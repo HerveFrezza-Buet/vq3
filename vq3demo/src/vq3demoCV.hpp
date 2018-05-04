@@ -45,12 +45,115 @@
 #include <vq3.hpp>
 #include <vq3demoPoint.hpp>
 #include <vq3demoSample.hpp>
+#include <algorithm>
 
 
 namespace vq3 {
   
   namespace demo2d {
     namespace opencv {
+
+      class HueSelector {
+      private:
+	cv::Mat hsv;
+	cv::Mat hsv_line;
+	int hsv_thickness;
+	int stride;
+	
+	void check_line(int rows, int cols) {
+	  if(cols == hsv_line.cols)
+	    return;
+
+	  hsv_line.create(1, cols, CV_8UC3);
+
+	  unsigned char* it  = hsv_line.data;
+	  unsigned char* end = hsv_line.data + 3*cols;
+	  int col = 0;
+	  while(it != end) {
+	    *(it++) = (unsigned char)(180.0*(col++)/(cols-1)+.5); // H
+	    *(it++) = 255;                                        // S
+	    *(it++) = 255;                                        // V
+	  }
+	  cv::cvtColor(hsv_line, hsv_line, CV_HSV2BGR);
+	  stride = cols*3;
+	  hsv_thickness = std::min(cols, 20);
+	}
+
+	bool hue_test(unsigned int h) const {
+	  int href = (int)(H_slider*180e-3+.5);
+	  int dh   = href - (int)h;
+	  dh       = std::min(std::abs(dh), std::abs(dh+180));
+	  return dh < T_slider;
+	}
+	
+	bool hsv_test(const unsigned char* hsv_pixel) const {
+	  unsigned char s = (unsigned char)(S_slider*255e-3+.5);
+	  unsigned char v = (unsigned char)(V_slider*255e-3+.5);
+
+	  return hsv_pixel[1] > s
+	    &&   hsv_pixel[2] > v
+	    &&   hue_test(hsv_pixel[0]);
+	}
+	
+      public:
+	cv::Mat image;
+	int H_slider =   0;
+	int S_slider = 500;
+	int V_slider = 500;
+	int T_slider =  20;
+	double darken = .2;
+
+	HueSelector() = default;
+
+
+	auto build_pixel_test() {
+	  return [this](const unsigned char* rgb_pixel) {
+	    cv::Mat src(1, 1, CV_8UC3, (void*)rgb_pixel);
+	    cv::Mat dst;
+	    cv::cvtColor(src, dst, CV_BGR2HSV);
+	    return this->hsv_test(dst.data);
+	  };
+	}
+	
+	void build_sliders(const std::string& window_name) {
+	  cv::createTrackbar("Hue",            window_name, &H_slider, 1000, nullptr);
+	  cv::createTrackbar("Hue Tolerance",  window_name, &T_slider,  100, nullptr);
+	  cv::createTrackbar("Min Saturation", window_name, &S_slider, 1000, nullptr);
+	  cv::createTrackbar("Min Value",      window_name, &V_slider, 1000, nullptr);
+	}
+
+	void build_image(cv::Mat img) {
+	  check_line(img.rows, img.cols);
+	  image.create(img.rows, img.cols, CV_8UC3);
+	  cv::cvtColor(img, hsv, CV_BGR2HSV);
+	  
+	  unsigned char* src = img.data;
+	  unsigned char* dst = image.data;
+	  unsigned char* end = src + img.rows*stride;
+
+	  for(int l = 0; l < hsv_thickness; ++l, dst += stride)
+	    std::copy(hsv_line.data, hsv_line.data + stride, dst);
+	  auto offset = hsv_thickness*stride;
+	  src += offset;
+
+	  double h = H_slider*1e-3*img.cols;
+	  cv::line(image, cv::Point(h, 0), cv::Point(h, hsv_thickness), cv::Scalar(0,0,0), 5);
+	  
+	  for(unsigned char* hsv_it = hsv.data + offset; src != end; hsv_it +=3) 
+	    if(hsv_test(hsv_it)) {
+	      *(dst++) = *(src++);
+	      *(dst++) = *(src++);
+	      *(dst++) = *(src++);
+	    }
+	    else {
+	      *(dst++) = *(src++)*darken;
+	      *(dst++) = *(src++)*darken;
+	      *(dst++) = *(src++)*darken;
+	    }
+	  }
+      };
+
+      
       namespace colormap {
 
 	class jet {

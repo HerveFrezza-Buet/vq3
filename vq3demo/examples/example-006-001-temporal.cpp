@@ -45,23 +45,9 @@ int main(int argc, char* argv[]) {
   ///////////////////
   
   int N_slider =  5000;
-  int T_slider =   127;
-  int I_slider =     0; // I use a slider for a boolean value since I do not require QT support for opencv.
 
-  auto video_data = vq3::demo2d::opencv::sample::video_data(0, [&T_slider, &I_slider](const unsigned char* rgb_pixel) {
-      unsigned char threshold = (unsigned char)(T_slider);
-      double res;
-      if(rgb_pixel[0] < threshold
-	 || rgb_pixel[1] < threshold
-	 || rgb_pixel[2] < threshold)
-	res = 1.;
-      else
-	res = 0.;
-      if(I_slider == 1)
-	return 1.0 - res;
-      else
-	return res;
-    });
+  vq3::demo2d::opencv::HueSelector selector;
+  auto video_data = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
 
   auto density = vq3::demo2d::opencv::sample::webcam(video_data);
 
@@ -72,8 +58,7 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   cv::createTrackbar("nb/m^2",           "image", &N_slider, 10000, nullptr);
-  cv::createTrackbar("threshold",        "image", &T_slider,   255, nullptr);
-  cv::createTrackbar("invert selection", "image", &I_slider,     1, nullptr);
+  selector.build_sliders("video");
 
   
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
@@ -209,7 +194,8 @@ int main(int argc, char* argv[]) {
     g.foreach_vertex(smooth_vertex);
     
     cv::imshow("image", image);
-    cv::imshow("video", video_data.image);
+    selector.build_image(video_data.image);
+    cv::imshow("video", selector.image);
     keycode = cv::waitKey(1) & 0xFF;
   }
   
