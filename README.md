@@ -4,6 +4,10 @@ The vq3 library is a C++ implementation of vector quantization, including GNG-T,
 
 Two packages are provided. vq3 is the core library. It is generic. vq3demo provides demo examples using openCV.
 
+# Support
+
+vq3 is a result of the <a href="http://interreg-grone.eu">GRONE project</a>, supported by the Interreg "Grande Région" program of the European Union's European Regional Development Fund.
+
 
 # Unix Installation
 
