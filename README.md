@@ -22,3 +22,6 @@ cmake .. -DCMAKE_INSTALL_PREFIX=/usr
 sudo make install
 cd ../..
 ```
+
+The documentation is in /usr/share/doc/vq3
+
