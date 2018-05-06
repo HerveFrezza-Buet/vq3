@@ -22,15 +22,13 @@ using vlayer_2 = vq3::decorator::tagged<vlayer_1>;                              
 using vlayer_3 = vq3::decorator::online::mean_std<vlayer_2, double, Param>;        // we add distortion statistics over time. 
 using vlayer_4 = vq3::decorator::smoother<vlayer_3, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
 using vlayer_5 = vq3::decorator::labelled<vlayer_4>;                               // for vertex labelling
-using vlayer_6 = vq3::demo::decorator::colored<vlayer_5>;                          // coloration for display
-using vertex   = vlayer_6;
+using vertex   = vlayer_5;
 
 //                                                        ## Edge properties :
 using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CHL computation.
 using elayer_1 = vq3::decorator::efficiency<elayer_0>;    // for connected components
-using elayer_2 = vq3::decorator::labelled<elayer_1>;      // for edge labelling                        
-using elayer_3 = vq3::demo::decorator::colored<elayer_2>; // coloration for display
-using edge     = elayer_3;
+using elayer_2 = vq3::decorator::labelled<elayer_1>;      // for edge labelling     
+using edge     = elayer_2;
 
 using graph  = vq3::graph<vertex, edge>;
   
@@ -45,6 +43,7 @@ using graph  = vq3::graph<vertex, edge>;
 double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
 
 
+#define MAX_DISPLAY_SPEED 2
 
 
 int main(int argc, char* argv[]) {
@@ -105,11 +104,15 @@ int main(int argc, char* argv[]) {
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
   
+  cv::namedWindow("speed", CV_WINDOW_AUTOSIZE);
+  auto speed_image = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
+  auto speed_frame = vq3::demo2d::opencv::direct_orthonormal_frame(speed_image.size(), .5*speed_image.size().width/(double)MAX_DISPLAY_SPEED, true);
+  
   auto dd = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
 								[](const vq3::demo2d::Point& pt) {return                      true;},
 								[](const vq3::demo2d::Point& pt) {return                        pt;},
 								[](const vq3::demo2d::Point& pt) {return                         1;},
-								[](const vq3::demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
+								[](const vq3::demo2d::Point& pt) {return cv::Scalar(230, 230, 230);},
 								[](const vq3::demo2d::Point& pt) {return                        -1;});
   
   auto smooth_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
@@ -242,10 +245,28 @@ int main(int argc, char* argv[]) {
     g.foreach_edge(smooth_edge); 
     g.foreach_vertex(smooth_speed);
     g.foreach_vertex(smooth_vertex);
+
+    speed_image = cv::Scalar(255, 255, 255);
+    cv::line(speed_image,
+	     speed_frame(vq3::demo2d::Point(0, -MAX_DISPLAY_SPEED)),
+	     speed_frame(vq3::demo2d::Point(0,  MAX_DISPLAY_SPEED)),
+	     cv::Scalar(0,0,0), 1);
+    cv::line(speed_image,
+	     speed_frame(vq3::demo2d::Point(-MAX_DISPLAY_SPEED, 0)),
+	     speed_frame(vq3::demo2d::Point( MAX_DISPLAY_SPEED, 0)),
+	     cv::Scalar(0,0,0), 1);
+    g.foreach_vertex([&speed_image, &speed_frame, &color_of_label](graph::ref_vertex ref_v) {
+	auto& vertex = (*ref_v)();
+	if(vertex.vq3_smoother.get<1>()) // If speed is available
+	  cv::circle(speed_image, speed_frame(vertex.vq3_smoother.get<1>().value()), 3, color_of_label(vertex.vq3_label), -1);
+      });
+								
+    
     
     cv::imshow("image", image);
     selector.build_image(video_data.image);
     cv::imshow("video", selector.image);
+    cv::imshow("speed", speed_image);
     keycode = cv::waitKey(1) & 0xFF;
   }
   
