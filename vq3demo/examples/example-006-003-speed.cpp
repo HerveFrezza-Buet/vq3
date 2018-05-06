@@ -1,8 +1,6 @@
 #include <vq3demo.hpp>
 #include <random>
 
-#define ANGLE_PERIOD 500
-#define D_ANGLE (360./ANGLE_PERIOD)
 #define SPEED_TO_METER .5
 
 // Graph definition
@@ -19,14 +17,17 @@ struct Param {
 
 //                                                                                 ## Node properties :
 using vlayer_0 = prototype;                                                        // prototypes are 2D points (this is the "user defined" value).
-using vlayer_1 = vq3::decorator::tagged<vlayer_0>;                                 // we add a tag for topology computation.
-using vlayer_2 = vq3::decorator::online::mean_std<vlayer_1, double, Param>;        // we add distortion statistics over time. 
-using vlayer_3 = vq3::decorator::smoother<vlayer_2, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
-using vertex   = vlayer_3;
+using vlayer_1 = vq3::decorator::efficiency<vlayer_0>;                             // for connected components
+using vlayer_2 = vq3::decorator::tagged<vlayer_1>;                                 // we add a tag for topology computation and connected components.
+using vlayer_3 = vq3::decorator::online::mean_std<vlayer_2, double, Param>;        // we add distortion statistics over time. 
+using vlayer_4 = vq3::decorator::smoother<vlayer_3, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
+using vlayer_5 = vq3::demo::decorator::colored<vlayer_4>;
+using vertex   = vlayer_5;
 
 //                                                        ## Edge properties :
 using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CHL computation.
-using edge     = elayer_0;
+using elayer_1 = vq3::demo::decorator::colored<elayer_0>;
+using edge     = elayer_1;
 
 using graph  = vq3::graph<vertex, edge>;
   
@@ -57,6 +58,11 @@ int main(int argc, char* argv[]) {
   std::random_device rd;  
   std::mt19937 random_device(rd());
   
+  auto color_of_label = vq3::demo2d::opencv::colormap::random(random_device);
+
+  vq3::demo2d::opencv::HueSelector selector;
+  auto video_data = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
+  
   int N_slider =   500;
   int T_slider =   500;
   int S_slider =   170;
@@ -67,22 +73,10 @@ int main(int argc, char* argv[]) {
   //
   ///////////////////
 
-#define BAR_SIDE 2.
-  
-  auto bar_theta     = vq3::demo::dyn::linear<vq3::demo::dyn::bound::wrap>(0, 0, 360, D_ANGLE);
-  auto bar_pos_x     = vq3::demo::dyn::sin(-2, 2,  0,     D_ANGLE);
-  auto bar_size_x    = vq3::demo::dyn::cos(BAR_SIDE, 5,  0, 1.25*D_ANGLE);
-  auto bar_pos       = vq3::demo2d::dyn::point(bar_pos_x, 0.);
-  auto bar_size      = vq3::demo2d::dyn::point(bar_size_x, BAR_SIDE);
-  double bar_density =   1;
-  double bar_width   =   1;
-  double bar_height  =   1;
-  auto bar = (vq3::demo2d::sample::rectangle(bar_width, bar_height, bar_density) * bar_size()) % bar_theta() + bar_pos();
-  
-  
-  auto density = bar;
-  
+  auto density = vq3::demo2d::opencv::sample::webcam(video_data);
 
+  auto input_size  = video_data.image.size();
+  video_data.frame = vq3::demo2d::opencv::direct_orthonormal_frame(input_size, .5*input_size.width, true);
   
   
   // Display
@@ -94,10 +88,13 @@ int main(int argc, char* argv[]) {
   cv::createTrackbar("nb/m^2",         "image", &N_slider,   2000, nullptr);
   cv::createTrackbar("T",              "image", &T_slider,   1000, nullptr);
   cv::createTrackbar("100*sigma_coef", "image", &S_slider,    300, nullptr);
-  cv::createTrackbar("nb SOM steps",   "image", &K_slider,       20, nullptr);
+  cv::createTrackbar("nb SOM steps",   "image", &K_slider,     20, nullptr);
+  
+  cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
+  selector.build_sliders("video");
   
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .1*image.size().width, true);
+  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
   
   auto dd = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
 								[](const vq3::demo2d::Point& pt) {return                      true;},
@@ -165,28 +162,9 @@ int main(int argc, char* argv[]) {
 
   vq3::temporal::dt_averager frame_delay(.05);
 
-  unsigned int step = 0;
-  unsigned int mode = 0;
-  
   int keycode = 0;
   while(keycode != 27) {
-
-    // Ubdate the distribution
-    switch(mode) {
-    case 0: // Rotation
-      ++bar_theta; 
-      break;
-    case 1: // stretch
-      ++bar_size_x;
-      ++bar_size;
-      break;
-    case 2: // translation
-      ++bar_pos_x;
-      ++bar_pos;
-      break;
-    default:
-      break;
-    }
+    ++video_data; // get next frame.
     
     // Get the samples and plot them.
     
@@ -230,16 +208,9 @@ int main(int argc, char* argv[]) {
     g.foreach_vertex(smooth_vertex);
     
     cv::imshow("image", image);
+    selector.build_image(video_data.image);
+    cv::imshow("video", selector.image);
     keycode = cv::waitKey(1) & 0xFF;
-
-    // Input mode
-    ++step;
-    if(step >= ANGLE_PERIOD) {
-      step = 0;
-      ++mode;
-      if(mode == 3)
-	mode = 0;
-    }
   }
   
   return 0;

@@ -63,4 +63,5 @@
    @example example-005-001-gngt.cpp
    @example example-006-001-temporal.cpp
    @example example-006-002-speed.cpp
+   @example example-006-003-speed.cpp
 */
