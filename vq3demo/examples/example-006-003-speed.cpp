@@ -21,13 +21,16 @@ using vlayer_1 = vq3::decorator::efficiency<vlayer_0>;                          
 using vlayer_2 = vq3::decorator::tagged<vlayer_1>;                                 // we add a tag for topology computation and connected components.
 using vlayer_3 = vq3::decorator::online::mean_std<vlayer_2, double, Param>;        // we add distortion statistics over time. 
 using vlayer_4 = vq3::decorator::smoother<vlayer_3, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
-using vlayer_5 = vq3::demo::decorator::colored<vlayer_4>;
-using vertex   = vlayer_5;
+using vlayer_5 = vq3::decorator::labelled<vlayer_4>;                               // for vertex labelling
+using vlayer_6 = vq3::demo::decorator::colored<vlayer_5>;                          // coloration for display
+using vertex   = vlayer_6;
 
 //                                                        ## Edge properties :
 using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CHL computation.
-using elayer_1 = vq3::demo::decorator::colored<elayer_0>;
-using edge     = elayer_1;
+using elayer_1 = vq3::decorator::efficiency<elayer_0>;    // for connected components
+using elayer_2 = vq3::decorator::labelled<elayer_1>;      // for edge labelling                        
+using elayer_3 = vq3::demo::decorator::colored<elayer_2>; // coloration for display
+using edge     = elayer_3;
 
 using graph  = vq3::graph<vertex, edge>;
   
@@ -68,9 +71,10 @@ int main(int argc, char* argv[]) {
   auto video_data = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
   
   int N_slider =  5000;
-  int T_slider =   500;
+  int T_slider =   400;
   int S_slider =   170;
   int K_slider =     5;
+  int E_slider =   100;
   
   
   // Input distribution
@@ -89,10 +93,11 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
-  cv::createTrackbar("nb/m^2",         "image", &N_slider,  10000, nullptr);
-  cv::createTrackbar("T",              "image", &T_slider,   1000, nullptr);
-  cv::createTrackbar("100*sigma_coef", "image", &S_slider,    300, nullptr);
-  cv::createTrackbar("nb SOM steps",   "image", &K_slider,     20, nullptr);
+  cv::createTrackbar("nb/m^2",               "image", &N_slider, 10000, nullptr);
+  cv::createTrackbar("1000*min_edge_length", "image", &E_slider,   500, nullptr);
+  cv::createTrackbar("T",                    "image", &T_slider,  1000, nullptr);
+  cv::createTrackbar("100*sigma_coef",       "image", &S_slider,   300, nullptr);
+  cv::createTrackbar("nb SOM steps",         "image", &K_slider,    20, nullptr);
   
   cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
   selector.build_sliders("video");
@@ -104,21 +109,29 @@ int main(int argc, char* argv[]) {
 								[](const vq3::demo2d::Point& pt) {return                      true;},
 								[](const vq3::demo2d::Point& pt) {return                        pt;},
 								[](const vq3::demo2d::Point& pt) {return                         1;},
-								[](const vq3::demo2d::Point& pt) {return cv::Scalar(255, 120, 120);},
+								[](const vq3::demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
 								[](const vq3::demo2d::Point& pt) {return                        -1;});
   
   auto smooth_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 								       [](const vertex& v1, const vertex& v2, const edge& e) {
 									 return v1.vq3_smoother.get<0>() && v2.vq3_smoother.get<0>();},   // draw anly if smoothed vertices are available.
 								       [](const vertex& v) {return   v.vq3_smoother.get<0>().value();},   // position
-								       [](const edge& e)     {return         cv::Scalar(  0,   0, 200);}, // color
+								       [&color_of_label](const edge& e)   {
+									 if(e.vq3_efficient)
+									   return color_of_label(e.vq3_label);
+									 else
+									   return cv::Scalar(200, 200, 200);},                            // color
 								       [](const edge& e)     {return                                1;}); // thickness
   
   auto smooth_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									     [](const vertex& v) {return (bool)(v.vq3_smoother.get<0>());},  // draw only is the smoothed vertex is available.
 									     [](const vertex& v) {return v.vq3_smoother.get<0>().value();},  // position
 									     [](const vertex& v) {return                               3;},  // radius
-									     [](const vertex& v) {return       cv::Scalar(  0,   0, 200);},  // color
+									     [&color_of_label](const vertex& v) {
+									     if(v.vq3_efficient)
+									       return color_of_label(v.vq3_label);
+									     else
+									       return cv::Scalar(200, 200, 200);},                           // color
 									     [](const vertex& v) {return                              -1;}); // thickness
   
   auto smooth_speed = vq3::demo2d::opencv::segment_at_vertex_drawer<graph::ref_vertex>(image, frame,
@@ -126,8 +139,8 @@ int main(int argc, char* argv[]) {
 										       [](const vertex& v) {return v.vq3_smoother.get<0>().value();},  // position
 										       [](const vertex& v) {return v.vq3_smoother.get<1>().value()
 													    *                      -SPEED_TO_METER;},  // speed
-										       [](const vertex& v) {return       cv::Scalar(  0, 200,   0);},  // color
-										       [](const vertex& v) {return                               3;}); // thickness
+										       [](const vertex& v) {return       cv::Scalar(  0, 0, 0);},      // color
+										       [](const vertex& v) {return                               1;}); // thickness
   
   
   // Data for computation
@@ -202,6 +215,25 @@ int main(int argc, char* argv[]) {
 	value.vq3_smoother += value.vq3_value;
 	value.vq3_smoother.set_timestep(delay);
       });
+
+    // Let us label the connected components
+
+    vq3::utils::clear_vertex_efficiencies(g, true); // All vertices are considered for connected components.
+    g.foreach_edge([thresh = E_slider*E_slider*1e-6](graph::ref_edge ref_e) {
+	  auto extr = ref_e->extremities();
+	  if(vq3::invalid_extremities(extr))
+	    ref_e->kill();
+	  else {
+	    auto& A =  (*(extr.first) )().vq3_value;
+	    auto& B =  (*(extr.second))().vq3_value;
+	    // Long edge are not considered for connected components.
+	    (*ref_e)().vq3_efficient = vq3::demo2d::d2(A,B) < thresh;
+	  }
+      });
+    auto components = vq3::connected_components::make(g);
+    vq3::labelling::conservative(components.begin(), components.end());
+    vq3::labelling::edges_from_vertices(g);
+    
     
     // Display
     
