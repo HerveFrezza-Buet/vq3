@@ -61,9 +61,13 @@ int main(int argc, char* argv[]) {
   auto color_of_label = vq3::demo2d::opencv::colormap::random(random_device);
 
   vq3::demo2d::opencv::HueSelector selector;
+  selector.H_slider =   0;
+  selector.T_slider =  20;
+  selector.S_slider =  80;
+  selector.V_slider = 200;
   auto video_data = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
   
-  int N_slider =   500;
+  int N_slider =  5000;
   int T_slider =   500;
   int S_slider =   170;
   int K_slider =     5;
@@ -85,7 +89,7 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
-  cv::createTrackbar("nb/m^2",         "image", &N_slider,   2000, nullptr);
+  cv::createTrackbar("nb/m^2",         "image", &N_slider,  10000, nullptr);
   cv::createTrackbar("T",              "image", &T_slider,   1000, nullptr);
   cv::createTrackbar("100*sigma_coef", "image", &S_slider,    300, nullptr);
   cv::createTrackbar("nb SOM steps",   "image", &K_slider,     20, nullptr);
@@ -175,8 +179,8 @@ int main(int argc, char* argv[]) {
     // Step
 
     double e = T_slider/1000.0;
-    double expo_min = -5;
-    double expo_max = -1;
+    double expo_min = -7;
+    double expo_max = -3;
     
     evolution.density    = N_slider;
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
