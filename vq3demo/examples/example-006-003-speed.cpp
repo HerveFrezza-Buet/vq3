@@ -2,7 +2,6 @@
 #include <random>
 
 #define SPEED_TO_METER .5
-#define MAX_DISPLAY_SPEED 2
 
 // Graph definition
 //
@@ -34,6 +33,13 @@ using edge     = elayer_2;
 using graph  = vq3::graph<vertex, edge>;
   
 
+// Epoch data for SOM-like pass
+//
+////////////////
+
+using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample>>;
+  
+
 // Distance
 //
 ////////////////
@@ -43,7 +49,7 @@ using graph  = vq3::graph<vertex, edge>;
 // compare actual vertex values with points.
 double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
 
-
+// Here is the main.
 
 int main(int argc, char* argv[]) {
   
@@ -71,8 +77,9 @@ int main(int argc, char* argv[]) {
   int N_slider =  5000;
   int T_slider =   400;
   int S_slider =   170;
-  int K_slider =     5;
   int E_slider =   100;
+  
+  int Z_slider =  2000;
   
   
   // Input distribution
@@ -95,7 +102,6 @@ int main(int argc, char* argv[]) {
   cv::createTrackbar("1000*min_edge_length", "image", &E_slider,   500, nullptr);
   cv::createTrackbar("T",                    "image", &T_slider,  1000, nullptr);
   cv::createTrackbar("100*sigma_coef",       "image", &S_slider,   300, nullptr);
-  cv::createTrackbar("nb SOM steps",         "image", &K_slider,    20, nullptr);
   
   cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
   selector.build_sliders("video");
@@ -104,8 +110,8 @@ int main(int argc, char* argv[]) {
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
   
   cv::namedWindow("speed", CV_WINDOW_AUTOSIZE);
+  cv::createTrackbar("zoom", "speed", &Z_slider, 3000, nullptr);
   auto speed_image = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
-  auto speed_frame = vq3::demo2d::opencv::direct_orthonormal_frame(speed_image.size(), .5*speed_image.size().width/(double)MAX_DISPLAY_SPEED, true);
   
   auto dd = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
 								[](const vq3::demo2d::Point& pt) {return                      true;},
@@ -158,12 +164,8 @@ int main(int argc, char* argv[]) {
   
   auto vertices  = vq3::utils::vertices(g);
   auto gngt      = vq3::algo::gngt::processor<prototype, sample>(g, vertices);
+  auto wtm       = vq3::epoch::wtm::processor(g, vertices);
   auto evolution = vq3::algo::gngt::by_default::evolution(random_device);
-  
-  gngt.nb_threads       = nb_threads;
-  gngt.neighbour_weight = .1;
-  gngt.distance         = dist;
-  gngt.prototype        = [](vertex& v) -> prototype& {return v.vq3_value;};
   
   // This is the loop
   //
@@ -193,6 +195,15 @@ int main(int argc, char* argv[]) {
 
     // Step
 
+    vertices.update_topology(g);
+    wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
+    for(int wta_step = 0; wta_step < 2; ++wta_step)
+      wtm.update_prototypes<epoch_wtm>(nb_threads,
+    				       S.begin(), S.end(),
+    				       [](const sample& s) {return s;},
+    				       [](vertex& v) -> prototype& {return v.vq3_value;},
+    				       dist);
+    
     double e = T_slider/1000.0;
     double expo_min = -7;
     double expo_max = -3;
@@ -201,10 +212,12 @@ int main(int argc, char* argv[]) {
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
     evolution.sigma_coef = S_slider*.01;
     
-    gngt.epoch(K_slider,
+    gngt.epoch(nb_threads,
 	       S.begin(), S.end(),
 	       [](const sample& s) {return s;},
+	       [](vertex& v) -> prototype& {return v.vq3_value;},
 	       [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
+	       dist,
 	       evolution);
     
     // Temporal update
@@ -246,13 +259,15 @@ int main(int argc, char* argv[]) {
     g.foreach_vertex(smooth_vertex);
 
     speed_image = cv::Scalar(255, 255, 255);
+    double max_speed = Z_slider*.001;
+    auto speed_frame = vq3::demo2d::opencv::direct_orthonormal_frame(speed_image.size(), .5*speed_image.size().width/std::max(max_speed, 1e-3), true);
     cv::line(speed_image,
-	     speed_frame(vq3::demo2d::Point(0, -MAX_DISPLAY_SPEED)),
-	     speed_frame(vq3::demo2d::Point(0,  MAX_DISPLAY_SPEED)),
+	     speed_frame(vq3::demo2d::Point(0, -max_speed)),
+	     speed_frame(vq3::demo2d::Point(0,  max_speed)),
 	     cv::Scalar(0,0,0), 1);
     cv::line(speed_image,
-	     speed_frame(vq3::demo2d::Point(-MAX_DISPLAY_SPEED, 0)),
-	     speed_frame(vq3::demo2d::Point( MAX_DISPLAY_SPEED, 0)),
+	     speed_frame(vq3::demo2d::Point(-max_speed, 0)),
+	     speed_frame(vq3::demo2d::Point( max_speed, 0)),
 	     cv::Scalar(0,0,0), 1);
     g.foreach_vertex([&speed_image, &speed_frame, &color_of_label](graph::ref_vertex ref_v) {
 	auto& vertex = (*ref_v)();

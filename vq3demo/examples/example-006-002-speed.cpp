@@ -49,9 +49,7 @@ using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample>>;
 double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
 
 
-// Here are winner-take most learning kernel functions. VOED means "value of edge distance".
-
-// This is the main.
+// Here is the main.
 
 int main(int argc, char* argv[]) {
   
@@ -230,7 +228,7 @@ int main(int argc, char* argv[]) {
     				       dist);
 
     // Second, narrow kernel fit, allowing the graph to spread over the samples.
-    wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.2;}, 1, 0);
+    wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
     for(int wta_step = 0; wta_step < K_slider; ++wta_step)
       wtm.update_prototypes<epoch_wtm>(nb_threads,
     				       S.begin(), S.end(),
