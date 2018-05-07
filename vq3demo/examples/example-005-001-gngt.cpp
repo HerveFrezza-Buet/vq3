@@ -37,7 +37,13 @@ using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CH
 using edge     = elayer_0;
 
 using graph  = vq3::graph<vertex, edge>;
-  
+
+
+// Epoch data for SOM-like pass
+//
+////////////////
+
+using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample>>;
 
 // Distance
 //
@@ -337,13 +343,13 @@ int main(int argc, char* argv[]) {
   std::vector<vq3::demo2d::Point> S;
 
   auto vertices = vq3::utils::vertices(g);
-  auto gngt     = vq3::algo::gngt::processor<prototype, sample>(g, vertices);
-  
-  gngt.nb_threads       = nb_threads;
-  gngt.neighbour_weight = .1;
-  gngt.distance         = dist;
-  gngt.prototype        = [](vertex& v) -> prototype& {return v.vq3_value;};
 
+  // This processes the topology evolution (number of vertices and edges)
+  auto gngt     = vq3::algo::gngt::processor<prototype, sample>(g, vertices);
+
+  // This updates the prototypes (i.e. the vertex positions).
+  auto wtm      = vq3::epoch::wtm::processor(g, vertices);
+  
   // This is how the default evolution would have been obtained.
   // auto evolution = vq3::algo::gngt::by_default::evolution(random_device);
 
@@ -391,12 +397,25 @@ int main(int argc, char* argv[]) {
       evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
       evolution.sigma_coef = S_slider*.01;
 
-      gngt.epoch(1,
+      // We compute the topology evolution of the graph...
+      gngt.epoch(nb_threads,
 		 S.begin(), S.end(),
 		 [](const sample& s) {return s;},
+		 [](vertex& v) -> prototype& {return v.vq3_value;},
 		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
+		 dist,
 		 evolution);
 
+      // ... and update the nodes with a SOM-like pass. Here,
+      // classically (for GNG), only the immediate neighbours are
+      // updated.
+      vertices.update_topology(g);
+      wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
+      wtm.update_prototypes<epoch_wtm>(nb_threads,
+				       S.begin(), S.end(),
+				       [](const sample& s) {return s;},
+				       [](vertex& v) -> prototype& {return v.vq3_value;},
+				       dist);
 							    
 
       // Display
