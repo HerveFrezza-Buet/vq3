@@ -2,6 +2,7 @@
 #include <random>
 
 #define SPEED_TO_METER .5
+#define MAX_DISPLAY_SPEED 2
 
 // Graph definition
 //
@@ -42,8 +43,6 @@ using graph  = vq3::graph<vertex, edge>;
 // compare actual vertex values with points.
 double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
 
-
-#define MAX_DISPLAY_SPEED 2
 
 
 int main(int argc, char* argv[]) {
@@ -202,7 +201,7 @@ int main(int argc, char* argv[]) {
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
     evolution.sigma_coef = S_slider*.01;
     
-    gngt.epoch(K_slider, 1,
+    gngt.epoch(K_slider,
 	       S.begin(), S.end(),
 	       [](const sample& s) {return s;},
 	       [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},

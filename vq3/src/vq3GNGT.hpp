@@ -179,7 +179,6 @@ namespace vq3 {
 	/**
 	 * This updates the prototypes and the graph topology (i.e vertex and/or edge modification).
 	 * @param nb_wtm_before the number (> 0) of SOM-like passes before the graph evolution.
-	 * @param nb_wtmchl_after the number (>= 0) of SOM-like passes after the graph evolution.
 	 * @param begin, end The samples
 	 * @param sample_of The samples are obtained from sample_of(*it).
 	 * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
@@ -187,7 +186,6 @@ namespace vq3 {
 	 */
 	template<typename ITER, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE>
 	void epoch(unsigned int nb_wtm_before,
-		   unsigned int nb_wtmchl_after,
 		   const ITER& begin, const ITER& end,
 		   const SAMPLE_OF& sample_of,
 		   const CLONE_PROTOTYPE& clone_prototype,
@@ -220,11 +218,9 @@ namespace vq3 {
 	  vertices.update_topology(g);
 	  wtm_topo();
 	  
-	  for(unsigned int i = 0; i < nb_wtmchl_after; ++i) {
-	    chl.update_edges(nb_threads, begin, end, sample_of, prototype, distance, edge());
-	    wtm_topo();
-	    wtm.template update_prototypes<epoch_wtm>(nb_threads, begin, end, sample_of, prototype, distance);
-	  }
+	  chl.update_edges(nb_threads, begin, end, sample_of, prototype, distance, edge());
+	  wtm_topo();
+	  wtm.template update_prototypes<epoch_wtm>(nb_threads, begin, end, sample_of, prototype, distance);
 	}
 	
       };

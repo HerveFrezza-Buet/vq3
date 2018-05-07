@@ -5,6 +5,8 @@
 #define D_ANGLE (360./ANGLE_PERIOD)
 #define SPEED_TO_METER .5
 
+#define MAX_DISPLAY_SPEED 2
+
 // Graph definition
 //
 ///////////////
@@ -98,6 +100,12 @@ int main(int argc, char* argv[]) {
   
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .1*image.size().width, true);
+
+
+  cv::namedWindow("speed", CV_WINDOW_AUTOSIZE);
+  auto speed_image = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
+  auto speed_frame = vq3::demo2d::opencv::direct_orthonormal_frame(speed_image.size(), .5*speed_image.size().width/(double)MAX_DISPLAY_SPEED, true);
+
   
   auto dd = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
 								[](const vq3::demo2d::Point& pt) {return                      true;},
@@ -204,7 +212,7 @@ int main(int argc, char* argv[]) {
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
     evolution.sigma_coef = S_slider*.01;
     
-    gngt.epoch(K_slider, 1,
+    gngt.epoch(K_slider,
 	       S.begin(), S.end(),
 	       [](const sample& s) {return s;},
 	       [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
@@ -229,7 +237,24 @@ int main(int argc, char* argv[]) {
     g.foreach_vertex(smooth_speed);
     g.foreach_vertex(smooth_vertex);
     
+
+    speed_image = cv::Scalar(255, 255, 255);
+    cv::line(speed_image,
+	     speed_frame(vq3::demo2d::Point(0, -MAX_DISPLAY_SPEED)),
+	     speed_frame(vq3::demo2d::Point(0,  MAX_DISPLAY_SPEED)),
+	     cv::Scalar(0,0,0), 1);
+    cv::line(speed_image,
+	     speed_frame(vq3::demo2d::Point(-MAX_DISPLAY_SPEED, 0)),
+	     speed_frame(vq3::demo2d::Point( MAX_DISPLAY_SPEED, 0)),
+	     cv::Scalar(0,0,0), 1);
+    g.foreach_vertex([&speed_image, &speed_frame](graph::ref_vertex ref_v) {
+	auto& vertex = (*ref_v)();
+	if(vertex.vq3_smoother.get<1>()) // If speed is available
+	  cv::circle(speed_image, speed_frame(vertex.vq3_smoother.get<1>().value()), 3, cv::Scalar(0,0,0), -1);
+      });
+    
     cv::imshow("image", image);
+    cv::imshow("speed", speed_image);
     keycode = cv::waitKey(1) & 0xFF;
 
     // Input mode
