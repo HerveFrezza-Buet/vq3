@@ -119,55 +119,20 @@ namespace vq3 {
 	
 	using epoch_bmu = vq3::epoch::data::online::bmu_mean_std<vq3::epoch::data::none<SAMPLE> >;
 	using epoch_wta = vq3::epoch::data::wta<vq3::epoch::data::none<SAMPLE> >;
-	using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<SAMPLE> >;
+	       
+
+      public:
 
 	GRAPH& g;
 
 	vq3::utils::Vertices<ref_vertex>&  vertices;
-	vq3::epoch::wtm::Processor<GRAPH> wtm;
 	vq3::epoch::wta::Processor<GRAPH> wta;
 	vq3::epoch::wta::Processor<GRAPH> bmu;
 	vq3::epoch::chl::Processor<GRAPH> chl;
 
-	
-
-      private:
-
-	
-	void wtm_topo() {
-	  wtm.update_topology([this](unsigned int edge_distance) {
-	      if(edge_distance == 0)
-		return 1.0;
-	      return this->neighbour_weight;},
-	    1.1, 0);
-	}
-		       
-
-      public:
-
-	unsigned int nb_threads = 1;
-
-	/**
-	 * This gives the importance in [0, 1] of vertices update for
-	 * those which are neighbours of the BMU (for which importance
-	 * is 1).
-	 */
-	double neighbour_weight = .1;
-
-	/**
-	 * Compares the vertex value to a sample.
-	 */
-	std::function<double (const vertex&, const SAMPLE&)> distance;
-
-	/** 
-	 * Returns a reference to the prototype from the vertex value.
-	 */
-	std::function<PROTOTYPE& (vertex&)> prototype;
-
 	Processor(GRAPH& g, vq3::utils::Vertices<typename GRAPH::ref_vertex>& vertices)
-	  : g(g), vertices(vertices), wtm(g, vertices), wta(g, vertices), bmu(g, vertices), chl(g) {
+	  : g(g), vertices(vertices), wta(g, vertices), bmu(g, vertices), chl(g) {
 	  vertices.update_topology(g);
-	  wtm_topo();
 	}
 	
 	Processor()                            = delete;
@@ -178,49 +143,41 @@ namespace vq3 {
 
 	/**
 	 * This updates the prototypes and the graph topology (i.e vertex and/or edge modification).
-	 * @param nb_wtm_before the number (> 0) of SOM-like passes before the graph evolution.
 	 * @param begin, end The samples
 	 * @param sample_of The samples are obtained from sample_of(*it).
+	 * @param ref_prototype_of_vertex Returns a reference to the prototype from the vertex value.
 	 * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
-	 * @param evolution modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
+	 * @param distance Compares the vertex value to a sample.
+	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 */
-	template<typename ITER, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE>
-	void epoch(unsigned int nb_wtm_before,
+	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE>
+	void epoch(unsigned int nb_threads,
 		   const ITER& begin, const ITER& end,
 		   const SAMPLE_OF& sample_of,
+		   const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
 		   const CLONE_PROTOTYPE& clone_prototype,
+		   const DISTANCE& distance,
 		   EVOLUTION& evolution) {
  	  if(begin == end) {
 	    g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
 	    vertices.update_topology(g);
-	    wtm_topo();
 	    return;
 	  }
-	  
-	  auto wtm_results = wtm.template update_prototypes<epoch_wtm>(nb_threads, begin, end, sample_of, prototype, distance);
-	  auto nb_vertices = wtm_results.size();
 
-	  if(nb_vertices == 0) {
+	  if(g.nb_vertices() == 0) {
 	    // empty graph, we create one vertex, and do one wta pass.
 	    g += sample_of(*begin);
 	    vertices.update_topology(g);
-	    wta.template update_prototypes<epoch_wta>(nb_threads, begin, end, sample_of, prototype, distance);
-	    wtm_topo();
+	    wta.template update_prototypes<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	    return;
 	  }
 
-	  for(unsigned int i = 1; i < nb_wtm_before; ++i)
-	    wtm.template update_prototypes<epoch_wtm>(nb_threads, begin, end, sample_of, prototype, distance);
-	  vertices.update_topology(g);
-	  auto bmu_results = bmu.template update_prototypes<epoch_bmu>(nb_threads, begin, end, sample_of, prototype, distance);
+	  auto bmu_results = bmu.template update_prototypes<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  
 	  evolution(g, bmu_results, vertices, clone_prototype);
 	  vertices.update_topology(g);
-	  wtm_topo();
 	  
-	  chl.update_edges(nb_threads, begin, end, sample_of, prototype, distance, edge());
-	  wtm_topo();
-	  wtm.template update_prototypes<epoch_wtm>(nb_threads, begin, end, sample_of, prototype, distance);
+	  chl.update_edges(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge());
 	}
 	
       };

@@ -5,7 +5,7 @@
 #define GRID_HEIGHT             8
 
 #define SOM_H_RADIUS            5.1
-#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS-1e-3)
+#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
 //                                                                               ## Node properties :
 using layer_0 = vq3::demo2d::Point;                                              // prototypes are 2D points (this is the "user defined" value).
