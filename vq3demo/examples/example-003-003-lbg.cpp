@@ -80,11 +80,6 @@ int main(int argc, char* argv[]) {
 									 [](const vq3::demo2d::Point& pt) {return                         1;},
 									 [](const vq3::demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
 									 [](const vq3::demo2d::Point& pt) {return                        -1;});
-  auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
-								       [](const vertex& v1, const vertex& v2) {return true;},  // always draw
-								       [](const vertex& v)   {return                     v;},  // position
-								       []()                  {return cv::Scalar(255, 0, 0);},  // color
-								       []()                  {return                     3;}); // thickness
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                true;},  // always draw
 									   [](const vertex& v) {return                   v;},  // position
@@ -163,7 +158,6 @@ int main(int argc, char* argv[]) {
   
   image = cv::Scalar(255, 255, 255);
   std::copy(S.begin(), S.end(), dd);
-  g.foreach_edge(draw_edge); 
   g.foreach_vertex(draw_vertex);
   cv::imshow("image", image);
   cv::waitKey(0);
@@ -171,8 +165,8 @@ int main(int argc, char* argv[]) {
   // Now, let us plot the histogram of local distortions. This is why
   // we have built up an epoch data stack.<graph::ref_vertex>
   auto vertices = vq3::utils::vertices(g);
-  auto wta = vq3::epoch::wta::processor(g, vertices);
   vertices.update_topology(g);
+  auto wta = vq3::epoch::wta::processor(g, vertices);
   auto epoch_result = wta.update_prototypes<epoch_data>(nb_threads,
 							S.begin(), S.end(), 
 							[](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.

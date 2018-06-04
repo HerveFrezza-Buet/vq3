@@ -47,12 +47,13 @@ double dist2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::
 
 
 int main(int argc, char* argv[]) {
-  if(argc != 2) {
-    std::cout << "Usage : " << argv[0] << " nb_threads" << std::endl;
+  if(argc != 3) {
+    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> nb_threads" << std::endl;
     return 0;
   }
 
-  unsigned int nb_threads = std::atoi(argv[1]);
+  bool uniform = std::string(argv[1]) == std::string("uniform");
+  unsigned int nb_threads = std::atoi(argv[2]);
   
   std::random_device rd;  
   std::mt19937 random_device(rd());
@@ -109,6 +110,11 @@ int main(int argc, char* argv[]) {
   vq3::demo2d::Point B = { sep - r,    thickness/2};
   auto bar             = vq3::demo2d::sample::rectangle(A, B, i);
 
+  double w3             = .1;
+  double h3             = .1;
+  auto source           = vq3::demo2d::sample::rectangle(w3, h3, i) + p1;
+  
+
   auto density = rect || bar || crown;
   
   // Some initializations
@@ -118,7 +124,10 @@ int main(int argc, char* argv[]) {
   // Let us generate the graph as random unconnected vertices, taken from the distribution.
   
   for(unsigned int i=0; i < NB_VERTICES; ++i)
-    g += vq3::demo2d::sample::get_one_sample(random_device, density);
+    if(uniform)
+      g += vq3::demo2d::sample::get_one_sample(random_device, density);
+    else
+      g += vq3::demo2d::sample::get_one_sample(random_device, source);
  
   // We need to register the input samples in a vector since we want
   // to both use and display them.
