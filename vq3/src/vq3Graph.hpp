@@ -276,7 +276,7 @@ namespace vq3 {
     ref_edge get_edge(const ref_vertex& v1, const ref_vertex& v2) const {
       ref_vertex v, vv;
       
-      if(v1->E.size() > v1->E.size()) {
+      if(v1->E.size() > v2->E.size()) {
 	v  = v2;
 	vv = v1;
       }
