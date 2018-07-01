@@ -27,6 +27,8 @@
 #pragma once
 
 #include <random>
+#include <optional>
+#include <utility>
 
 namespace vq3 {
   namespace demo2d {
@@ -69,17 +71,30 @@ namespace vq3 {
       Point operator-(const Point& p) const {
 	return {x-p.x, y-p.y};
       }
-  
+
+      /**
+       * The dot product
+       */
       double operator*(const Point& p) const {
 	return x*p.x + y*p.y;
       }
 
+      /**
+       * Component-wise product.
+       */
       Point operator&(const Point& p) const {
 	return {x*p.x, y*p.y};
       }
       
       Point operator/(const Point& p) const {
 	return {x/p.x, y/p.y};
+      }
+
+      /**
+       * vector cross product
+       */
+      double operator^(const Point& p) const {
+	return x*p.y - y*p.x;
       }
 
       /**
@@ -136,6 +151,12 @@ namespace vq3 {
       return os;
     }
 
+    inline std::ostream& operator<<(std::ostream& os, 
+				    const std::pair<Point, Point>& p) {
+      os << '[' << p.first << ", " << p.second << ']';
+      return os;
+    }
+
     inline std::istream& operator>>(std::istream& is, 
 				    Point& p) {
       char c;
@@ -176,5 +197,36 @@ namespace vq3 {
     inline Point max(const Point& A, const Point& B) {
       return {std::max(A.x,B.x),std::max(A.y,B.y)};
     }
+
+
+    /**
+     * This returns (if it exists) the single point where the segments do intersect. If the segments overlap (i.e they share a common segment), no intersection is returned. If on segment is a point, no intersection is returned.
+     */
+    std::optional<Point> operator&&(const std::pair<Point, Point>& seg1, const std::pair<Point, Point>& seg2) {
+      auto& P = seg1.first;
+      auto  R = seg1.second - P;
+      auto& Q = seg2.first;
+      auto  S = seg2.second - Q;
+
+      std::optional<Point> res;
+
+
+      if(R == Point() || S == Point()) 
+	return res;
+	    
+      double rs  = R^S;
+      double qpr = (Q-P)^R;
+	    
+      if(rs != 0) {
+
+	double t = ((Q-P)^S)/rs;
+	double u = qpr/rs;
+	if(0 <= t && t <= 1 && 0 <= u && u <= 1)
+	  res = P + t*R;
+      }
+      
+      return res;
+    }
+    
   }
 }
