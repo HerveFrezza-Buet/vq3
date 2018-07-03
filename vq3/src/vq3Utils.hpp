@@ -318,7 +318,7 @@ namespace vq3 {
      * @return a height-sized vector of width-sized vector of vertex references.
      */
     template<typename GRAPH, typename VERTEX_VALUE_OF, typename EDGE_VALUE_OF>
-    std::vector<std::vector<typename GRAPH::ref_vertex>> make_grid(GRAPH& g, unsigned int width, unsigned int height,
+    auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
 		   const VERTEX_VALUE_OF& v_of, const EDGE_VALUE_OF& e_of) {
       std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
       std::vector<typename GRAPH::ref_vertex> line(width);
@@ -355,7 +355,7 @@ namespace vq3 {
      * @param v_of A function such as v_of(w, h) is the vertex value at position (w,h).
      */
     template<typename GRAPH, typename VERTEX_VALUE_OF>
-    std::vector<std::vector<typename GRAPH::ref_vertex>> make_grid(GRAPH& g, unsigned int width, unsigned int height,
+    auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
 		   const VERTEX_VALUE_OF& v_of) {
       std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
       std::vector<typename GRAPH::ref_vertex> line(width);
