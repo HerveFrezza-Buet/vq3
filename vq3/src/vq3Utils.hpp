@@ -315,32 +315,36 @@ namespace vq3 {
      * @param width, height The grid dimensions.
      * @param v_of A function such as v_of(w, h) is the vertex value at position (w,h).
      * @param e_of A function such as e_of(w, h, ww, hh) is the edge value for the edge linking (w,h) to (ww, hh).
+     * @return a height-sized vector of width-sized vector of vertex references.
      */
     template<typename GRAPH, typename VERTEX_VALUE_OF, typename EDGE_VALUE_OF>
-    void make_grid(GRAPH& g, unsigned int width, unsigned int height,
+    auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
 		   const VERTEX_VALUE_OF& v_of, const EDGE_VALUE_OF& e_of) {
-      std::vector<typename GRAPH::ref_vertex> temporary_vertex_references;
-      auto out = std::back_inserter(temporary_vertex_references);
+      std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
+      std::vector<typename GRAPH::ref_vertex> line(width);
+      auto lout = std::back_inserter(lines);
 
       unsigned int w, h;
-      unsigned int width_  = width - 1;
+      unsigned int width_  = width  - 1;
       unsigned int height_ = height - 1;
       
-      for(h = 0; h < height; ++h)
+      for(h = 0; h < height; ++h) {
 	for(w = 0; w < width; ++w)
-	  *(out++) = (g += v_of(w, h));
-      
-      auto it  = temporary_vertex_references.begin();
-      for(h = 0; h < height_; ++h, it += width) {
-	auto iit = it;
-	for(w = 0; w < width_; ++w, ++iit) {
-	  g.connect(*iit, *(iit +      1), e_of(w, h, w + 1, h));
-	  g.connect(*iit, *(iit + width), e_of(w, h, w, h + 1));
-	}
-	g.connect(*iit, *(iit + width), e_of(w, h, w, h + 1));
+	  line[w] = (g += v_of(w, h));
+	*(lout++) = line;
       }
-      for(w = 0; w < width_; ++w, ++it)
-       	g.connect(*it, *(it + 1), e_of(w, h, w + 1, h));
+      
+      for(h = 0; h < height_; ++h) {
+	for(w = 0; w < width_; ++w) {
+	  g.connect(lines[h][w], lines[h][w + 1], e_of(w, h, w + 1, h));
+	  g.connect(lines[h][w], lines[h + 1][w], e_of(w, h, w, h + 1));
+	}
+	g.connect(lines[h][w], lines[h + 1][w], e_of(w, h, w, h + 1));
+      }
+      for(w = 0; w < width_; ++w)
+       	g.connect(lines[h][w], lines[h][w + 1], e_of(w, h, w + 1, h));
+      
+      return lines;
     }
 
 
@@ -351,30 +355,33 @@ namespace vq3 {
      * @param v_of A function such as v_of(w, h) is the vertex value at position (w,h).
      */
     template<typename GRAPH, typename VERTEX_VALUE_OF>
-    void make_grid(GRAPH& g, unsigned int width, unsigned int height,
+    auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
 		   const VERTEX_VALUE_OF& v_of) {
-      std::vector<typename GRAPH::ref_vertex> temporary_vertex_references;
-      auto out = std::back_inserter(temporary_vertex_references);
+      std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
+      std::vector<typename GRAPH::ref_vertex> line(width);
+      auto lout = std::back_inserter(lines);
 
       unsigned int w, h;
-      unsigned int width_  = width - 1;
+      unsigned int width_  = width  - 1;
       unsigned int height_ = height - 1;
       
-      for(h = 0; h < height; ++h)
+      for(h = 0; h < height; ++h) {
 	for(w = 0; w < width; ++w)
-	  *(out++) = (g += v_of(w, h));
-      
-      auto it  = temporary_vertex_references.begin();
-      for(h = 0; h < height_; ++h, it += width) {
-	auto iit = it;
-	for(w = 0; w < width_; ++w, ++iit) {
-	  g.connect(*iit, *(iit +      1));
-	  g.connect(*iit, *(iit + width));
-	}
-	g.connect(*iit, *(iit + width));
+	  line[w] = (g += v_of(w, h));
+	*(lout++) = line;
       }
-      for(w = 0; w < width_; ++w, ++it)
-       	g.connect(*it, *(it + 1));
+      
+      for(h = 0; h < height_; ++h) {
+	for(w = 0; w < width_; ++w) {
+	  g.connect(lines[h][w], lines[h][w + 1]);
+	  g.connect(lines[h][w], lines[h + 1][w]);
+	}
+	g.connect(lines[h][w], lines[h + 1][w]);
+      }
+      for(w = 0; w < width_; ++w)
+       	g.connect(lines[h][w], lines[h][w + 1]);
+      
+      return lines;
     }
 
     /**
