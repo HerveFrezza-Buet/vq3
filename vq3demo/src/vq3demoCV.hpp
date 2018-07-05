@@ -1067,6 +1067,10 @@ namespace vq3 {
 	  return vq3::demo2d::sample::density(new Webcam(video_data));
 	}
       }
+
+      inline void draw(cv::Mat& image, const Frame& frame, const vq3::demo2d::sample::BBox& bbox, const cv::Scalar& color, int thickness) {
+	cv::rectangle(image, frame(bbox.bottom_left()), frame(bbox.top_right()), color, thickness);
+      }
     }
   }
 }
