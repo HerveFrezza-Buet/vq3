@@ -53,6 +53,8 @@ namespace vq3 {
 	  if(empty)
 	    throw bbox_exception("vq3::demo2d : empty bbox");
 	}
+
+	
 	
       public:
 	BBox() : a(0), empty(true) {}
@@ -84,6 +86,30 @@ namespace vq3 {
 	BBox(const Point& A, const Point& B, const Point& C, const Point& D)
 	  : BBox(demo2d::min(A, demo2d::min(B, demo2d::min(C, D))),
 		 demo2d::max(A, demo2d::max(B, demo2d::max(C, D)))) {}
+
+	template<typename ITER, typename POINT_OF>
+	BBox(const ITER& begin, const ITER& end, const POINT_OF& point_of) {
+	  empty = true;
+	  a = 0;
+	  if(auto it = begin; it != end) {
+	    min = point_of(*(it++));
+	    max = min;
+	    while(it != end) {
+	      auto pt = point_of(*(it++));
+	      min = demo2d::min(min, pt);
+	      max = demo2d::max(max, pt);
+	    }
+	    if(min != max) {
+	      empty = false;
+	      auto diff = max - min;
+	      a = diff.x*diff.y;
+	    }
+	  }
+	}
+
+	Point size() const {
+	  return max-min;
+	}
 
 
 	Point bottom_left()  const {check_empty(); return min;}
