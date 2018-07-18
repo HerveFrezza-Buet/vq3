@@ -5,6 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <set>
 
 
 // This example shows how to perform winner-take-all. We will
@@ -47,13 +48,27 @@ double dist2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::
 
 
 int main(int argc, char* argv[]) {
-  if(argc != 3) {
-    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> nb_threads" << std::endl;
+  if(argc < 3) {
+    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> nb_threads [i1 | [i2 | ...] ]" << std::endl
+	      << "    i1 i2 ... : Successive steps where a snaphot is taken. if i1=-1, a snapshot is taken at each step." << std::endl
+	      << "                If snapshots are asked, the last step is recordered systematically." << std::endl;
     return 0;
   }
 
   bool uniform = std::string(argv[1]) == std::string("uniform");
   unsigned int nb_threads = std::atoi(argv[2]);
+
+  std::set<unsigned int> snapshots;
+  bool snap_all = false;
+
+  if(argc > 3) {
+    int i = std::atoi(argv[3]);
+    if(i < 0) snap_all = true;
+    else 
+      for(int arg = 3; arg < argc; ++arg)  
+	snapshots.insert((unsigned int)(std::atoi(argv[arg])));
+  }
+  
   
   std::random_device rd;  
   std::mt19937 random_device(rd());
@@ -67,8 +82,8 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
-  auto image       = cv::Mat(768, 1024, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .2*image.size().width, true);
+  auto image       = cv::Mat(360, 1024, CV_8UC3, cv::Scalar(255,255,255));
+  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .325*image.size().width, true);
   auto dd          = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
 									 [](const vq3::demo2d::Point& pt) {return                      true;},
 									 [](const vq3::demo2d::Point& pt) {return                        pt;},
@@ -150,12 +165,29 @@ int main(int argc, char* argv[]) {
   // This is the loop
   //
   //////////////////
-  
+
+  std::string prefix = "wta";
+  if(uniform) prefix += "-uniform";
+  else        prefix += "-unbalanced";
+  auto filename = vq3::demo::videoframe_name(prefix, "png");
+
+
+  image = cv::Scalar(255, 255, 255);
+  std::copy(S.begin(), S.end(), dd);
+  g.foreach_edge(draw_edge); 
+  g.foreach_vertex(draw_vertex);
+    
+  if(snap_all)
+    cv::imwrite(filename(), image);
+  else if(snapshots.find(step) != snapshots.end())
+    cv::imwrite(filename(step), image);
+  cv::imshow("image", image);
+  cv::waitKey(10);
   
   while(!stop) {
-    ++step;
 
     // Vertex update
+    ++step;
     
     auto t_start = std::chrono::high_resolution_clock::now();
     auto epoch_result = wta.update_prototypes<epoch_data>(nb_threads,
@@ -184,24 +216,35 @@ int main(int argc, char* argv[]) {
     std::copy(S.begin(), S.end(), dd);
     g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
+
+    if(snap_all)
+      cv::imwrite(filename(), image);
+    else if(stop || snapshots.find(step) != snapshots.end())
+      cv::imwrite(filename(step), image);
+    
     cv::imshow("image", image);
-    cv::waitKey(1);
+    cv::waitKey(10);
     
   }
 
   
 
-  std::cout << std::endl
-	    << std::endl
-	    << std::endl
-	    << "##########" << std::endl
-	    << std::endl
-	    << "Convergence reached after " << step << " steps. Press any key to end." << std::endl
-	    << std::endl
-	    << "##########" << std::endl
-	    << std::endl;
   cv::imshow("image", image);
-  cv::waitKey(0);
+
+  if(snap_all || snapshots.size() > 0)
+    cv::waitKey(2000);
+  else {
+    std::cout << std::endl
+	      << std::endl
+	      << std::endl
+	      << "##########" << std::endl
+	      << std::endl
+	      << "Convergence reached after " << step << " steps. Press any key to end." << std::endl
+	      << std::endl
+	      << "##########" << std::endl
+	      << std::endl;
+    cv::waitKey(0);
+  }
 
   return 0;
 }

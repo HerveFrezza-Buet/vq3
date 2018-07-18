@@ -80,8 +80,8 @@ int main(int argc, char* argv[]) {
   // Let us display the result.
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   
-  cv::imwrite(filename(), image); // writes img-000000.png
-  cv::imshow ("image",    image);
+  cv::imwrite(filename(37), image); // writes img-000037.png
+  cv::imshow ("image",      image);
   cv::waitKey(0);
   
   image = color_b;
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
   auto abscissas = vq3::demo::range(-.5, .5, 100);
   std::copy(abscissas.begin(), abscissas.end(), dd);
 
-  cv::imwrite(filename(), image); // writes img-000001.png
+  cv::imwrite(filename(), image); // writes img-000038.png
   cv::imshow ("image",    image);
   cv::waitKey(0);
 
