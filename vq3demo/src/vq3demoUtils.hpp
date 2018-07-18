@@ -136,6 +136,12 @@ namespace vq3 {
       videoframe_name(const std::string& name, const std::string& suffix)
 	: num(0), name(name), suffix(suffix) {}
 
+      std::string operator()(std::string frame_label) {
+	std::ostringstream str;
+	str << name << '-' << frame_label << '.' << suffix;
+	return str.str();
+      }
+      
       std::string operator()(unsigned int num_frame) {
 	num = num_frame;
 	return (*this)();
