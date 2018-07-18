@@ -73,8 +73,7 @@ int main(int argc, char* argv[]) {
   }
   
   
-  std::random_device rd;  
-  std::mt19937 random_device(rd());
+  std::mt19937 random_device(0);
 
   graph g;
 
@@ -138,6 +137,13 @@ int main(int argc, char* argv[]) {
   // Some initializations
   //
   ///////////////////
+ 
+  // We need to register the input samples in a vector since we want
+  // to both use and display them.
+  std::vector<vq3::demo2d::Point> S;
+  auto out = std::back_inserter(S);
+  for(unsigned int i = 0; i < NB_SAMPLES; ++i)
+    *out++ = vq3::demo2d::sample::get_one_sample(random_device, density);
   
   // Let us generate the graph as random unconnected vertices, taken from the distribution.
   
@@ -146,13 +152,6 @@ int main(int argc, char* argv[]) {
       g += vq3::demo2d::sample::get_one_sample(random_device, density);
     else
       g += vq3::demo2d::sample::get_one_sample(random_device, source);
- 
-  // We need to register the input samples in a vector since we want
-  // to both use and display them.
-  std::vector<vq3::demo2d::Point> S;
-  auto out = std::back_inserter(S);
-  for(unsigned int i = 0; i < NB_SAMPLES; ++i)
-    *out++ = vq3::demo2d::sample::get_one_sample(random_device, density);
 
   bool stop = false;
   unsigned int step = 0;
