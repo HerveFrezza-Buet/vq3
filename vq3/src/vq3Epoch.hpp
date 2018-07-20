@@ -302,8 +302,8 @@ namespace vq3 {
 	using vertex_value_type = typename MOTHER::vertex_value_type;
 	using prototype_type = typename MOTHER::prototype_type;
 	
-	prototype_type wq3_previous_prototype; //!< The vertex value computed at the previous step.
-	prototype_type wq3_current_prototype;  //!< The vertex value computed at the current step.
+	prototype_type vq3_previous_prototype; //!< The vertex value computed at the previous step.
+	prototype_type vq3_current_prototype;  //!< The vertex value computed at the current step.
 	
 	delta() = default;
 	
@@ -323,9 +323,9 @@ namespace vq3 {
 	//!< accum += sample
 	
 	void set_prototype(prototype_type& prototype) {
-	  wq3_previous_prototype = prototype;
+	  vq3_previous_prototype = prototype;
 	  this->MOTHER::set_prototype(prototype);
-	  wq3_current_prototype = prototype;
+	  vq3_current_prototype = prototype;
 	}
 	//!< previous_proto = prototype; update prototype; current_proto = prototype;
 	
