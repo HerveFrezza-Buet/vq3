@@ -218,7 +218,7 @@ int main(int argc, char* argv[]) {
     // Let us check the convergence for each vertex.
     stop = true;
     for(auto& d : epoch_result)
-      if(dist2(d.wq3_wta_previous_prototype, d.wq3_wta_current_prototype) > MAX_DIST2) {
+      if(dist2(d.wq3_previous_prototype, d.wq3_current_prototype) > MAX_DIST2) {
 	stop = false;
 	break;
       }

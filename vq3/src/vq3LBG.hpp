@@ -124,7 +124,7 @@ namespace vq3 {
 																				distance);
 	  stop = true;
 	  for(auto& d : res)
-	    if(check(d.wq3_wta_previous_prototype, d.wq3_wta_current_prototype)) {
+	    if(check(d.wq3_previous_prototype, d.wq3_current_prototype)) {
 	      stop = false;
 	      break;
 	    }
