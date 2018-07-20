@@ -89,12 +89,13 @@ namespace vq3 {
 		  << "Starting Linde-Buzo-Gray with K =" << std::setw(4) << k << "." << std::endl
 		  << "--------------------------------------" << std::endl;
 
-      wta.template update_prototypes<typename vq3::epoch::data::wta_check<typename epoch::data::none<PROTOTYPE>,
-									  typename GRAPH::vertex_value_type> >(nb_threads,
-													       begin, end,
-													       sample_of,
-													       prototype_of,
-													       distance);
+      wta.template update_prototypes<typename vq3::epoch::data::delta<typename vq3::epoch::data::wta<typename epoch::data::none<PROTOTYPE,
+																typename GRAPH::vertex_value_type,
+																PROTOTYPE> > > >(nb_threads,
+																		 begin, end,
+																		 sample_of,
+																		 prototype_of,
+																		 distance);
       
       while(nb_nodes < k) {
 	unsigned int new_nb_nodes = std::min(k, 2*nb_nodes);
@@ -114,12 +115,13 @@ namespace vq3 {
 
 	bool stop = false;
 	while(!stop) {
-	  auto res = wta.template update_prototypes<typename vq3::epoch::data::wta_check<typename epoch::data::none<PROTOTYPE>,
-											 typename GRAPH::vertex_value_type> >(nb_threads,
-															      begin, end,
-															      sample_of,
-															      prototype_of,
-															      distance);
+	  auto res = wta.template update_prototypes<typename vq3::epoch::data::delta<typename vq3::epoch::data::wta<typename epoch::data::none<PROTOTYPE,
+																	       typename GRAPH::vertex_value_type,
+																	       PROTOTYPE> > > >(nb_threads,
+																				begin, end,
+																				sample_of,
+																				prototype_of,
+																				distance);
 	  stop = true;
 	  for(auto& d : res)
 	    if(check(d.wq3_wta_previous_prototype, d.wq3_wta_current_prototype)) {

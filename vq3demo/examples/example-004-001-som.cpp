@@ -24,8 +24,11 @@
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
+using sample    = vq3::demo2d::Point;
+using prototype = vq3::demo2d::Point;
+
 //                                                                ## Node properties :
-using layer_0 = vq3::demo2d::Point;                               // prototypes are 2D points (this is the "user defined" value).
+using layer_0 = prototype;                                        // prototypes are 2D points (this is the "user defined" value).
 using layer_1 = vq3::decorator::tagged<layer_0>;                  // we add a tag for topology computation.
 using layer_2 = vq3::decorator::sum<layer_1, vq3::demo2d::Point>; // we add the ability to hande a sum of points.
 using layer_3 = vq3::decorator::grid_pos<layer_2>;                // we add the ability to register a grid position.

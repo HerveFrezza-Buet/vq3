@@ -281,9 +281,10 @@ for(ref_vv : vertices) {
 
    Let us consider the following example:
    @code
-using sample       = ...;                                     // sample is the type of our samples.
-using epoch_data_0 = vq3::epoch::data::none<sample>;          // This is the root of the stack, the sample type has to be provided.
-using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0>;     // We collect the sum of the distances for each best-matching vertex.
+using sample       = ...;                                            // sample is the type of our samples.
+using epoch_data_0 = vq3::epoch::data::none<sample, vertex, sample>; // This is the root of the stack, the sample type vertex value type and prototype type 
+                                                                     // have to be provided. Usually, sample and prototypes have the same type.
+using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0>;            // We collect the sum of the distances for each best-matching vertex.
 using epoch_data   = epoch_data_1;
 ...
 some_processor p;
@@ -349,11 +350,12 @@ bool topology_modified = processor.update_edges(nb_threads, S.begin(), S.end(),
    This processor applies a k-means update, i.e. each prototype is set to the centroid of its Voronoi cell.
    @code
 using sample       = ...;
-using epoch_data_0 = vq3::epoch::data::none<sample>;        
+using vertex       = ...;
+
+using epoch_data_0 = vq3::epoch::data::none<sample, vertex, sample>;        
 using epoch_data_1 = vq3::epoch::data::wta<epoch_data_0>; 
 using epoch_data   = epoch_data_1;
 
-using vertex = ...;
 using graph  = vq3::graph<vertex, void>; 
 
 graph g;  
@@ -389,13 +391,14 @@ for(epoch_data& data : epoch_result) {
    This processor applies a SOM update, i.e. each prototype is set the weighted sum of some samples, the weight depending on the topological proximity of the vertex with the best matching unit.
    @code
 using sample       = ...;
-using epoch_data_0 = vq3::epoch::data::none<sample>;        
-using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>; 
-using epoch_data   = epoch_data_1;
 
 using prototype = ...;
 using vertex    = vq3::decorator::tagged<prototype>; // We need tags on the vertices, for topology computation.
 using graph     = vq3::graph<vertex, void>; 
+
+using epoch_data_0 = vq3::epoch::data::none<sample, vertex, sample>;        
+using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>; 
+using epoch_data   = epoch_data_1;
 
 graph g;  
 auto processor = vq3::epoch::wtm::processor(g);

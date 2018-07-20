@@ -37,7 +37,7 @@ using graph  = vq3::graph<vertex, edge>;
 //
 ////////////////
 
-using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample>>;
+using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample, vertex, prototype>>;
   
 
 // Distance

@@ -49,6 +49,10 @@ namespace vq3 {
     template<typename SAMPLE_TYPE, typename VERTEX_VALUE_TYPE, typename PROTOTYPE_TYPE>
     struct EpochData {
 
+      using sample_type       = SAMPLE_TYPE;
+      using vertex_value_type = VERTEX_VALUE_TYPE;
+      using prototype_type    = PROTOTYPE_TYPE;
+
       EpochData();
 
       /**
@@ -56,32 +60,32 @@ namespace vq3 {
        * @param sample The current sample that is submitted.
        * @param closest_distance The distance from the vertex prototype and the sample (which is the cmallest among all vertices in the graph).
        */
-      void notify_closest(const SAMPLE_TYPE& sample, double closest_distance);
+      void notify_closest(const sample_type& sample, double closest_distance);
 
       /**
        * This notifies that the prototype should be updated.
        * @param sample The current sample that is submitted.
        * @param topo_coef This is the WTM coefficient related to edge-distance between the BMU and the prototype.
        */
-      void notify_wtm_update(const SAMPLE_TYPE& sample, double topo_coef);
+      void notify_wtm_update(const sample_type& sample, double topo_coef);
 
       /**
        * This notifies that the prototype should be updated. No coefficient is provides, this is used in a WTA context.
        * @param sample The current sample that is submitted.
        */
-      void notify_wta_update(const SAMPLE_TYPE& sample);
+      void notify_wta_update(const sample_type& sample);
 
       /**
        * This is learning, at the end of an epoch.
        * @prototype This is the prototype of the vertex, passed by reference in order do be modified by the call.
        */
-      void set_prototype(PROTOTYPE_TYPE& prototype);
+      void set_prototype(prototype_type& prototype);
 
       /**
        * This is prototype value updating, at the end of an epoch.
        * @vertex_vale This is the vertex value of the vertex, passed by reference in order do be modified by the call.
        */
-      void set_content(VERTEX_VALUE_TYPE& vertex_value);
+      void set_content(vertex_value_type& vertex_value);
  
       /**
        * This combine the current data with another one (computed in another thread) for the same vertex.
@@ -109,11 +113,14 @@ namespace vq3 {
     namespace data {
 
       /**
-       * Root data type, it fits vq3::concept::EpochData. It only notifies the sample type.
+       * Root data type, it fits vq3::concept::EpochData. It only notifies the types.
        */
-      template<typename SAMPLE_TYPE>
+      template<typename SAMPLE_TYPE, typename VERTEX_VALUE_TYPE, typename PROTOTYPE_TYPE>
       struct none {
-	using sample_type = SAMPLE_TYPE;
+	using sample_type       = SAMPLE_TYPE;
+	using vertex_value_type = VERTEX_VALUE_TYPE;
+	using prototype_type    = PROTOTYPE_TYPE;
+	
 	none() = default;
 
 	void  notify_closest    (const sample_type&, double) {}
@@ -125,27 +132,29 @@ namespace vq3 {
 	void  notify_wta_update (const sample_type&)         {}
 	//!< nop.
 
-	template<typename PROTOTYPE_TYPE>
-	void set_prototype(PROTOTYPE_TYPE& prototype) {}
+	void set_prototype(prototype_type& prototype) {}
 	//!< nop.
 	
-	template<typename VERTEX_VALUE_TYPE>
-	void set_content(VERTEX_VALUE_TYPE& vertex_value) {}
+	void set_content(vertex_value_type& vertex_value) {}
 	//!< nop.
 	
 	none& operator+=(const none& other)                  {return *this;}
       };
 
       /**
-       * This is a base class for collecting winner-take-all data and computes the prototype.
+       * This collects winner-take-all data and computes the
+       * prototype. There is no check of stability (rather use
+       * wta_ckeck for that).
        */ 
       template<typename MOTHER>
-      struct wta_ : MOTHER {
+      struct wta : MOTHER {
 	using sample_type = typename MOTHER::sample_type;
+	using vertex_value_type = typename MOTHER::vertex_value_type;
+	using prototype_type = typename MOTHER::prototype_type;
 	
 	utils::accum<sample_type, double> vq3_wta_accum; //!< The sum of samples in the Voronoï cell
 	
-	wta_() = default;
+	wta() = default;
 	
 	void notify_closest(const sample_type& sample, double dist) {
 	  this->MOTHER::notify_closest(sample, dist);
@@ -163,121 +172,25 @@ namespace vq3 {
 	}
 	//!< accum += sample
 
-	template<typename PROTOTYPE_TYPE>
-	void set_prototype(PROTOTYPE_TYPE& prototype) {
-	  this->MOTHER::set_prototype(prototype);
-	}
-	//!< nop.
-	
-	template<typename VERTEX_VALUE_TYPE>
-	void set_content(VERTEX_VALUE_TYPE& vertex_value) {
-	  this->MOTHER::set_content(vertex_value);
-	}
-	//!< nop.
-
-	wta_<MOTHER>& operator+=(const wta_<MOTHER>& arg) {
-	  this->MOTHER::operator+=(arg);
-	  vq3_wta_accum += arg.vq3_wta_accum;
-	  return *this;
-	}
-      };
-
-      /**
-       * This collects winner-take-all data and computes the
-       * prototype. There is no check of stability (rather use
-       * wta_ckeck for that).
-       */ 
-      template<typename MOTHER>
-      struct wta : wta_<MOTHER> {
-	using sample_type = typename wta_<MOTHER>::sample_type;
-	
-	wta() = default;
-	
-	void notify_closest(const sample_type& sample, double dist) {
-	  wta_<MOTHER>::notify_closest(sample, dist);
-	}
-	//!< nop. 
-	
-	void notify_wtm_update(const sample_type& sample, double coef) {
-	  this->wta_<MOTHER>::notify_wtm_update(sample, coef);
-	}
-	//!< nop. 
-	
-	void notify_wta_update(const sample_type& sample) {
-	  this->wta_<MOTHER>::notify_wta_update(sample);
-	}
-	//!< accum += sample
-
-	template<typename PROTOTYPE_TYPE>
-	void set_prototype(PROTOTYPE_TYPE& prototype) {
+	void set_prototype(prototype_type& prototype) {
 	  this->MOTHER::set_prototype(prototype);
 	  if(this->vq3_wta_accum.nb != 0)
 	    prototype = this->vq3_wta_accum.template average<double>();
 	}
 	//!< prototype = accum.average();
 	
-	template<typename VERTEX_VALUE_TYPE>
-	void set_content(VERTEX_VALUE_TYPE& vertex_value) {
+	void set_content(vertex_value_type& vertex_value) {
 	  this->MOTHER::set_content(vertex_value);
 	}
 	//!< nop.
 
 	wta<MOTHER>& operator+=(const wta<MOTHER>& arg) {
-	  this->wta_<MOTHER>::operator+=(arg);
+	  this->MOTHER::operator+=(arg);
+	  vq3_wta_accum += arg.vq3_wta_accum;
 	  return *this;
 	}
       };
 
-      /**
-       * This collects winner-take-all data and computes the
-       * prototype. This data also stores both the current and the
-       * previous value that were used for updating the prototype,
-       * for the sake of convergence checking.
-       */ 
-      template<typename MOTHER, typename PROTOTYPE_TYPE>
-      struct wta_check : wta_<MOTHER> {
-	using sample_type = typename wta_<MOTHER>::sample_type;
-	
-	PROTOTYPE_TYPE wq3_wta_previous_prototype; //!< The vertex value computed at the previous step.
-	PROTOTYPE_TYPE wq3_wta_current_prototype;  //!< The vertex value computed at the current step.
-	
-	wta_check() = default;
-	
-	void notify_closest(const sample_type& sample, double dist) {
-	  wta_<MOTHER>::notify_closest(sample, dist);
-	}
-	//!< nop. 
-	
-	void notify_wtm_update(const sample_type& sample, double coef) {
-	  this->wta_<MOTHER>::notify_wtm_update(sample, coef);
-	}
-	//!< nop. 
-	
-	void notify_wta_update(const sample_type& sample) {
-	  this->wta_<MOTHER>::notify_wta_update(sample);
-	}
-	//!< accum += sample
-	
-	void set_prototype(PROTOTYPE_TYPE& prototype) {
-	  this->MOTHER::set_prototype(prototype);
-	  wq3_wta_previous_prototype = prototype;
-	  if(this->vq3_wta_accum.nb != 0)
-	    prototype = this->vq3_wta_accum.template average<double>();
-	  wq3_wta_current_prototype = prototype;
-	}
-	//!< prev_proto = prototype; prototype = accum.average(); 
-	
-	template<typename VERTEX_VALUE_TYPE>
-	void set_content(VERTEX_VALUE_TYPE& vertex_value) {
-	  this->MOTHER::set_content(vertex_value);
-	}
-	//!< nop.
-
-	wta_check<MOTHER, PROTOTYPE_TYPE>& operator+=(const wta_check<MOTHER, PROTOTYPE_TYPE>& arg) {
-	  this->wta_<MOTHER>::operator+=(arg);
-	  return *this;
-	}
-      };
 
       /**
        * This collects winner-take-most data and computes the prototype.
@@ -285,6 +198,8 @@ namespace vq3 {
       template<typename MOTHER>
       struct wtm : MOTHER {
 	using sample_type = typename MOTHER::sample_type;
+	using vertex_value_type = typename MOTHER::vertex_value_type;
+	using prototype_type = typename MOTHER::prototype_type;
 	
 	utils::accum<sample_type, double> vq3_wtm_accum; //!< The weighted sum of samples in the Voronoï cell
 	
@@ -309,16 +224,14 @@ namespace vq3 {
 	}
 	//!< nop. 
 
-	template<typename PROTOTYPE_TYPE>
-	void set_prototype(PROTOTYPE_TYPE& prototype) {
+	void set_prototype(prototype_type& prototype) {
 	  this->MOTHER::set_prototype(prototype);
 	  if(vq3_wtm_accum.nb != 0)
 	    prototype = vq3_wtm_accum.template average<double>();
 	}
 	//!< prototype = accum.average(); 
 	
-	template<typename VERTEX_VALUE_TYPE>
-	void set_content(VERTEX_VALUE_TYPE& vertex_value) {
+	void set_content(vertex_value_type& vertex_value) {
 	  this->MOTHER::set_content(vertex_value);
 	}
 	//!< nop.
@@ -337,6 +250,8 @@ namespace vq3 {
       template<typename MOTHER>
       struct bmu : MOTHER {
 	using sample_type = typename MOTHER::sample_type;
+	using vertex_value_type = typename MOTHER::vertex_value_type;
+	using prototype_type = typename MOTHER::prototype_type;
 	
 	utils::accum<double, double> vq3_bmu_accum; //!< The sum of distortions when the nodes is the BMU. 
 
@@ -358,14 +273,12 @@ namespace vq3 {
 	}
 	//!< nop. 
 
-	template<typename PROTOTYPE_TYPE>
-	void set_prototype(PROTOTYPE_TYPE& prototype) {
+	void set_prototype(prototype_type& prototype) {
 	  this->MOTHER::set_prototype(prototype);
 	}
 	//!< nop.
 	
-	template<typename VERTEX_VALUE_TYPE>
-	void set_content(VERTEX_VALUE_TYPE& vertex_value) {
+	void set_content(vertex_value_type& vertex_value) {
 	  this->MOTHER::set_content(vertex_value);
 	}
 	//!< nop.
@@ -373,6 +286,56 @@ namespace vq3 {
 	bmu<MOTHER>& operator+=(const bmu<MOTHER>& arg) {
 	  this->MOTHER::operator+=(arg);
 	  vq3_bmu_accum += arg.vq3_bmu_accum;
+	  return *this;
+	}
+      };
+
+      /**
+       * This data stores both the current and the
+       * previous value that were used for updating the prototype,
+       * for the sake of convergence checking.
+       */ 
+      template<typename MOTHER>
+      struct delta : MOTHER {
+	
+	using sample_type = typename MOTHER::sample_type;
+	using vertex_value_type = typename MOTHER::vertex_value_type;
+	using prototype_type = typename MOTHER::prototype_type;
+	
+	prototype_type wq3_wta_previous_prototype; //!< The vertex value computed at the previous step.
+	prototype_type wq3_wta_current_prototype;  //!< The vertex value computed at the current step.
+	
+	delta() = default;
+	
+	void notify_closest(const sample_type& sample, double dist) {
+	  this->MOTHER::notify_closest(sample, dist);
+	}
+	//!< nop. 
+	
+	void notify_wtm_update(const sample_type& sample, double coef) {
+	  this->MOTHER::notify_wtm_update(sample, coef);
+	}
+	//!< nop. 
+	
+	void notify_wta_update(const sample_type& sample) {
+	  this->MOTHER::notify_wta_update(sample);
+	}
+	//!< accum += sample
+	
+	void set_prototype(prototype_type& prototype) {
+	  wq3_wta_previous_prototype = prototype;
+	  this->MOTHER::set_prototype(prototype);
+	  wq3_wta_current_prototype = prototype;
+	}
+	//!< previous_proto = prototype; update prototype; current_proto = prototype;
+	
+	void set_content(vertex_value_type& vertex_value) {
+	  this->MOTHER::set_content(vertex_value);
+	}
+	//!< nop.
+
+	delta<MOTHER>& operator+=(const delta<MOTHER>& arg) {
+	  this->MOTHER::operator+=(arg);
 	  return *this;
 	}
       };
@@ -389,6 +352,8 @@ namespace vq3 {
 	template<typename MOTHER>
 	struct bmu_mean_std : MOTHER {
 	  using sample_type = typename MOTHER::sample_type;
+	  using vertex_value_type = typename MOTHER::vertex_value_type;
+	  using prototype_type = typename MOTHER::prototype_type;
 	
 	  vq3::utils::accum<double, double> vq3_bmu_accum; //!< The sum of distortions when the nodes is the BMU. 
 
@@ -410,14 +375,12 @@ namespace vq3 {
 	  }
 	  //!< nop. 
 
-	  template<typename PROTOTYPE_TYPE>
-	  void set_prototype(PROTOTYPE_TYPE& prototype) {
+	  void set_prototype(prototype_type& prototype) {
 	    this->MOTHER::set_prototype(prototype);
 	  }
 	  //!< nop.
 
-	  template<typename VERTEX_VALUE_TYPE>
-	  void set_content(VERTEX_VALUE_TYPE& vertex_value) {
+	  void set_content(vertex_value_type& vertex_value) {
 	    this->MOTHER::set_content(vertex_value);
 	    vertex_value.vq3_online_mean_std += vq3_bmu_accum.value;
 	  }

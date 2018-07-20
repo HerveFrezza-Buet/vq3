@@ -24,9 +24,11 @@
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
+using sample    = vq3::demo2d::Point;
+using prototype = vq3::demo2d::Point;
 
 //                                                                ## Node properties :
-using layer_0 = vq3::demo2d::Point;                               // prototypes are 2D points (this is the "user defined" value).
+using layer_0 = prototype;                                        // prototypes are 2D points (this is the "user defined" value).
 using layer_1 = vq3::decorator::tagged<layer_0>;                  // we add a tag for topology computation.
 using layer_2 = vq3::demo::decorator::colored<layer_1>;           // we add a color to the nodes.
 using vertex  = layer_2;
@@ -37,9 +39,9 @@ using graph  = vq3::graph<vertex, void>;
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
 
-using epoch_data_0 = vq3::epoch::data::none<vq3::demo2d::Point>; // This is the root of the stack, the sample type has to be provided.
-using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;        // This gathers computation for batch winner-take-most.
-using epoch_data_2 = vq3::epoch::data::bmu<epoch_data_1>;        // This gathers computation for the BMU.
+using epoch_data_0 = vq3::epoch::data::none<sample, vertex, prototype>; // This is the root of the stack.
+using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;               // This gathers computation for batch winner-take-most.
+using epoch_data_2 = vq3::epoch::data::bmu<epoch_data_1>;               // This gathers computation for the BMU.
 using epoch_data   = epoch_data_2;
 
 int main(int argc, char* argv[]) {

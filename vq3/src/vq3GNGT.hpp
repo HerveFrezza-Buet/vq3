@@ -117,8 +117,8 @@ namespace vq3 {
 	using edge       = typename GRAPH::edge_value_type;
       
 	
-	using epoch_bmu = vq3::epoch::data::online::bmu_mean_std<vq3::epoch::data::none<SAMPLE> >;
-	using epoch_wta = vq3::epoch::data::wta<vq3::epoch::data::none<SAMPLE> >;
+	using epoch_bmu = vq3::epoch::data::online::bmu_mean_std<vq3::epoch::data::none<SAMPLE, vertex, PROTOTYPE> >;
+	using epoch_wta = vq3::epoch::data::wta<vq3::epoch::data::none<SAMPLE, vertex, PROTOTYPE> >;
 	       
 
       public:

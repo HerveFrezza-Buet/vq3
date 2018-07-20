@@ -23,8 +23,11 @@
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
+using sample    = vq3::demo2d::Point;
+using prototype = vq3::demo2d::Point;
+
 //                                                      ## Node properties :
-using layer_0 = vq3::demo2d::Point;                     // prototypes are 2D points (this is the "user defined" value).
+using layer_0 = prototype;                              // prototypes are 2D points (this is the "user defined" value).
 using layer_1 = vq3::decorator::tagged<layer_0>;        // we add a tag for topology computation.
 using layer_2 = vq3::demo::decorator::colored<layer_1>; // we add a color to the nodes.
 using vertex  = layer_2;
@@ -58,8 +61,8 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
 // computed. vq3 offers classes for epoch data, they are intended to
 // be stacked in order to define an agglomerate epoch data class.
 
-using epoch_data_0 = vq3::epoch::data::none<vq3::demo2d::Point>; // This is the root of the stack, the sample type has to be provided.
-using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;        // This gathers computation for batch winner-take-most.
+using epoch_data_0 = vq3::epoch::data::none<sample, vertex, prototype>; // This is the root of the stack.
+using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;               // This gathers computation for batch winner-take-most.
 using epoch_data   = epoch_data_1;
 
 int main(int argc, char* argv[]) {

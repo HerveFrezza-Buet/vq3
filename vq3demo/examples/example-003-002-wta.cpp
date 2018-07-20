@@ -19,16 +19,18 @@
 // Graph definition
 //
 ///////////////
-
-using vertex = vq3::demo2d::Point;
-using graph  = vq3::graph<vertex, void>; 
+using sample    = vq3::demo2d::Point;
+using prototype = vq3::demo2d::Point;
+using vertex    = prototype;
+using graph     = vq3::graph<vertex, void>; 
 
 // This defines the data used during the epochs in order to collect
 // and gather information from threads.
-using epoch_data_0 = vq3::epoch::data::none<vq3::demo2d::Point>;         // This is the root of the stack, the sample type has to be provided.
-using epoch_data_1 = vq3::epoch::data::wta_check<epoch_data_0, vertex>;  // This gathers computation for batch winner-take-all and provides arguments for convergence test.
-using epoch_data_2 = vq3::epoch::data::bmu<epoch_data_1>;                // This enables the computation of distortion. This is not mandatory for finding the prototype positions.         
-using epoch_data   = epoch_data_2;
+using epoch_data_0 = vq3::epoch::data::none<sample, vertex, prototype>;  // This is the root of the stack.
+using epoch_data_1 = vq3::epoch::data::wta<epoch_data_0>;                // This gathers computation for batch winner-take-all.
+using epoch_data_2 = vq3::epoch::data::delta<epoch_data_1>;              // This records variations of the prototype (for further convergence test).
+using epoch_data_3 = vq3::epoch::data::bmu<epoch_data_2>;                // This enables the computation of distortion. This is not mandatory for finding the prototype positions.         
+using epoch_data   = epoch_data_3;
 
 
 // Distance

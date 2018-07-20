@@ -16,11 +16,11 @@
 //
 ///////////////
 
-using vertex = vq3::demo2d::Point;
-using graph  = vq3::graph<vertex, void>;
-
 using sample    = vq3::demo2d::Point;
 using prototype = vq3::demo2d::Point;
+
+using vertex = prototype;
+using graph  = vq3::graph<vertex, void>;
 
 
 // Distance
@@ -37,8 +37,8 @@ double dist2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::
 ////////////////
 
 // We need an epoch data stack in order to compute statistics.
-using epoch_data_0 = vq3::epoch::data::none<sample>;          // This is the root of the stack, the sample type has to be provided.
-using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0>;     // We collect distortion for each best-matching vertex.
+using epoch_data_0 = vq3::epoch::data::none<sample, vertex, prototype>; // This is the root of the stack.
+using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0>;               // We collect distortion for each best-matching vertex.
 using epoch_data   = epoch_data_1;
 
 

@@ -19,8 +19,8 @@ using graph  = vq3::graph<vertex, void>;
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
 
-using epoch_data_0 = vq3::epoch::data::none<vq3::demo2d::Point>; // This is the root of the stack, the sample type has to be provided.
-using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;        // This gathers computation for batch winner-take-most.
+using epoch_data_0 = vq3::epoch::data::none<vq3::demo2d::Point, vertex, vq3::demo2d::Point>; // This is the root of the stack.
+using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;                                    // This gathers computation for batch winner-take-most.
 using epoch_data   = epoch_data_1;
 
 #define SPEED_TO_METER .5
