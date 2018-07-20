@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
 	    << std::endl
 	    << "##################" << std::endl
 	    << std::endl
-	    << "click in the image to restart, press ESC to quit." << std::endl
+	    << "press ESC to quit." << std::endl
 	    << std::endl
 	    << "##################" << std::endl
 	    << std::endl;

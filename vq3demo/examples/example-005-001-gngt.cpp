@@ -243,6 +243,7 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  
   cv::createTrackbar("nb/m^2",         "image", &N_slider, 50000, nullptr);
   cv::createTrackbar("T",              "image", &T_slider,  1000, nullptr);
   cv::createTrackbar("100*sigma_coef", "image", &S_slider,   300, nullptr);
