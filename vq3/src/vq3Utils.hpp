@@ -353,6 +353,7 @@ namespace vq3 {
      * @param g the graph.
      * @param width, height The grid dimensions.
      * @param v_of A function such as v_of(w, h) is the vertex value at position (w,h).
+     * @return a height-sized vector of width-sized vector of vertex references.
      */
     template<typename GRAPH, typename VERTEX_VALUE_OF>
     auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
