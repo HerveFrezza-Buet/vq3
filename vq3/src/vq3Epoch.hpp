@@ -82,7 +82,7 @@ namespace vq3 {
       void set_prototype(prototype_type& prototype);
 
       /**
-       * This is prototype value updating, at the end of an epoch.
+       * This is prototype value updating, at the end of an epoch (i.e. not in the parallel execution).
        * @vertex_vale This is the vertex value of the vertex, passed by reference in order do be modified by the call.
        */
       void set_content(vertex_value_type& vertex_value);
@@ -143,8 +143,7 @@ namespace vq3 {
 
       /**
        * This collects winner-take-all data and computes the
-       * prototype. There is no check of stability (rather use
-       * wta_ckeck for that).
+       * prototype. 
        */ 
       template<typename MOTHER>
       struct wta : MOTHER {
