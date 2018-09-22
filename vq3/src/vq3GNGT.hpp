@@ -70,7 +70,7 @@ namespace vq3 {
 	    for(auto& res : bmu_epoch_result)
 	      if(res.vq3_bmu_accum.nb != 0)
 		mean_std  = res.vq3_bmu_accum.value;
-	    double spatial_dmean = std::sqrt(mean_std.variance())*sigma_coef;
+	    double spatial_dmean = std::sqrt(mean_std.variance());
     
 	    unsigned int idx = 0;
 	    for(auto& res : bmu_epoch_result) {
@@ -79,9 +79,8 @@ namespace vq3 {
 		ref_v->kill(); // We kill a vertex which has never won the competition.
 	      else if(auto& omstd = (*ref_v)().vq3_online_mean_std; omstd) {
 		auto [m, std] = omstd(); // We get the vertex distortion statistics.
-		auto dm = sigma_coef*std;
 	  
-		double radius = dm + spatial_dmean;
+		double radius = (std + spatial_dmean)*sigma_coef;
 	  
 		if(NT < m - radius) // There are not enough nodes (cold color).
 		  *(out_above++) = ref_v;

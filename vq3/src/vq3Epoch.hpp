@@ -83,7 +83,7 @@ namespace vq3 {
 
       /**
        * This is prototype value updating, at the end of an epoch (i.e. not in the parallel execution).
-       * @vertex_vale This is the vertex value of the vertex, passed by reference in order do be modified by the call.
+       * @vertex_value This is the vertex value of the vertex, passed by reference in order do be modified by the call.
        */
       void set_content(vertex_value_type& vertex_value);
  
