@@ -57,6 +57,7 @@
    @example example-003-001-chl.cpp
    @example example-003-002-wta.cpp
    @example example-003-003-lbg.cpp
+   @example example-004-000-online.cpp
    @example example-004-001-som.cpp
    @example example-004-002-som.cpp
    @example example-004-003-som.cpp

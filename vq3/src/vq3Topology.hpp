@@ -111,7 +111,20 @@ namespace vq3 {
       return res;
     }
 
-
+    /**
+     * This builds a std::map, keys are ref_vertex type, values are
+     * the neighborhood returned by the topo::edge_based_neighborhood
+     * for the key vertex.
+     */
+    template<typename GRAPH, typename VERTICES, typename VALUE_OF_EDGE_DISTANCE>
+    auto make_neighborhood_table(GRAPH& g, VERTICES& vertices, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
+      return utils::make_vertex_table(g,
+				      [&g, &vertices, &voed, max_dist, min_val](const typename GRAPH::ref_vertex& ref_v) {
+					utils::clear_vertex_tags(g, false); 
+					return topo::edge_based_neighborhood(vertices, ref_v, voed, max_dist, min_val); 
+				      });
+    }
+    
     
   }
   

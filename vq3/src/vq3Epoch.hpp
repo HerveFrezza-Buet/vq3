@@ -630,11 +630,7 @@ namespace vq3 {
 	 */
 	template<typename VALUE_OF_EDGE_DISTANCE>
 	void update_topology(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	  neighborhood_table = utils::make_vertex_table(g,
-							[this, &voed, max_dist, min_val](const typename GRAPH::ref_vertex& ref_v) {
-							  utils::clear_vertex_tags(g, false); 
-							  return topo::edge_based_neighborhood(vertices, ref_v, voed, max_dist, min_val); 
-							});
+	  neighborhood_table = topo::make_neighborhood_table(g, vertices, voed, max_dist, min_val);
 	}
 
 

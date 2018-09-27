@@ -7,12 +7,14 @@
 #include <algorithm>
 #include <random>
 
-
 /*
 
-  Here, we build up and run a batch Kohonen self-organizing map from
-  scratch, using general vq3 features. Next examples show the use of processors 
-  in order to run this in parallel.
+  Here, we build up and run a Kohonen self-organizing map from
+  scratch, using general vq3 features.
+
+  In this introductive example, we use vq3 for implementing the online
+  version of SOMs. Keep in mind that the library is rather oriented to
+  batch mode, as next examples show.
 
 */
 
@@ -25,21 +27,26 @@
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
+#define ALPHA                  .05
+
+#define NB_SAMPLES_PER_FRAME   10
+
+
 using sample    = vq3::demo2d::Point;
 using prototype = vq3::demo2d::Point;
 
 //                                                                ## Node properties :
 using layer_0 = prototype;                                        // prototypes are 2D points (this is the "user defined" value).
 using layer_1 = vq3::decorator::tagged<layer_0>;                  // we add a tag for topology computation.
-using layer_2 = vq3::decorator::sum<layer_1, vq3::demo2d::Point>; // we add the ability to hande a sum of points.
-using layer_3 = vq3::decorator::grid_pos<layer_2>;                // we add the ability to register a grid position.
-using vertex  = layer_3;
+using layer_2 = vq3::decorator::grid_pos<layer_1>;                // we add the ability to register a grid position.
+using vertex  = layer_2;
 
 using graph  = vq3::graph<vertex, void>;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+
 
 struct callback_data {
   graph& g;
@@ -75,6 +82,9 @@ int main(int argc, char* argv[]) {
   auto vertices = vq3::utils::vertices(g);
   vertices.update_topology(g);
 
+  bool wtm_mode = true; // false means wta.
+  
+
   double intensity = 1. ;
   double radius    =  .5;
   double hole      =  .3;
@@ -84,11 +94,11 @@ int main(int argc, char* argv[]) {
   std::vector<vq3::demo2d::Point> S; // Let us use a single sample of S_.
   auto out = std::back_inserter(S);
   std::copy(S_.begin(), S_.end(), out);
-  
-  
+
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image       = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
   auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
+
   callback_data user_data(g, random_device);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   auto dd          = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
@@ -112,60 +122,57 @@ int main(int argc, char* argv[]) {
 									   [](const vertex& v) {return                                                     -1;}); // thickness
   
   // Let us store the neighborhood of all nodes, in order to avoid computing it on demand.
-  auto neighborhood_table = vq3::topo::make_neighborhood_table(g, vertices,
-							       [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-							       SOM_MAX_DIST,
-							       1e-3); // Could be 0 here...
+  auto neighborhood_table = vq3::utils::make_vertex_table(g,
+							  [&g, &vertices](const graph::ref_vertex& ref_v) {
+							    vq3::utils::clear_vertex_tags(g, false); // Do not forget this....
+							    return vq3::topo::edge_based_neighborhood(vertices, ref_v, 
+												      [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+												      SOM_MAX_DIST,
+												      1e-3); // should be 0, but numerical approximations are considered here.
+							  });
 
-  // Then, we build a function that gets the neighborhood from the table, rather than recomputing it each time it is required.
-  auto neighborhood = [&neighborhood_table](const graph::ref_vertex& ref_v) -> decltype(neighborhood_table)::mapped_type& { // I need to specify the return type in order to force return by reference.
-    return neighborhood_table[ref_v];
-  };
 
-  
-  image = cv::Scalar(255, 255, 255);
-  std::copy(S.begin(), S.end(), dd);
-  g.foreach_edge(draw_edge); 
-  g.foreach_vertex(draw_vertex);
-  cv::imshow("image", image);
-  cv::waitKey(1000);
-
-  
   
   std::cout << std::endl
 	    << std::endl
 	    << std::endl
 	    << "##################" << std::endl
 	    << std::endl
-	    << "click in the image to restart, press ESC to quit." << std::endl
+	    << "click in the image to restart, press ESC to quit. 'space' toggles wta/wtm mode." << std::endl
 	    << std::endl
 	    << "##################" << std::endl
 	    << std::endl;
   int keycode = 0;
+  auto sample_it = S.begin();
   while(keycode != 27) {
 
-    // This is the SOM algorithm (with minibatch) : 2 steps
+    if(wtm_mode)
+      for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
+	vq3::online::wtm::learn(g, vertices, d2, neighborhood_table, *(sample_it++), ALPHA);
+	if(sample_it == S.end()) sample_it=S.begin();
+      }
+    else
+      for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
+	vq3::online::wta::learn(g, vertices, d2, *(sample_it++), ALPHA);
+	if(sample_it == S.end()) sample_it=S.begin();
+      }
 
-    // Step #1 : submit all samples.
-    for(auto& sample : S)
-      for(auto& topo_info : neighborhood(vq3::utils::closest(g, sample, d2)))
-	(*(vertices(topo_info.index)))().vq3_sum.increment(topo_info.value, sample);
-    
-    // Step #2 : update prototypes.
-    g.foreach_vertex([](const graph::ref_vertex& ref_v) {
-	auto& v = (*ref_v)();
-	if(v.vq3_sum.nb != 0)
-	  v.vq3_value = v.vq3_sum.average<double>();
-	v.vq3_sum.clear();
-      });
     
     image = cv::Scalar(255, 255, 255);
     std::copy(S.begin(), S.end(), dd);
-    g.foreach_edge(draw_edge); 
+    if(wtm_mode)
+      g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
     cv::imshow("image", image);
     keycode = cv::waitKey(1) & 0xFF;
+    if(keycode == 32)
+      wtm_mode = !wtm_mode;
+
+    if(++sample_it == S.end())
+      sample_it = S.begin();
   }
+  
+  
   
   return 0;
 }
