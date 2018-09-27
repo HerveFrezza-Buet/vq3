@@ -122,14 +122,10 @@ int main(int argc, char* argv[]) {
 									   [](const vertex& v) {return                                                     -1;}); // thickness
   
   // Let us store the neighborhood of all nodes, in order to avoid computing it on demand.
-  auto neighborhood_table = vq3::utils::make_vertex_table(g,
-							  [&g, &vertices](const graph::ref_vertex& ref_v) {
-							    vq3::utils::clear_vertex_tags(g, false); // Do not forget this....
-							    return vq3::topo::edge_based_neighborhood(vertices, ref_v, 
-												      [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-												      SOM_MAX_DIST,
-												      1e-3); // should be 0, but numerical approximations are considered here.
-							  });
+  auto neighborhood_table = vq3::topo::make_neighborhood_table(g, vertices,
+							       [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+							       SOM_MAX_DIST,
+							       1e-3); // could be 0 here.
 
 
   

@@ -217,15 +217,15 @@ int main(int argc, char* argv[]) {
 
     vertices.update_topology(g);
     
-    // First, wide kernel fit, for a quicker update.
-    double h = std::max(H_slider,1)*.01;
-    wtm.update_topology([h](unsigned int edge_distance) {return std::max(0., 1.-edge_distance/h);}, (unsigned int)h, 0);
-    for(int wta_step = 0; wta_step < W_slider; ++wta_step)
-      wtm.update_prototypes<epoch_wtm>(nb_threads,
-    				       S.begin(), S.end(),
-    				       [](const sample& s) {return s;},
-    				       [](vertex& v) -> prototype& {return v.vq3_value;},
-    				       dist);
+    // // First, wide kernel fit, for a quicker update.
+    // double h = std::max(H_slider,1)*.01;
+    // wtm.update_topology([h](unsigned int edge_distance) {return std::max(0., 1.-edge_distance/h);}, (unsigned int)h, 0);
+    // for(int wta_step = 0; wta_step < W_slider; ++wta_step)
+    //   wtm.update_prototypes<epoch_wtm>(nb_threads,
+    // 				       S.begin(), S.end(),
+    // 				       [](const sample& s) {return s;},
+    // 				       [](vertex& v) -> prototype& {return v.vq3_value;},
+    // 				       dist);
 
     // Second, narrow kernel fit, allowing the graph to spread over the samples.
     wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);

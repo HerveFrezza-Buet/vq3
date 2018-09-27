@@ -117,11 +117,6 @@ int main(int argc, char* argv[]) {
 							       SOM_MAX_DIST,
 							       1e-3); // Could be 0 here...
 
-  // Then, we build a function that gets the neighborhood from the table, rather than recomputing it each time it is required.
-  auto neighborhood = [&neighborhood_table](const graph::ref_vertex& ref_v) -> decltype(neighborhood_table)::mapped_type& { // I need to specify the return type in order to force return by reference.
-    return neighborhood_table[ref_v];
-  };
-
   
   image = cv::Scalar(255, 255, 255);
   std::copy(S.begin(), S.end(), dd);
@@ -148,7 +143,7 @@ int main(int argc, char* argv[]) {
 
     // Step #1 : submit all samples.
     for(auto& sample : S)
-      for(auto& topo_info : neighborhood(vq3::utils::closest(g, sample, d2)))
+      for(auto& topo_info : neighborhood_table[vq3::utils::closest(g, sample, d2)])
 	(*(vertices(topo_info.index)))().vq3_sum.increment(topo_info.value, sample);
     
     // Step #2 : update prototypes.
