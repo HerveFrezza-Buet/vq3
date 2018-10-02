@@ -64,11 +64,9 @@ double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d
 // of illustration of what it is. Our evolution is similar to the
 // default one, but it adds colors to the vertices.
 
-template<typename RANDOM_DEVICE>
 struct Evolution {
   double T;
   double density;
-  RANDOM_DEVICE& rd;
   double sigma_coef;
   vq3::demo2d::opencv::colormap::jet colormap;
   vq3::demo2d::opencv::histogram histo; // This collects information for display.
@@ -76,12 +74,11 @@ struct Evolution {
   double radius = 0;
   double NT = 0;
 	  
-  Evolution(RANDOM_DEVICE& rd)
-    : rd(rd), histo({0, -1.3}, {2.4, -0.6}) {
+  Evolution()
+    : histo({0, -1.3}, {2.4, -0.6}) {
     histo.frame_margin = .1;
   }
   
-  Evolution()                 = delete;
   Evolution(const Evolution&) = default;
 
 
@@ -146,9 +143,8 @@ struct Evolution {
   }
 };
 
-template<typename RANDOM_DEVICE>
-Evolution<RANDOM_DEVICE> make_evolution(RANDOM_DEVICE& rd) {
-  return Evolution<RANDOM_DEVICE>(rd);
+inline Evolution make_evolution() {
+  return Evolution();
 }
 
 
@@ -354,7 +350,7 @@ int main(int argc, char* argv[]) {
   // This is how the default evolution would have been obtained.
   // auto evolution = vq3::algo::gngt::by_default::evolution(random_device);
 
-  auto evolution = make_evolution(random_device);
+  auto evolution = make_evolution();
   
   // This is the loop
   //

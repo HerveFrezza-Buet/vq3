@@ -165,7 +165,7 @@ int main(int argc, char* argv[]) {
   auto vertices  = vq3::utils::vertices(g);
   auto gngt      = vq3::algo::gngt::processor<prototype, sample>(g, vertices);
   auto wtm       = vq3::epoch::wtm::processor(g, vertices);
-  auto evolution = vq3::algo::gngt::by_default::evolution(random_device);
+  auto evolution = vq3::algo::gngt::by_default::evolution();
   
   // This is the loop
   //

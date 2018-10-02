@@ -35,21 +35,19 @@
 #include <vq3Epoch.hpp>
 #include <vq3Utils.hpp>
 #include <vq3Stats.hpp>
+#include <vq3Online.hpp>
 
 namespace vq3 {
   namespace algo {
     namespace gngt {
       
       namespace by_default {
-	template<typename RANDOM_DEVICE>
 	struct Evolution {
 	  double T          =   0;
 	  double density    =   0;
 	  double sigma_coef = 1.5;
-	  RANDOM_DEVICE& rd;
 	  
-	  Evolution(RANDOM_DEVICE& rd) : rd(rd) {}
-	  Evolution()                 = delete;
+	  Evolution()                 = default;
 	  Evolution(const Evolution&) = default;
 	  
 	  template<typename GRAPH, typename BMU_RESULT, typename VERTICES, typename CLONE_PROTOTYPE>
@@ -100,9 +98,8 @@ namespace vq3 {
 	  }
 	};
 
-	template<typename RANDOM_DEVICE>
-	Evolution<RANDOM_DEVICE> evolution(RANDOM_DEVICE& rd) {
-	  return Evolution<RANDOM_DEVICE>(rd);
+	inline Evolution evolution() {
+	  return Evolution();
 	}
       }
       
