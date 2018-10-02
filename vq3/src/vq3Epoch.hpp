@@ -610,10 +610,13 @@ namespace vq3 {
       
 	GRAPH& g;
 	vertices_type& vertices;
-	std::map<ref_vertex, std::list<topo::Info<index_type, double> > > neighborhood_table;
       
       public:
-      
+
+	/**
+	 * This is the neighborhood table recomputed each time update_topology is called.
+	 */
+	std::map<ref_vertex, std::list<topo::Info<index_type, double> > > neighborhood_table;
 	
 	Processor(GRAPH& g, vertices_type& vertices) : g(g), vertices(vertices), neighborhood_table() {}
 	Processor()                            = delete;
