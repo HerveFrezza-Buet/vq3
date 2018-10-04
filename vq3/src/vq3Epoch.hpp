@@ -452,8 +452,20 @@ namespace vq3 {
 			  const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
 			  const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance,
 			  const edge& value_for_new_edges) {
-	  if(g.nb_vertices() < 2)
+	  auto nb_vertices = g.nb_vertices();
+	  if(nb_vertices < 2)
 	    return false;
+	  if(nb_vertices == 2) {
+	    std::array<ref_vertex, 2> vertices;
+	    vq3::utils::collect_vertices(g,vertices.begin());
+	    auto ref_e = g.get_edge(vertices[0], vertices[1]);
+	    if(ref_e == nullptr) {
+	      g.connect(vertices[0], vertices[1], value_for_new_edges);
+	      return true;
+	    }
+	    return false;
+	  }
+	    
 	  auto iters = utils::split(samples_begin, samples_end, nb_threads);
 	  std::vector<std::future<data> > futures;
 	  auto out = std::back_inserter(futures);
@@ -475,22 +487,24 @@ namespace vq3 {
 	  
 	  std::vector<ref_edge> survivors;
 	  std::vector<refpair>  newedges;
+	  
 	  for(auto& f : futures) {
 	    auto d = f.get();
-	    
+
 	    std::vector<ref_edge> s;
 	    auto outs = std::back_inserter(s);
-	    std::merge(survivors.begin(),   survivors.end(),
-		       d.survivors.begin(), d.survivors.end(),
-		       outs);
+	    std::set_union(survivors.begin(),   survivors.end(),
+			   d.survivors.begin(), d.survivors.end(),
+			   outs);
 	    
 	    std::vector<refpair>  n;
 	    auto outn = std::back_inserter(n);
-	    std::merge(newedges.begin(),   newedges.end(),
-		       d.newedges.begin(), d.newedges.end(),
-		       outn);
+	    std::set_union(newedges.begin(),   newedges.end(),
+			   d.newedges.begin(), d.newedges.end(),
+			   outn);
 	    std::swap(s, survivors);
 	    std::swap(n, newedges);
+
 	  }
 
 	  bool one_kill = false;

@@ -256,7 +256,14 @@ namespace vq3 {
      */
     unsigned int nb_edges() {
       unsigned int res = 0;
-      this->foreach_edge([&res](const ref_edge&) {++res;});
+      this->foreach_edge([&res](const ref_edge& ref_e) {
+	  auto extr_pair = ref_e->extremities();           
+	  if(vq3::invalid_extremities(extr_pair)) {
+	    ref_e->kill();
+	    return;
+	  }
+	  ++res;
+	});
       return res;
     }
     
