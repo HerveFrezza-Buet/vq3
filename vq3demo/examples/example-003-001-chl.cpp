@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
   // to both use and display them.
   std::vector<vq3::demo2d::Point> S;
 
-  auto processor = vq3::epoch::chl::processor(g);
+  auto chl = vq3::epoch::chl::processor(g);
   
   // This is the loop
   //
@@ -148,12 +148,12 @@ int main(int argc, char* argv[]) {
     // Edge update
     
     auto t_start = std::chrono::high_resolution_clock::now();
-    processor.update_edges(nb_threads,
-			   S.begin(), S.end(),
-			   [](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
-			   [](const vertex& v) {return v;},             // Gets the prototype from the vertex value.
-			   d2,                                          // d2(prototype, sample).
-			   edge());                                     // New edge initialization value.
+    chl.process(nb_threads,
+		S.begin(), S.end(),
+		[](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
+		[](const vertex& v) {return v;},             // Gets the prototype from the vertex value.
+		d2,                                          // d2(prototype, sample).
+		edge());                                     // New edge initialization value.
     auto t_end = std::chrono::high_resolution_clock::now();
 
     // Edge count (for display)
