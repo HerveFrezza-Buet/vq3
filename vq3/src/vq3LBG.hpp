@@ -78,7 +78,7 @@ namespace vq3 {
       
       g.foreach_vertex([](const typename GRAPH::ref_vertex& ref_v){ref_v->kill();});
 
-      auto table = vq3::topo::table(g);
+      auto table = vq3::topology::table(g);
       auto wta   = vq3::epoch::wta::processor(table);
       
       g += sample_of(*begin);
@@ -90,13 +90,13 @@ namespace vq3 {
 		  << "Starting Linde-Buzo-Gray with K =" << std::setw(4) << k << "." << std::endl
 		  << "--------------------------------------" << std::endl;
 
-      wta.template processs<typename vq3::epoch::data::delta<typename vq3::epoch::data::wta<typename epoch::data::none<PROTOTYPE,
-														       typename GRAPH::vertex_value_type,
-														       PROTOTYPE> > > >(nb_threads,
-																	begin, end,
-																	sample_of,
-																	prototype_of,
-																	distance);
+      wta.template process<typename vq3::epoch::data::delta<typename vq3::epoch::data::wta<typename epoch::data::none<PROTOTYPE,
+														      typename GRAPH::vertex_value_type,
+														      PROTOTYPE> > > >(nb_threads,
+																       begin, end,
+																       sample_of,
+																       prototype_of,
+																       distance);
       
       while(nb_nodes < k) {
 	unsigned int new_nb_nodes = std::min(k, 2*nb_nodes);
@@ -116,13 +116,13 @@ namespace vq3 {
 
 	bool stop = false;
 	while(!stop) {
-	  auto res = wta.template processs<typename vq3::epoch::data::delta<typename vq3::epoch::data::wta<typename epoch::data::none<PROTOTYPE,
-																      typename GRAPH::vertex_value_type,
-																      PROTOTYPE> > > >(nb_threads,
-																		       begin, end,
-																		       sample_of,
-																		       prototype_of,
-																		       distance);
+	  auto res = wta.template process<typename vq3::epoch::data::delta<typename vq3::epoch::data::wta<typename epoch::data::none<PROTOTYPE,
+																     typename GRAPH::vertex_value_type,
+																     PROTOTYPE> > > >(nb_threads,
+																		      begin, end,
+																		      sample_of,
+																		      prototype_of,
+																		      distance);
 	  stop = true;
 	  for(auto& d : res)
 	    if(check(d.vq3_previous_prototype, d.vq3_current_prototype)) {

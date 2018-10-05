@@ -49,10 +49,10 @@ double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(
 
 struct callback_data {
   vq3::demo2d::opencv::Frame& frame;
-  vq3::topo::Table<graph>& topology;
+  vq3::topology::Table<graph>& topology;
 
   callback_data(vq3::demo2d::opencv::Frame& frame,
-		vq3::topo::Table<graph>& topology)
+		vq3::topology::Table<graph>& topology)
     : frame(frame),
       topology(topology) {}
   callback_data()                                = delete;
@@ -99,12 +99,12 @@ int main(int argc, char* argv[]) {
   
   // If edges had values, we would have used
   /*
-  vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
-			[](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));},
-			[](unsigned int w, unsigned int h, unsigned int ww, unsigned int hh) {return some_edge_value;});
+    vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
+    [](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));},
+    [](unsigned int w, unsigned int h, unsigned int ww, unsigned int hh) {return some_edge_value;});
   */
 
-  auto topology = vq3::topo::table(g);
+  auto topology = vq3::topology::table(g);
   topology(); // We only inform the topology table about vertices, ignoring edge-based neighborhoods.
   
   // Let us draw the graph

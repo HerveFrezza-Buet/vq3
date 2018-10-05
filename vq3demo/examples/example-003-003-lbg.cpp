@@ -164,14 +164,14 @@ int main(int argc, char* argv[]) {
 
   // Now, let us plot the histogram of local distortions. This is why
   // we have built up an epoch data stack.<graph::ref_vertex>
-  auto vertices = vq3::utils::vertices(g);
-  vertices.update_topology(g);
-  auto wta = vq3::epoch::wta::processor(g, vertices);
-  auto epoch_result = wta.update_prototypes<epoch_data>(nb_threads,
-							S.begin(), S.end(), 
-							[](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
-							[](vertex& v) -> vertex& {return v;},        // Gets the prototype ***reference*** from the vertex value.
-							dist2);                                      // dist2(prototype, sample).
+  auto topology = vq3::topology::table(g);
+  topology();
+  auto wta = vq3::epoch::wta::processor(topology);
+  auto epoch_result = wta.process<epoch_data>(nb_threads,
+					      S.begin(), S.end(), 
+					      [](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
+					      [](vertex& v) -> vertex& {return v;},        // Gets the prototype ***reference*** from the vertex value.
+					      dist2);                                      // dist2(prototype, sample).
   
   auto disto_histo = vq3::demo::gnuplot::histogram("distortion distribution", "histo");
   disto_histo.set_xlabel("distortion values");

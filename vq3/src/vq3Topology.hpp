@@ -43,7 +43,7 @@
 
 namespace vq3 {
 
-  namespace topo {
+  namespace topology {
 
     /**
      * This builds a array of the vertex currently in the graph,
@@ -254,7 +254,7 @@ namespace vq3 {
 	auto it = vertex2idx.find(pt);
 	if(it == vertex2idx.end()) {
 	  std::ostringstream ostr;
-	  ostr << "vq3::topo::Vertices::operator(" << pt << ") : bad vertex reference";
+	  ostr << "vq3::topology::Table::operator(" << pt << ") : bad vertex reference";
 	  throw std::runtime_error(ostr.str());
 	}
 	return it->second;

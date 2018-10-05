@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
   // This is an structure that stores vertex-related computation. It
   // can be shared by several processors, this is why it is allocated
   // first and then passed to each processor. 
-  auto topology = vq3::topo::table(g);
+  auto topology = vq3::topology::table(g);
   topology(); // We update the topology without considering edge-based neighborhood.
   auto wta = vq3::epoch::wta::processor(topology);
 
