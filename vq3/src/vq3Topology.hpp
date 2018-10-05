@@ -42,7 +42,7 @@
 #include <vq3Utils.hpp>
 
 namespace vq3 {
-  enum class topo_tag : char {vertices = 'v', neihborhood = 'b', all = 'a'};
+  enum class topo_tag : char {vertices = 'v', neighborhood = 'b', all = 'a'};
 
   namespace topo {
 
@@ -60,7 +60,7 @@ namespace vq3 {
     class Table {
     public:
       using graph_type      = GRAPH;
-      using index_type      = typename std::vector<typename GRPH::ref_vertex>::size_type;
+      using index_type      = typename std::vector<typename GRAPH::ref_vertex>::size_type;
       
       /**
        * This structure stores neihgborhood information.
@@ -77,14 +77,13 @@ namespace vq3 {
 	Info& operator=(Info&&)      = default;
       };
 
-      using neighborhood_table_type = std::map<ref_vertex, std::list<Info> >;
+      using neighborhood_table_type = std::map<typename graph_type::ref_vertex, std::list<Info> >;
 
     private:
 
-      GRAPH& g;
       
-      std::vector<typename GRAPH::ref_vertex> idx2vertex;
-      std::map<vertex_type*, index_type> vertex2idx;
+      std::vector<typename graph_type::ref_vertex> idx2vertex;
+      std::map<typename graph_type::vertex_type*, index_type> vertex2idx;
       neighborhood_table_type neighborhood_table;
 
 
@@ -92,7 +91,7 @@ namespace vq3 {
 
       
 
-      friend std::ostream& operator<<(std::ostream& os, Table<GRAPH>& v) {
+      friend std::ostream& operator<<(std::ostream& os, Table<graph_type>& v) {
 	os << "Vertex map : " << std::endl;
 	unsigned int idx = 0;
 	for(auto& ref_v : v.idx2vertex)
@@ -112,7 +111,7 @@ namespace vq3 {
        * Fills or refills the table from the graph. It is called in the constructor.
        */
       void fill_vertices() {
-	g.foreach_vertex([this](const typename GRAPH::ref_vertex& ref_v) {
+	g.foreach_vertex([this](const typename graph_type::ref_vertex& ref_v) {
 	    auto idx = this->idx2vertex.size();
 	    this->idx2vertex.push_back(ref_v);
 	    this->vertex2idx[ref_v.get()] = idx;
@@ -128,15 +127,15 @@ namespace vq3 {
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
       template<typename VERTICES, typename VALUE_OF_EDGE_DISTANCE>
-      auto edge_based_neighborhood(index_type vertex_index, const typename GRAPH::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	std::list<Info<decltype(voed(0))> > res;
-	std::deque<std::pair<unsigned int, typename GRAPH::ref_vertex> > to_do;
+      auto edge_based_neighborhood(index_type vertex_index, const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
+	std::list<Info> res;
+	std::deque<std::pair<unsigned int, typename graph_type::ref_vertex> > to_do;
 
 	auto res_out = std::back_inserter(res);
 	auto job_out = std::back_inserter(to_do);
 	*(res_out++) = {(double)(voed(0)), vertex_index};
 	(*ref_v)().vq3_tag = true;
-	ref_v->foreach_edge([&job_out, &ref_v](const typename GRAPH::ref_edge ref_e) {
+	ref_v->foreach_edge([&job_out, &ref_v](const typename graph_type::ref_edge ref_e) {
 	    auto extr = ref_e->extremities();
 	    if(invalid_extremities(extr)) {ref_e->kill(); return;}
 	    auto& other = other_extremity(extr, ref_v);
@@ -151,7 +150,7 @@ namespace vq3 {
 	  if(val > min_val) {
 	    *(res_out++) = {val, vertex_table(d_v.second)};
 	    if(d_v.first != max_dist)
-	      d_v.second->foreach_edge([&job_out, &v = d_v.second, dist = d_v.first + 1](const typename GRAPH::ref_edge ref_e) {
+	      d_v.second->foreach_edge([&job_out, &v = d_v.second, dist = d_v.first + 1](const typename graph_type::ref_edge ref_e) {
 		  auto extr = ref_e->extremities();
 		  if(invalid_extremities(extr)) {ref_e->kill(); return;}
 		  auto& other = other_extremity(extr, v);
@@ -168,22 +167,23 @@ namespace vq3 {
       
       /**
        * This builds a std::map, keys are ref_vertex type, values are
-       * the neighborhood returned by the topo::edge_based_neighborhood
-       * for the key vertex.
+       * the neighborhood returned by the neighborhood method.
        */
       template<typename VALUE_OF_EDGE_DISTANCE>
       void make_neighborhood_table(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	neighborhood_table =  utils::make_vertex_table(g,
-						       [this, &voed, max_dist, min_val](const typename GRAPH::ref_vertex& ref_v) {
+						       [this, &voed, max_dist, min_val](const typename graph_type::ref_vertex& ref_v) {
 							 utils::clear_vertex_tags(g, false); 
-							 return edge_based_neighborhood(vertices, ref_v, voed, max_dist, min_val); 
+							 return neighborhood(ref_v, voed, max_dist, min_val); 
 						       });
       }
     
       
     public:
+      
+      graph_type& g;
 
-      Table(GRAPH& g) : g(g) {}
+      Table(graph_type& g) : g(g) {}
       Table()                        = delete;
       Table(const Table&)            = delete;
       Table(Table&&)                 = default;
@@ -198,7 +198,7 @@ namespace vq3 {
       /**
        * Updates the vertices and/or neioghbours (typically after a topology change).
        */
-      void update_vertices(topo_tag tag) {
+      void operator()(topo_tag tag) {
 	switch(tag) {
 	case topo_tag::vertices :
 	  clear_vertices();
@@ -226,7 +226,7 @@ namespace vq3 {
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
       template<typename VERTICES, typename VALUE_OF_EDGE_DISTANCE>
-      auto edge_based_neighborhood(const typename GRAPH::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
+      auto neighborhood(const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	return edge_based_neighborhood((*this)(ref_v), ref_v, voed, max_dist, min_val);
       }
       
@@ -239,7 +239,7 @@ namespace vq3 {
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
       template<typename VERTICES, typename VALUE_OF_EDGE_DISTANCE>
-      auto edge_based_neighborhood(index vertex_index, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
+      auto neighborhood(index_type vertex_index, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	return edge_based_neighborhood(vertex_index, (*this)(vertex_index),voed, max_dist, min_val);
       }
 	  
@@ -247,12 +247,12 @@ namespace vq3 {
       /**
        * @return the vertex (reference) whose index is idx. Complexiy is contant.
        */
-      const typename GRAPH::ref_vertex& operator()(index_type idx) const {return idx2vertex[idx];}
+      const typename graph_type::ref_vertex& operator()(index_type idx) const {return idx2vertex[idx];}
       
       /**
        * @return the index of the vertex (reference). Complexiy is logarithmic.
        */
-      const index_type operator()(const typename GRAPH::ref_vertex& ref_v) const {
+      const index_type operator()(const typename graph_type::ref_vertex& ref_v) const {
 	auto pt = ref_v.get();
 	auto it = vertex2idx.find(pt);
 	if(it == vertex2idx.end()) {
@@ -262,10 +262,17 @@ namespace vq3 {
 	}
 	return it->second;
       }
+
+      /**
+       * @returns the neighborhood of node #idx.
+       */
+      const typename neighborhood_table_type::content_type operator[](index_type idx) const {
+	return neighborhood_table[idx];
+      }
     };
 
     template<typename GRAPH>
-    auto table(const GRAPH&) {
+    auto table(const GRAPH& g) {
       return Table<GRAPH>(g);
     }
     
