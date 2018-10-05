@@ -83,7 +83,7 @@ namespace vq3 {
       
       g += sample_of(*begin);
       unsigned int nb_nodes = 1;
-      table(topo_tag::vertices);
+      table();
 
       if(verbose)
 	std::cout << std::endl
@@ -112,7 +112,7 @@ namespace vq3 {
 	for(auto it = V.begin(); it != vend; ++it)
 	  g += nearly(prototype_of((*(*it))()));
 	
-	table(topo_tag::vertices);
+	table();
 
 	bool stop = false;
 	while(!stop) {

@@ -48,16 +48,13 @@ using graph = vq3::graph<vertex, void>;
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value.pos, p);}
 
 struct callback_data {
-  graph& g;
   vq3::demo2d::opencv::Frame& frame;
-  vq3::utils::Vertices<graph::ref_vertex>& vertex_table;
+  vq3::topo::Table<graph>& topology;
 
-  callback_data(graph& g,
-		vq3::demo2d::opencv::Frame& frame,
-		vq3::utils::Vertices<graph::ref_vertex>& vertex_table)
-    : g(g),
-      frame(frame),
-      vertex_table(vertex_table) {}
+  callback_data(vq3::demo2d::opencv::Frame& frame,
+		vq3::topo::Table<graph>& topology)
+    : frame(frame),
+      topology(topology) {}
   callback_data()                                = delete;
   callback_data(const callback_data&)            = delete;
   callback_data& operator=(const callback_data&) = delete;
@@ -107,15 +104,15 @@ int main(int argc, char* argv[]) {
 			[](unsigned int w, unsigned int h, unsigned int ww, unsigned int hh) {return some_edge_value;});
   */
 
-  auto vertex_table = vq3::utils::vertices(g);
-  vertex_table.update_topology(g);
+  auto topology = vq3::topo::table(g);
+  topology(); // We only inform the topology table about vertices, ignoring edge-based neighborhoods.
   
   // Let us draw the graph
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
   auto frame        = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
-  callback_data user_data(g, frame, vertex_table);
+  callback_data user_data(frame, topology);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
@@ -165,24 +162,21 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   auto click_pos = data.frame(cv::Point(x,y));
 
   // Let us clear the graph values.
-  data.g.foreach_vertex([](const graph::ref_vertex& ref_v) {(*ref_v)().vq3_value.value = 0;});
+  data.topology.g.foreach_vertex([](const graph::ref_vertex& ref_v) {(*ref_v)().vq3_value.value = 0;});
 
   // Now, let us find the vertex which is the closest to click_pos.
-  auto ref_v = vq3::utils::closest(data.g, click_pos, d2);
+  auto ref_v = vq3::utils::closest(data.topology.g, click_pos, d2);
 
   // Now, let us compute its neighborhood. This is why we have
-  // tag-decorated our node values. The type std::string given as a
-  // template argument will have a dummy usage here, for the sake of
-  // illustration. If this user data type is not needed, provide void.
-  vq3::utils::clear_vertex_tags(data.g, false);
-  auto n = vq3::topo::edge_based_neighborhood(data.vertex_table,
-					      ref_v,
-					      [](unsigned int edge_distance) {return std::pow(.95, edge_distance);},
-					      0, 0.0);
+  // tag-decorated our node values. 
+  vq3::utils::clear_vertex_tags(data.topology.g, false);
+  auto n = data.topology.neighborhood(ref_v,
+				      [](unsigned int edge_distance) {return std::pow(.95, edge_distance);},
+				      0, 0.0);
 
   // Now, from value/index pairs in the neighborhood, let us change the nodes.
   for(auto& info : n) {
-    auto& ref_v = data.vertex_table(info.index);
+    auto& ref_v = data.topology(info.index);
     (*(ref_v))().vq3_value.value = info.value;
   }
   

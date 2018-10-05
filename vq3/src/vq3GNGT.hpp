@@ -154,14 +154,14 @@ namespace vq3 {
 		     EVOLUTION& evolution) {
  	  if(begin == end) {
 	    table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
-	    table(topo_tag::all);
+	    table();
 	    return;
 	  }
 
 	  if(table.nb_vertices() == 0) {
 	    // empty graph, we create one vertex, and do one wta pass.
 	    table.g += sample_of(*begin);
-	    table(topo_tag::vertices);
+	    table();
 	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	    return;
 	  }
@@ -169,7 +169,7 @@ namespace vq3 {
 	  auto bmu_results = bmu.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  
 	  evolution(table, bmu_results, clone_prototype);
-	  table(topo_tag::vertices);
+	  table();
 	  
 	  chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge());
 	}

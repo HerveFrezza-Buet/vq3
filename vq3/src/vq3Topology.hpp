@@ -42,7 +42,6 @@
 #include <vq3Utils.hpp>
 
 namespace vq3 {
-  enum class topo_tag : char {vertices = 'v', neighborhood = 'b', all = 'a'};
 
   namespace topo {
 
@@ -126,7 +125,7 @@ namespace vq3 {
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
-      template<typename VERTICES, typename VALUE_OF_EDGE_DISTANCE>
+      template<typename VALUE_OF_EDGE_DISTANCE>
       auto edge_based_neighborhood(index_type vertex_index, const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	std::list<Info> res;
 	std::deque<std::pair<unsigned int, typename graph_type::ref_vertex> > to_do;
@@ -148,7 +147,7 @@ namespace vq3 {
 	  to_do.pop_front();
 	  double val = voed(d_v.first);
 	  if(val > min_val) {
-	    *(res_out++) = {val, vertex_table(d_v.second)};
+	    *(res_out++) = {val, (*this)(d_v.second)};
 	    if(d_v.first != max_dist)
 	      d_v.second->foreach_edge([&job_out, &v = d_v.second, dist = d_v.first + 1](const typename graph_type::ref_edge ref_e) {
 		  auto extr = ref_e->extremities();
@@ -196,23 +195,21 @@ namespace vq3 {
       const index_type size() const {return idx2vertex.size();}
 
       /**
-       * Updates the vertices and/or neioghbours (typically after a topology change).
+       * Updates the vertices only (typically after the adding or removal of vertices in the graph).
        */
-      void operator()(topo_tag tag) {
-	switch(tag) {
-	case topo_tag::vertices :
+      void operator()() {
+	clear_vertices();
+	fill_vertices();
+      }
+      
+      /**
+       * Updates the vertices and neighbouts (typically after a topology change in terms of vertices and/or edges of the graph).
+       */
+      template<typename VALUE_OF_EDGE_DISTANCE>
+      void operator()(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	  clear_vertices();
 	  fill_vertices();
-	  break;
-	case topo_tag::neighborhood :
-	  make_neighborhood_table();
-	  break;
-	default:
-	  clear_vertices();
-	  fill_vertices();
-	  make_neighborhood_table();
-	  break;
-	}
+	  make_neighborhood_table(voed, max_dist, min_val);
       }
 
     
@@ -225,7 +222,7 @@ namespace vq3 {
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
-      template<typename VERTICES, typename VALUE_OF_EDGE_DISTANCE>
+      template<typename VALUE_OF_EDGE_DISTANCE>
       auto neighborhood(const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	return edge_based_neighborhood((*this)(ref_v), ref_v, voed, max_dist, min_val);
       }
@@ -238,7 +235,7 @@ namespace vq3 {
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
-      template<typename VERTICES, typename VALUE_OF_EDGE_DISTANCE>
+      template<typename VALUE_OF_EDGE_DISTANCE>
       auto neighborhood(index_type vertex_index, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	return edge_based_neighborhood(vertex_index, (*this)(vertex_index),voed, max_dist, min_val);
       }
@@ -266,13 +263,13 @@ namespace vq3 {
       /**
        * @returns the neighborhood of node #idx.
        */
-      const typename neighborhood_table_type::content_type operator[](index_type idx) const {
+      auto& operator[](index_type idx) const {
 	return neighborhood_table[idx];
       }
     };
 
     template<typename GRAPH>
-    auto table(const GRAPH& g) {
+    auto table(GRAPH& g) {
       return Table<GRAPH>(g);
     }
     
