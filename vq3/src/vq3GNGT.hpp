@@ -123,7 +123,7 @@ namespace vq3 {
 	topology_table_type& table;
 	vq3::epoch::wta::Processor<topology_table_type> wta;
 	vq3::epoch::wta::Processor<topology_table_type> bmu;
-	vq3::epoch::chl::Processor<topology_table_type> chl;
+	vq3::epoch::chl::Processor<graph_type>          chl;
 
 	Processor(topology_table_type& table)
 	  : table(table), wta(table), bmu(table), chl(table.g) {
@@ -158,7 +158,7 @@ namespace vq3 {
 	    return;
 	  }
 
-	  if(table.nb_vertices() == 0) {
+	  if(table.size() == 0) {
 	    // empty graph, we create one vertex, and do one wta pass.
 	    table.g += sample_of(*begin);
 	    table();
