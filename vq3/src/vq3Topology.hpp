@@ -266,6 +266,14 @@ namespace vq3 {
       auto& operator[](index_type idx) const {
 	return neighborhood_table[idx];
       }
+
+      /**
+       * @returns the neighborhood of node #idx.
+       */
+      auto& operator[](const typename graph_type::ref_vertex& ref_v) const {
+	auto it = neighborhood_table.find(ref_v);
+	return it->second;
+      }
     };
 
     template<typename GRAPH>
