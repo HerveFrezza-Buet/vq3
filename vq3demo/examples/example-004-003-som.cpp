@@ -148,26 +148,23 @@ int main(int argc, char* argv[]) {
   // template argument is the type of input samples. For the sake of
   // function notation homogeneity, let us use the alias algo::som
   // indtead of epoch::wtm.
-  auto vertices = vq3::utils::vertices(g);
-  auto som      = vq3::algo::som::processor(g, vertices);
+  auto topology = vq3::topology::table(g);
+  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+	   SOM_MAX_DIST,
+	   1e-3); // We consider node and edge-based neihborhoods.
+  auto som      = vq3::algo::som::processor(topology);
 
-  // We need to inform the processor about the graph topology. This
-  // can be done once here, since the topology do not change.
-  vertices.update_topology(g);
-  som.update_topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-		      SOM_MAX_DIST,
-		      1e-3);
 
   std::cout << std::endl;
 
   std::vector<epoch_data> epoch_results;
   for(unsigned int step = 0; step < NB_STEPS; ++step) {
     // Learning : the returned value of this function is ignored here. See next examples.
-    epoch_results = som.update_prototypes<epoch_data>(nb_threads,
-						      S.begin(), S.end(),
-						      [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},
-						      [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;},
-						      d2);
+    epoch_results = som.process<epoch_data>(nb_threads,
+					    S.begin(), S.end(),
+					    [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},
+					    [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;},
+					    d2);
     
     // since our epoch data stack has a bmu layer, we can get the
     // accumulator handling the distortion for all nodes. The distance

@@ -261,14 +261,14 @@ namespace vq3 {
       }
 
       /**
-       * @returns the neighborhood of node #idx.
+       * @returns the neighborhood of vertex #idx.
        */
       auto& operator[](index_type idx) const {
 	return neighborhood_table[idx];
       }
 
       /**
-       * @returns the neighborhood of node #idx.
+       * @returns the neighborhood of vertex ref_v.
        */
       auto& operator[](const typename graph_type::ref_vertex& ref_v) const {
 	auto it = neighborhood_table.find(ref_v);

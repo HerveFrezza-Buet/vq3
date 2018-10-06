@@ -170,25 +170,24 @@ int main(int argc, char* argv[]) {
 
   // First, we need a structure for handling SOM-like computation. The
   // template argument is the type of input samples.
-  auto vertices         = vq3::utils::vertices(g);
-  auto winner_take_most = vq3::epoch::wtm::processor(g, vertices);
 
-  // We need to inform the processor about the graph topology. This
-  // can be done once here, since the topology do not change.
-  vertices.update_topology(g);
-  winner_take_most.update_topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-				   SOM_MAX_DIST,
-				   1e-3);
+  auto topology = vq3::topology::table(g);
+  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+	   SOM_MAX_DIST,
+	   1e-3); // We consider node and edge-based neihborhoods.
+  // This is the winner-take-most parallel processor.
+  auto winner_take_most = vq3::epoch::wtm::processor(topology);
+
   
   while(keycode != 27) {
 
     auto t_start = std::chrono::high_resolution_clock::now();
     // Learning : the returned value of thus function is ignored here. See next examples.
-    winner_take_most.update_prototypes<epoch_data>(nb_threads,
-						   data.begin(), data.end(),
-						   [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},         // how to get the sample from a data content (*it).
-						   [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;}, // how to get a **reference** to the prototype from the vertex value.
-						   d2);
+    winner_take_most.process<epoch_data>(nb_threads,
+					 data.begin(), data.end(),
+					 [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},         // how to get the sample from a data content (*it).
+					 [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;}, // how to get a **reference** to the prototype from the vertex value.
+					 d2);
     auto t_end = std::chrono::high_resolution_clock::now();
     
     int duration =  std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
