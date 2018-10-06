@@ -32,8 +32,8 @@
 namespace vq3 {
   namespace algo {
     namespace som {
-      template<typename GRAPH>
-      auto processor(GRAPH& g, vq3::utils::Vertices<typename GRAPH::ref_vertex>& vertices) {return vq3::epoch::wtm::processor(g, vertices);}
+      template<typename TABLE>
+      auto processor(TABLE& table) {return vq3::epoch::wtm::processor(table);}
     }
   }
 }

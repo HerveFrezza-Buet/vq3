@@ -171,6 +171,45 @@ sum = 0;
 ref_A->foreach_edge([&sum](graph::ref_edge ref_e) {sum += (*ref_e)();});
    @endcode
 
+   @subsection topo Topology
+
+   We call the "topology" the knowledge of the graph structure, i.e the vertices and for each one its neighborhood. Algorithm may need to retrieve vertices from an index value. The topology table object provides this. 
+   @code
+graph g;
+auto topology = vq3::topology::table(g);
+...
+topology(); // This updates the topology according to the current graph structure (required when the graph changes).
+            // Only knowledge about vertices is updated.
+auto ref_vertex = topology(3);          // Gets the 4th vertex from the table (constant time)
+auto idx        = topology(ref_vertex); // Should return 3... (logarithmic time).
+   @endcode
+
+   Topology tables also provides the computation of neighborhoods. The neighborhood of a vertex v is a list of (value, index) pairs. Each (value, index) is the index of one neighbour of v, value is the distance related coefficient associated to it. To compute this value, we apply a function h(e) where e is the number of edges from v to vertex #index. If e>Emax or if h(e)<Hmin, vertices are not considered as neighbours. This can be computed as follows using the topology table.
+   @code
+graph g;
+auto topology = vq3::topology::table(g);
+...
+auto ref_vertex   = topology(3); // we get some vertex.
+auto neighborhood = topology.neighborhood(3, // ref_vertex works as well
+                                          h, Emax, Hmin);
+for(auto& info : neighborhood) {
+    auto& ref_v = topology(info.index);
+    double coef = info.value;
+}
+   @endcode
+
+   When some algorithm requires the knowledge of all neigborhoods, they can be computed at once.
+
+   @code
+graph g;
+auto topology = vq3::topology::table(g);
+...
+topology(h, Emax, Hmin); // Both vertices and their neighborhoods are updated.
+auto ref_vertex   = topology(3);          // we get some vertex.
+neighborhood      = topology[3];          // Gets the precomputed neighborhood of the 4th vertex
+neighborhood      = topology[ref_vertex]; // Does the same.
+   @endcode
+   
    @subsection graphutils Utilities
 
    There are several utilities associated with the graph class, see the vq3::utils namespace.
@@ -254,11 +293,12 @@ for(sample : current_epoch) {
   
   // In the winner-take-most case, all vertices have to be considered for an
   // update. We notify all of them for the next coming update, providing them 
-  // with both the sample and their distance to the BMU (i.e. ref_min_v).
+  // with both the sample and their weight h(d) according to their distance d 
+  // to the BMU (i.e. ref_min_v). 
   if(winner_take_most) 
     for(ref_v : vertices) {
       data = epoch_data_associated_with(ref_vv);
-      data.notify_wtm_update(sample, topological_distance(ref_min_v, ref_v));
+      data.notify_wtm_update(sample, h(topological_distance(ref_min_v, ref_v)));
     }
 }
 
@@ -324,8 +364,8 @@ using edge   = vq3::decorator::tagged<void>; // We need tags on the edges.
 using graph  = vq3::graph<vertex, edge>; 
 
 graph g;  
-auto processor = vq3::epoch::chl::processor(g);
-auto S = ...; // a sample set
+auto  processor = vq3::epoch::chl::processor(g);
+auto  S         = ...; // a sample set
 
 auto sample_of(const set_content& content) {
   // returns the sample from *it : sample = sample_of(*it)
@@ -360,8 +400,9 @@ using epoch_data   = epoch_data_1;
 using graph  = vq3::graph<vertex, void>; 
 
 graph g;  
-auto processor = vq3::epoch::wta::processor(g);
-auto S = ...; // a sample set
+auto  topology  = vq3::topology::table(g);
+auto  processor = vq3::epoch::wta::processor(table);
+auto  S         = ...; // a sample set
 
 auto sample_of(const set_content& content) {
   // returns the sample from *it : sample = sample_of(*it)
@@ -377,9 +418,9 @@ double dist(const prototype& p, const sample& s) {
 
 auto new_edge_value = edge(); // Value for initializing new edges.
 
-processor.update_topology(); // Notifies the graph structure, redo it at each topology change.    
-auto epoch_result = processor.update_prototypes<epoch_data>(nb_threads, S.begin(), S.end(),
-                                                            sample_of, prototype_of, dist);
+topology(); // Notifies the graph structure, redo it at each topology change.    
+auto epoch_result = processor.process<epoch_data>(nb_threads, S.begin(), S.end(),
+                                                  sample_of, prototype_of, dist);
 for(epoch_data& data : epoch_result) {
   // data is the epoch data computed for each vertex.
   std::cout << data.vq3_wta_accum.average<double>() << std::endl;
@@ -402,8 +443,9 @@ using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;
 using epoch_data   = epoch_data_1;
 
 graph g;  
-auto processor = vq3::epoch::wtm::processor(g);
-auto S = ...; // a sample set
+auto  topology  = vq3::topology::table(g);
+auto  processor = vq3::epoch::wtm::processor(g);
+auto  S         = ...; // a sample set
 
 auto sample_of(const set_content& content) {
   // returns the sample from *it : sample = sample_of(*it)
@@ -424,10 +466,10 @@ auto new_edge_value = edge(); // Value for initializing new edges.
 // with the number of edges to the best matching unit.
 // 5, 1e-3 are the maximal edge distance considered, and 1e-3 
 // a minimal threshold for considering a coefficient as non null.
-processor.update_topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/5.0;},
-                          5, 1e-3));   
-auto epoch_result = processor.update_prototypes<epoch_data>(nb_threads, S.begin(), S.end(),
-                                                            sample_of, prototype_of, dist);
+topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/5.0;},
+         5, 1e-3));   
+auto epoch_result = processor.process<epoch_data>(nb_threads, S.begin(), S.end(),
+                                                  sample_of, prototype_of, dist);
 for(epoch_data& data : epoch_result) {
   // data is the epoch data computed for each vertex.
   std::cout << data.vq3_wtm_accum.average<double>() << std::endl;

@@ -72,8 +72,11 @@ int main(int argc, char* argv[]) {
 			  return value;
 			});
 
-  auto vertices = vq3::utils::vertices(g);
-  vertices.update_topology(g);
+  auto topology = vq3::topology::table(g);
+  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+	   SOM_MAX_DIST,
+	   1e-3); // We consider node and edge-based neihborhoods.
+
 
   double intensity = 1. ;
   double radius    =  .5;
@@ -111,11 +114,6 @@ int main(int argc, char* argv[]) {
 														  255*v.vq3_gridpos.second/(GRID_HEIGHT - 1));},  // color
 									   [](const vertex& v) {return                                                     -1;}); // thickness
   
-  // Let us store the neighborhood of all nodes, in order to avoid computing it on demand.
-  auto neighborhood_table = vq3::topo::make_neighborhood_table(g, vertices,
-							       [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-							       SOM_MAX_DIST,
-							       1e-3); // Could be 0 here...
 
   
   image = cv::Scalar(255, 255, 255);
@@ -143,8 +141,8 @@ int main(int argc, char* argv[]) {
 
     // Step #1 : submit all samples.
     for(auto& sample : S)
-      for(auto& topo_info : neighborhood_table[vq3::utils::closest(g, sample, d2)])
-	(*(vertices(topo_info.index)))().vq3_sum.increment(topo_info.value, sample);
+      for(auto& topo_info : topology[vq3::utils::closest(g, sample, d2)])
+	(*(topology(topo_info.index)))().vq3_sum.increment(topo_info.value, sample);
     
     // Step #2 : update prototypes.
     g.foreach_vertex([](const graph::ref_vertex& ref_v) {

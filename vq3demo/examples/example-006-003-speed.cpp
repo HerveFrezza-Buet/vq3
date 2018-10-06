@@ -160,11 +160,11 @@ int main(int argc, char* argv[]) {
   // to both use and display them.
   std::vector<vq3::demo2d::Point> S;
 
-  graph g;
   
-  auto vertices  = vq3::utils::vertices(g);
-  auto gngt      = vq3::algo::gngt::processor<prototype, sample>(g, vertices);
-  auto wtm       = vq3::epoch::wtm::processor(g, vertices);
+  graph g;
+  auto topology  = vq3::topology::table(g);
+  auto gngt      = vq3::algo::gngt::processor<prototype, sample>(topology);
+  auto wtm       = vq3::epoch::wtm::processor(topology);
   auto evolution = vq3::algo::gngt::by_default::evolution();
   
   // This is the loop
@@ -195,14 +195,13 @@ int main(int argc, char* argv[]) {
 
     // Step
 
-    vertices.update_topology(g);
-    wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
+    topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
     for(int wta_step = 0; wta_step < 2; ++wta_step)
-      wtm.update_prototypes<epoch_wtm>(nb_threads,
-    				       S.begin(), S.end(),
-    				       [](const sample& s) {return s;},
-    				       [](vertex& v) -> prototype& {return v.vq3_value;},
-    				       dist);
+      wtm.process<epoch_wtm>(nb_threads,
+			     S.begin(), S.end(),
+			     [](const sample& s) {return s;},
+			     [](vertex& v) -> prototype& {return v.vq3_value;},
+			     dist);
     
     double e = T_slider/1000.0;
     double expo_min = -7;
@@ -212,13 +211,13 @@ int main(int argc, char* argv[]) {
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
     evolution.sigma_coef = S_slider*.01;
     
-    gngt.epoch(nb_threads,
-	       S.begin(), S.end(),
-	       [](const sample& s) {return s;},
-	       [](vertex& v) -> prototype& {return v.vq3_value;},
-	       [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
-	       dist,
-	       evolution);
+    gngt.process(nb_threads,
+		 S.begin(), S.end(),
+		 [](const sample& s) {return s;},
+		 [](vertex& v) -> prototype& {return v.vq3_value;},
+		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
+		 dist,
+		 evolution);
     
     // Temporal update
     

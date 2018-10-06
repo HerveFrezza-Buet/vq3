@@ -36,6 +36,7 @@
 #include <vq3Utils.hpp>
 #include <vq3Stats.hpp>
 #include <vq3Online.hpp>
+#include <vq3Topology.hpp>
 
 namespace vq3 {
   namespace algo {
@@ -50,14 +51,13 @@ namespace vq3 {
 	  Evolution()                 = default;
 	  Evolution(const Evolution&) = default;
 	  
-	  template<typename GRAPH, typename BMU_RESULT, typename VERTICES, typename CLONE_PROTOTYPE>
-	  void operator()(GRAPH& g,
+	  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
+	  void operator()(TABLE& table,
 			  const BMU_RESULT& bmu_epoch_result,
-			  const VERTICES& vertices,
 			  const CLONE_PROTOTYPE& clone_prototype) {
 
-	    std::vector<typename GRAPH::ref_vertex> above;
-	    std::vector<typename GRAPH::ref_vertex> below;
+	    std::vector<typename TABLE::graph_type::ref_vertex> above;
+	    std::vector<typename TABLE::graph_type::ref_vertex> below;
 	    auto out_above = std::back_inserter(above);
 	    auto out_below = std::back_inserter(below);
     
@@ -72,7 +72,7 @@ namespace vq3 {
     
 	    unsigned int idx = 0;
 	    for(auto& res : bmu_epoch_result) {
-	      auto& ref_v = vertices(idx++);
+	      auto& ref_v = table(idx++);
 	      if(res.vq3_bmu_accum.nb == 0)
 		ref_v->kill(); // We kill a vertex which has never won the competition.
 	      else if(auto& omstd = (*ref_v)().vq3_online_mean_std; omstd) {
@@ -89,7 +89,7 @@ namespace vq3 {
 
 	    if(above.size() > 0)
 	      for(auto it = above.begin(); it != above.end(); ++it)
-		g += clone_prototype((*(*it))().vq3_value);
+		table.g += clone_prototype((*(*it))().vq3_value);
     
 	    if(below.size() > 0)
 	      for(auto it = below.begin(); it != below.end(); ++it)
@@ -103,14 +103,16 @@ namespace vq3 {
 	}
       }
       
-      template<typename PROTOTYPE, typename SAMPLE, typename GRAPH>
+      template<typename PROTOTYPE, typename SAMPLE, typename TABLE>
       class Processor {
       public:
-	
-	using ref_vertex = typename GRAPH::ref_vertex;
-	using ref_edge   = typename GRAPH::ref_edge;
-	using vertex     = typename GRAPH::vertex_value_type;
-	using edge       = typename GRAPH::edge_value_type;
+
+	using topology_table_type = TABLE;
+	using graph_type = typename topology_table_type::graph_type;
+	using ref_vertex = typename graph_type::ref_vertex;
+	using ref_edge   = typename graph_type::ref_edge;
+	using vertex     = typename graph_type::vertex_value_type;
+	using edge       = typename graph_type::edge_value_type;
       
 	
 	using epoch_bmu = vq3::epoch::data::online::bmu_mean_std<vq3::epoch::data::none<SAMPLE, vertex, PROTOTYPE> >;
@@ -118,17 +120,13 @@ namespace vq3 {
 	       
 
       public:
+	topology_table_type& table;
+	vq3::epoch::wta::Processor<topology_table_type> wta;
+	vq3::epoch::wta::Processor<topology_table_type> bmu;
+	vq3::epoch::chl::Processor<graph_type>          chl;
 
-	GRAPH& g;
-
-	vq3::utils::Vertices<ref_vertex>&  vertices;
-	vq3::epoch::wta::Processor<GRAPH> wta;
-	vq3::epoch::wta::Processor<GRAPH> bmu;
-	vq3::epoch::chl::Processor<GRAPH> chl;
-
-	Processor(GRAPH& g, vq3::utils::Vertices<typename GRAPH::ref_vertex>& vertices)
-	  : g(g), vertices(vertices), wta(g, vertices), bmu(g, vertices), chl(g) {
-	  vertices.update_topology(g);
+	Processor(topology_table_type& table)
+	  : table(table), wta(table), bmu(table), chl(table.g) {
 	}
 	
 	Processor()                            = delete;
@@ -147,40 +145,40 @@ namespace vq3 {
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 */
 	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE>
-	void epoch(unsigned int nb_threads,
-		   const ITER& begin, const ITER& end,
-		   const SAMPLE_OF& sample_of,
-		   const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
-		   const CLONE_PROTOTYPE& clone_prototype,
-		   const DISTANCE& distance,
-		   EVOLUTION& evolution) {
+	void process(unsigned int nb_threads,
+		     const ITER& begin, const ITER& end,
+		     const SAMPLE_OF& sample_of,
+		     const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
+		     const CLONE_PROTOTYPE& clone_prototype,
+		     const DISTANCE& distance,
+		     EVOLUTION& evolution) {
  	  if(begin == end) {
-	    g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
-	    vertices.update_topology(g);
+	    table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
+	    table();
 	    return;
 	  }
 
-	  if(g.nb_vertices() == 0) {
+	  if(table.size() == 0) {
 	    // empty graph, we create one vertex, and do one wta pass.
-	    g += sample_of(*begin);
-	    vertices.update_topology(g);
-	    wta.template update_prototypes<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	    table.g += sample_of(*begin);
+	    table();
+	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	    return;
 	  }
 
-	  auto bmu_results = bmu.template update_prototypes<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	  auto bmu_results = bmu.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  
-	  evolution(g, bmu_results, vertices, clone_prototype);
-	  vertices.update_topology(g);
+	  evolution(table, bmu_results, clone_prototype);
+	  table();
 	  
-	  chl.update_edges(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge());
+	  chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge());
 	}
 	
       };
 
-      template<typename PROTOTYPE, typename SAMPLE, typename GRAPH>
-      Processor<PROTOTYPE, SAMPLE, GRAPH> processor(GRAPH& g, vq3::utils::Vertices<typename GRAPH::ref_vertex>& vertices) {
-	return Processor<PROTOTYPE, SAMPLE, GRAPH>(g, vertices);
+      template<typename PROTOTYPE, typename SAMPLE, typename TABLE>
+      Processor<PROTOTYPE, SAMPLE, TABLE> processor(TABLE& table) {
+	return Processor<PROTOTYPE, SAMPLE, TABLE>(table);
       }
       
     }

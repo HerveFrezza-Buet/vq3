@@ -82,14 +82,13 @@ struct Evolution {
   Evolution(const Evolution&) = default;
 
 
-  template<typename GRAPH, typename BMU_RESULT, typename VERTICES, typename CLONE_PROTOTYPE>
-  void operator()(GRAPH& g,
+  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
+  void operator()(TABLE& table,
 		  const BMU_RESULT& bmu_epoch_result,
-		  const VERTICES& vertices,
 		  const CLONE_PROTOTYPE& clone_prototype) {
 
-    std::vector<typename GRAPH::ref_vertex> above;
-    std::vector<typename GRAPH::ref_vertex> below;
+    std::vector<typename TABLE::graph_type::ref_vertex> above;
+    std::vector<typename TABLE::graph_type::ref_vertex> below;
     auto out_above = std::back_inserter(above);
     auto out_below = std::back_inserter(below);
     
@@ -110,7 +109,7 @@ struct Evolution {
     
     unsigned int idx = 0;
     for(auto& res : bmu_epoch_result) {
-      auto& ref_v = vertices(idx++);
+      auto& ref_v = table(idx++);
       if(res.vq3_bmu_accum.nb == 0)
 	ref_v->kill(); // We kill a vertex which has never won the competition.
       else {
@@ -135,7 +134,7 @@ struct Evolution {
 
     if(above.size() > 0)
       for(auto it = above.begin(); it != above.end(); ++it)
-	g += clone_prototype((*(*it))().vq3_value);
+	table.g += clone_prototype((*(*it))().vq3_value);
     
     if(below.size() > 0)
       for(auto it = below.begin(); it != below.end(); ++it)
@@ -339,13 +338,13 @@ int main(int argc, char* argv[]) {
   // is iterated several times.
   std::vector<vq3::demo2d::Point> S;
 
-  auto vertices = vq3::utils::vertices(g);
+  auto topology = vq3::topology::table(g);
 
   // This processes the topology evolution (number of vertices and edges)
-  auto gngt     = vq3::algo::gngt::processor<prototype, sample>(g, vertices);
+  auto gngt     = vq3::algo::gngt::processor<prototype, sample>(topology);
 
   // This updates the prototypes (i.e. the vertex positions).
-  auto wtm      = vq3::epoch::wtm::processor(g, vertices);
+  auto wtm      = vq3::epoch::wtm::processor(topology);
   
   // This is how the default evolution would have been obtained.
   // auto evolution = vq3::algo::gngt::by_default::evolution(random_device);
@@ -395,24 +394,23 @@ int main(int argc, char* argv[]) {
       evolution.sigma_coef = S_slider*.01;
 
       // We compute the topology evolution of the graph...
-      gngt.epoch(nb_threads,
-		 S.begin(), S.end(),
-		 [](const sample& s) {return s;},
-		 [](vertex& v) -> prototype& {return v.vq3_value;},
-		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
-		 dist,
-		 evolution);
+      gngt.process(nb_threads,
+		   S.begin(), S.end(),
+		   [](const sample& s) {return s;},
+		   [](vertex& v) -> prototype& {return v.vq3_value;},
+		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
+		   dist,
+		   evolution);
 
       // ... and update the nodes with a SOM-like pass. Here,
       // classically (for GNG), only the immediate neighbours are
       // updated.
-      vertices.update_topology(g);
-      wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
-      wtm.update_prototypes<epoch_wtm>(nb_threads,
-				       S.begin(), S.end(),
-				       [](const sample& s) {return s;},
-				       [](vertex& v) -> prototype& {return v.vq3_value;},
-				       dist);
+      topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
+      wtm.process<epoch_wtm>(nb_threads,
+			     S.begin(), S.end(),
+			     [](const sample& s) {return s;},
+			     [](vertex& v) -> prototype& {return v.vq3_value;},
+			     dist);
 							    
 
       // Display

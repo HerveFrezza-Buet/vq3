@@ -162,11 +162,10 @@ int main(int argc, char* argv[]) {
 
   // This is an structure that stores vertex-related computation. It
   // can be shared by several processors, this is why it is allocated
-  // first and then passed to each processor. Here, we have only one
-  // processor, so this external allocation may sound artificial.
-  auto vertices = vq3::utils::vertices(g);
-  vertices.update_topology(g);
-  auto wta = vq3::epoch::wta::processor(g, vertices);
+  // first and then passed to each processor. 
+  auto topology = vq3::topology::table(g);
+  topology(); // We update the topology without considering edge-based neighborhood.
+  auto wta = vq3::epoch::wta::processor(topology);
 
   std::string prefix = "wta";
   if(uniform) prefix += "-uniform";
@@ -204,11 +203,11 @@ int main(int argc, char* argv[]) {
     ++step;
     
     auto t_start = std::chrono::high_resolution_clock::now();
-    auto epoch_result = wta.update_prototypes<epoch_data>(nb_threads,
-							  S.begin(), S.end(), 
-							  [](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
-							  [](vertex& v) -> vertex& {return v;},        // Gets the prototype ***reference*** from the vertex value.
-							  dist2);                                      // dist2(prototype, sample).
+    auto epoch_result = wta.process<epoch_data>(nb_threads,
+						S.begin(), S.end(), 
+						[](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
+						[](vertex& v) -> vertex& {return v;},        // Gets the prototype ***reference*** from the vertex value.
+						dist2);                                      // dist2(prototype, sample).
     auto t_end = std::chrono::high_resolution_clock::now();
 
     

@@ -79,8 +79,10 @@ int main(int argc, char* argv[]) {
 			  return value;
 			});
 
-  auto vertices = vq3::utils::vertices(g);
-  vertices.update_topology(g);
+  auto topology = vq3::topology::table(g);
+  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+	   SOM_MAX_DIST,
+	   1e-3); // We consider node and edge-based neihborhoods.
 
   bool wtm_mode = true; // false means wta.
   
@@ -120,12 +122,6 @@ int main(int argc, char* argv[]) {
 														  255*v.vq3_gridpos.first/(GRID_WIDTH - 1),
 														  255*v.vq3_gridpos.second/(GRID_HEIGHT - 1));},  // color
 									   [](const vertex& v) {return                                                     -1;}); // thickness
-  
-  // Let us store the neighborhood of all nodes, in order to avoid computing it on demand.
-  auto neighborhood_table = vq3::topo::make_neighborhood_table(g, vertices,
-							       [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-							       SOM_MAX_DIST,
-							       1e-3); // could be 0 here.
 
 
   
@@ -144,12 +140,12 @@ int main(int argc, char* argv[]) {
 
     if(wtm_mode)
       for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
-	vq3::online::wtm::learn(g, vertices, d2, neighborhood_table, *(sample_it++), ALPHA);
+	vq3::online::wtm::learn(topology, d2, *(sample_it++), ALPHA);
 	if(sample_it == S.end()) sample_it=S.begin();
       }
     else
       for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
-	vq3::online::wta::learn(g, vertices, d2, *(sample_it++), ALPHA);
+	vq3::online::wta::learn(g, d2, *(sample_it++), ALPHA);
 	if(sample_it == S.end()) sample_it=S.begin();
       }
 

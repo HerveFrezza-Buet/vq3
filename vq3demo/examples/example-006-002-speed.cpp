@@ -159,10 +159,9 @@ int main(int argc, char* argv[]) {
   std::vector<vq3::demo2d::Point> S;
 
   graph g;
-  
-  auto vertices  = vq3::utils::vertices(g);
-  auto gngt      = vq3::algo::gngt::processor<prototype, sample>(g, vertices);
-  auto wtm       = vq3::epoch::wtm::processor(g, vertices);
+  auto topology  = vq3::topology::table(g);
+  auto gngt      = vq3::algo::gngt::processor<prototype, sample>(topology);
+  auto wtm       = vq3::epoch::wtm::processor(topology);
   auto evolution = vq3::algo::gngt::by_default::evolution();
   
   // This is the loop
@@ -215,26 +214,13 @@ int main(int argc, char* argv[]) {
     // The input has evolved. We update the graph so that it fits the
     // new distribution, keeping the previously computed topology.
 
-    vertices.update_topology(g);
-    
-    // // First, wide kernel fit, for a quicker update.
-    // double h = std::max(H_slider,1)*.01;
-    // wtm.update_topology([h](unsigned int edge_distance) {return std::max(0., 1.-edge_distance/h);}, (unsigned int)h, 0);
-    // for(int wta_step = 0; wta_step < W_slider; ++wta_step)
-    //   wtm.update_prototypes<epoch_wtm>(nb_threads,
-    // 				       S.begin(), S.end(),
-    // 				       [](const sample& s) {return s;},
-    // 				       [](vertex& v) -> prototype& {return v.vq3_value;},
-    // 				       dist);
-
-    // Second, narrow kernel fit, allowing the graph to spread over the samples.
-    wtm.update_topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
+    topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
     for(int wta_step = 0; wta_step < K_slider; ++wta_step)
-      wtm.update_prototypes<epoch_wtm>(nb_threads,
-    				       S.begin(), S.end(),
-    				       [](const sample& s) {return s;},
-    				       [](vertex& v) -> prototype& {return v.vq3_value;},
-    				       dist);
+      wtm.process<epoch_wtm>(nb_threads,
+			     S.begin(), S.end(),
+			     [](const sample& s) {return s;},
+			     [](vertex& v) -> prototype& {return v.vq3_value;},
+			     dist);
     
 
     // Now, we can compute GNG-T topology evolution.
@@ -247,13 +233,13 @@ int main(int argc, char* argv[]) {
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
     evolution.sigma_coef = S_slider*.01;
     
-    gngt.epoch(nb_threads,
-	       S.begin(), S.end(),
-	       [](const sample& s) {return s;},
-	       [](vertex& v) -> prototype& {return v.vq3_value;},
-	       [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
-	       dist,
-	       evolution);
+    gngt.process(nb_threads,
+		 S.begin(), S.end(),
+		 [](const sample& s) {return s;},
+		 [](vertex& v) -> prototype& {return v.vq3_value;},
+		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
+		 dist,
+		 evolution);
     
     // Temporal update
     

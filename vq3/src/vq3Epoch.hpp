@@ -399,11 +399,12 @@ namespace vq3 {
       class Processor {
       private:
 
-	using ref_vertex = typename GRAPH::ref_vertex;
-	using ref_edge   = typename GRAPH::ref_edge;
-	using edge       = typename GRAPH::edge_value_type;
+	using graph_type = GRAPH;
+	using ref_vertex = typename graph_type::ref_vertex;
+	using ref_edge   = typename graph_type::ref_edge;
+	using edge       = typename graph_type::edge_value_type;
       
-	GRAPH& g;
+	graph_type& g;
 
 	struct refpair {
 	  ref_vertex first, second;
@@ -436,7 +437,7 @@ namespace vq3 {
 	  
       public:
       
-	Processor(GRAPH& g) : g(g) {}
+	Processor(graph_type& g) : g(g) {}
 	Processor()                            = delete;
 	Processor(const Processor&)            = default;
 	Processor(Processor&&)                 = default;
@@ -448,10 +449,10 @@ namespace vq3 {
 	 * @return true if the process has modified the graph topology. 
 	 */
 	template<typename ITERATOR, typename SAMPLE_OF, typename PROTOTYPE_OF_VERTEX_VALUE, typename DISTANCE>
-	bool update_edges(unsigned int nb_threads,
-			  const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
-			  const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance,
-			  const edge& value_for_new_edges) {
+	bool process(unsigned int nb_threads,
+			const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
+			const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance,
+			const edge& value_for_new_edges) {
 	  auto nb_vertices = g.nb_vertices();
 	  if(nb_vertices < 2)
 	    return false;
@@ -533,35 +534,31 @@ namespace vq3 {
     
     namespace wta {
 
-      template<typename GRAPH>
+      template<typename TABLE>
       class Processor {
       public:
-	
-	using ref_vertex    = typename GRAPH::ref_vertex;
-	using vertices_type = utils::Vertices<ref_vertex>;
-	using index_type    = typename vertices_type::index_type;
+
+	using topology_table_type = TABLE;
 	
       private:
 
-      
-	GRAPH& g;
-	vertices_type& vertices;
+	topology_table_type& table;
       
       public:
       
-	Processor(GRAPH& g, vertices_type& vertices) : g(g), vertices(vertices) {}
+	Processor(topology_table_type& table) : table(table) {}
 	Processor()                            = delete;
-	Processor(const Processor&)            = default;
+	Processor(const Processor&)            = delete;
 	Processor(Processor&&)                 = default;
-	Processor& operator=(const Processor&) = default;
-	Processor& operator=(Processor&&)      = default;
+	Processor& operator=(const Processor&) = delete;
+	Processor& operator=(Processor&&)      = delete;
 
 
 	/**
 	 * @return A vector, for each prototype index, of the epoch data.
 	 */
 	template<typename EPOCH_DATA, typename ITERATOR, typename SAMPLE_OF, typename PROTOTYPE_OF_VERTEX_VALUE, typename DISTANCE>
-	auto update_prototypes(unsigned int nb_threads, const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance) {
+	auto process(unsigned int nb_threads, const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance) {
 	  auto iters = utils::split(samples_begin, samples_end, nb_threads);
 	  std::vector<std::future<std::vector<EPOCH_DATA> > > futures;
 	  auto out = std::back_inserter(futures);
@@ -569,13 +566,13 @@ namespace vq3 {
 	  for(auto& begin_end : iters) 
 	    *(out++) = std::async(std::launch::async,
 				  [begin_end, this, &sample_of, &distance]() {
-				    std::vector<EPOCH_DATA> data(vertices.size());
+				    std::vector<EPOCH_DATA> data(table.size());
 				    for(auto it = begin_end.first; it != begin_end.second; ++it) {
 				      double min_dist;
 				      const auto&  sample = sample_of(*it);
-				      auto        closest = utils::closest(g, sample, distance, min_dist);
+				      auto        closest = utils::closest(table.g, sample, distance, min_dist);
 				      if(closest != nullptr) {
-					auto&             d = data[vertices(closest)];
+					auto&             d = data[table(closest)];
 					d.notify_closest(sample, min_dist);
 					d.notify_wta_update(sample);
 				      }
@@ -596,7 +593,7 @@ namespace vq3 {
 
 	  unsigned int idx = 0;
 	  for(auto&  d : data0) {
-	    auto& value = (*(vertices(idx++)))();
+	    auto& value = (*(table(idx++)))();
 	    d.set_prototype(prototype_of(value));
 	    d.set_content(value);
 	  }
@@ -605,71 +602,52 @@ namespace vq3 {
 	}
       };
     
-      template<typename GRAPH>
-      auto processor(GRAPH& g, utils::Vertices<typename GRAPH::ref_vertex>& vertices) {return Processor<GRAPH>(g, vertices);}
+      template<typename TABLE>
+      auto processor(TABLE& table) {return Processor<TABLE>(table);}
     }
     
     namespace wtm {
 
-      template<typename GRAPH>
+      template<typename TABLE>
       class Processor {
       public:
-	
 
-	using ref_vertex    = typename GRAPH::ref_vertex;
-	using vertices_type = utils::Vertices<ref_vertex>;
-	using index_type    = typename vertices_type::index_type;
-	
+	using topology_table_type = TABLE;
+
       private:
-      
-	GRAPH& g;
-	vertices_type& vertices;
+
+	topology_table_type& table;
       
       public:
 
-	/**
-	 * This is the neighborhood table recomputed each time update_topology is called.
-	 */
-	std::map<ref_vertex, std::list<topo::Info<index_type, double> > > neighborhood_table;
 	
-	Processor(GRAPH& g, vertices_type& vertices) : g(g), vertices(vertices), neighborhood_table() {}
+	Processor(topology_table_type& table) : table(table) {}
 	Processor()                            = delete;
-	Processor(const Processor&)            = default;
+	Processor(const Processor&)            = delete;
 	Processor(Processor&&)                 = default;
-	Processor& operator=(const Processor&) = default;
-	Processor& operator=(Processor&&)      = default;
-
-	/**
-	 * Do not forget to update the external vertices topology first.
-	 * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-	 * @param max_dist The maximal distance considered. 0 means "no limit".
-	 * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
-	 */
-	template<typename VALUE_OF_EDGE_DISTANCE>
-	void update_topology(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	  neighborhood_table = topo::make_neighborhood_table(g, vertices, voed, max_dist, min_val);
-	}
+	Processor& operator=(const Processor&) = delete;
+	Processor& operator=(Processor&&)      = delete;
 
 
 	/**
 	 * @return A vector, for each prototype index, of the epoch data.
 	 */
 	template<typename EPOCH_DATA, typename ITERATOR, typename SAMPLE_OF, typename PROTOTYPE_OF_VERTEX_VALUE, typename DISTANCE>
-	auto update_prototypes(unsigned int nb_threads, const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance) {
+	auto process(unsigned int nb_threads, const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance) {
 	  auto iters = utils::split(samples_begin, samples_end, nb_threads);
 	  std::vector<std::future<std::vector<EPOCH_DATA> > > futures;
 	  auto out = std::back_inserter(futures);
 
 	  for(auto& begin_end : iters) 
 	    *(out++) = std::async(std::launch::async,
-				  [begin_end, this, &sample_of, &distance, size = vertices.size()]() {
+				  [begin_end, this, &sample_of, &distance, size = table.size()]() {
 				    std::vector<EPOCH_DATA> data(size);
 				    for(auto it = begin_end.first; it != begin_end.second; ++it) {
 				      double min_dist;
 				      const auto&  sample = sample_of(*it);
-				      auto        closest = utils::closest(g, sample, distance, min_dist);
+				      auto        closest = utils::closest(table.g, sample, distance, min_dist);
 				      if(closest != nullptr) {
-					auto&  neighborhood = neighborhood_table[closest];
+					auto&  neighborhood = table[closest];
 					data[neighborhood.begin()->index].notify_closest(sample, min_dist);
 					for(auto& info : neighborhood) data[info.index].notify_wtm_update(sample, info.value);
 				      }
@@ -690,7 +668,7 @@ namespace vq3 {
 
 	  unsigned int idx = 0;
 	  for(auto&  d : data0) {
-	    auto& value = (*(vertices(idx++)))();
+	    auto& value = (*(table(idx++)))();
 	    d.set_prototype(prototype_of(value));
 	    d.set_content(value);
 	  }
@@ -698,8 +676,8 @@ namespace vq3 {
 	}
       };
     
-      template<typename GRAPH>
-      auto processor(GRAPH& g, utils::Vertices<typename GRAPH::ref_vertex>& vertices) {return Processor<GRAPH>(g, vertices);}
+      template<typename TABLE>
+      auto processor(TABLE& table) {return Processor<TABLE>(table);}
     }
   }
 }
