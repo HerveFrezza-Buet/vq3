@@ -581,24 +581,28 @@ namespace vq3 {
 				  });
 
 	  auto fit = futures.begin();
-	  auto data0 = (fit++)->get();
-	  auto b0 = data0.begin();
-	  auto e0 = data0.end();
-	  for(unsigned int thread_id = 1; thread_id < nb_threads; ++thread_id) {
-	    auto datai = (fit++)->get();
-	    auto bi = datai.begin();
-	    for(auto b = b0; b != e0; ++b, ++bi)
-	      (*b) += *bi;
+	  if(futures.end() != fit) {
+	    auto data0 = (fit++)->get();
+	    auto b0 = data0.begin();
+	    auto e0 = data0.end();
+	    for(unsigned int thread_id = 1; thread_id < nb_threads; ++thread_id) {
+	      auto datai = (fit++)->get();
+	      auto bi = datai.begin();
+	      for(auto b = b0; b != e0; ++b, ++bi)
+		(*b) += *bi;
+	    }
+	    
+	    unsigned int idx = 0;
+	    for(auto&  d : data0) {
+	      auto& value = (*(table(idx++)))();
+	      d.set_prototype(prototype_of(value));
+	      d.set_content(value);
+	    }
+	    
+	    return data0;
 	  }
-
-	  unsigned int idx = 0;
-	  for(auto&  d : data0) {
-	    auto& value = (*(table(idx++)))();
-	    d.set_prototype(prototype_of(value));
-	    d.set_content(value);
-	  }
-
-	  return data0;
+	  else
+	    return std::vector<EPOCH_DATA>();
 	}
       };
     
@@ -656,23 +660,27 @@ namespace vq3 {
 				  });
 	  
 	  auto fit = futures.begin();
-	  auto data0 = (fit++)->get();
-	  auto b0 = data0.begin();
-	  auto e0 = data0.end();
-	  for(unsigned int thread_id = 1; thread_id < nb_threads; ++thread_id) {
-	    auto datai = (fit++)->get();
-	    auto bi = datai.begin();
-	    for(auto b = b0; b != e0; ++b, ++bi)
-	      (*b) += *bi;
+	  if(fit != futures.end()) {
+	    auto data0 = (fit++)->get();
+	    auto b0 = data0.begin();
+	    auto e0 = data0.end();
+	    for(unsigned int thread_id = 1; thread_id < nb_threads; ++thread_id) {
+	      auto datai = (fit++)->get();
+	      auto bi = datai.begin();
+	      for(auto b = b0; b != e0; ++b, ++bi)
+		(*b) += *bi;
+	    }
+	    
+	    unsigned int idx = 0;
+	    for(auto&  d : data0) {
+	      auto& value = (*(table(idx++)))();
+	      d.set_prototype(prototype_of(value));
+	      d.set_content(value);
+	    }
+	    return data0;
 	  }
-
-	  unsigned int idx = 0;
-	  for(auto&  d : data0) {
-	    auto& value = (*(table(idx++)))();
-	    d.set_prototype(prototype_of(value));
-	    d.set_content(value);
-	  }
-	  return data0;
+	  else
+	    return std::vector<EPOCH_DATA>();
 	}
       };
     
