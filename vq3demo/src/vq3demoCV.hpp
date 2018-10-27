@@ -742,7 +742,8 @@ namespace vq3 {
 	double bin_coef;
 
 	double maxh;
-	
+
+	bool draw_sci_histo = false;
 
 	double abscissa_of(double value) {
 	  return (value - value_min)*value_coef + pA.x;
@@ -775,9 +776,22 @@ namespace vq3 {
       public:
 
 	/**
+	 * Toggles the drawing of small confidence interval.
+	 */
+	void draw_sci(bool on) {
+	  draw_sci_histo = on;
+	}
+
+	/**
 	 * This draw the histogram. Call this before any other supplementary drawings.
 	 */
-	void draw(cv::Mat& image, const Frame& frame) {	  
+	void draw(cv::Mat& image, const Frame& frame) {
+
+	  if(draw_sci_histo)
+	    sci_range = sci;
+	  else
+	    sci_range.reset();
+	  
 	  cv::rectangle(image, frame(min), frame(max), frame_background ,              -1);
 	  cv::rectangle(image, frame(min), frame(max), frame_foreground , frame_thickness);
 
@@ -918,13 +932,22 @@ namespace vq3 {
 	/**
 	 * This draws a gaussian function, using nb_points points.
 	 */
-	void gaussian(cv::Mat& image, const Frame& frame,
-		      double mean, double std_dev, double amplitude, unsigned nb_points,
-		      const cv::Scalar& color, int thickness, bool clip) {
+	void gaussian_stddev(cv::Mat& image, const Frame& frame,
+			  double mean, double std_dev, double amplitude, unsigned nb_points,
+			  const cv::Scalar& color, int thickness, bool clip) {
+	  gaussian_var(image,frame, mean, std_dev*std_dev, amplitude, nb_points, color, thickness, clip);
+	}
+	
+	/**
+	 * This draws a gaussian function, using nb_points points.
+	 */
+	void gaussian_var(cv::Mat& image, const Frame& frame,
+			  double mean, double var, double amplitude, unsigned nb_points,
+			  const cv::Scalar& color, int thickness, bool clip) {
 	  std::vector<demo2d::Point> points;
 	  auto out = std::back_inserter(points);
 	  double coef  = (value_max - value_min)/nb_points;
-	  double gamma = -.5/(std_dev*std_dev);
+	  double gamma = -.5/var;
 	  for(unsigned int i=0; i <= nb_points; ++i) {
 	    double x   = value_min + i*coef;
 	    double dx = x - mean;

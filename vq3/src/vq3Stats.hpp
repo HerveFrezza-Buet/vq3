@@ -335,21 +335,31 @@ namespace vq3 {
 
 
       unsigned int bin_quantile = 0;
-
+      
+      std::tuple<double, double, double> gapprox(double m, double v, double std, double nb) {
+	return {m, v, nb*bin_width*0.3989422804014327/std}; // 0.39 = 1/sqrt(2*pi)
+      }
+      
     protected:
 
-      double sci_conf      = .5;
-      double bin_min       =  0;
-      double bin_max       =  1;
-      unsigned int bin_nb  = 10;
-      unsigned int nb_hits =  0;
-      double bin_width     =  1;
+      double sci_conf          = .5;
+      double bin_min           =  0;
+      double bin_max           =  1;
+      unsigned int bin_nb      = 10;
+      unsigned int nb_hits     =  0;
+      unsigned int nb_hits_sci =  0;
+      double bin_width         =  1;
 
       std::vector<unsigned int> h;
       std::pair<double, double> sci;
       
       double mean;
       double var;
+      double std_dev;
+      
+      double smean;
+      double svar;
+      double sstd_dev;
 	
     public:
 
@@ -413,9 +423,26 @@ namespace vq3 {
 	std::sort(values.begin(), values.end());
 	sci = shortest_confidence_interval(sci_conf, values.begin(), values.end());
 
-	auto ms = mean_std();
-	std::copy(values.begin(), values.end(), ms.output_iterator());
+	auto   ms = mean_std();
+	auto  sms = mean_std();
+	auto  out = ms.output_iterator();
+	auto sout = sms.output_iterator();
+
+	nb_hits_sci = 0;
+	for(auto it = values.begin(); it != values.end(); ++it) {
+	  auto v = *it;
+	  *(out++) =  v;
+	  if(sci.first <= v && v <= sci.second) {
+	    *(sout++) =  v;
+	    ++nb_hits_sci;
+	  }
+	}
+	
 	std::tie(mean, var) = ms();
+	std_dev = std::sqrt(var);
+	
+	std::tie(smean, svar) = sms();
+	sstd_dev = std::sqrt(svar);
 	  
 	
 	  
@@ -462,10 +489,17 @@ namespace vq3 {
       }
 
       /**
-       * @return (mu, sigma, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance).
+       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance).
        */
       std::tuple<double, double, double> get_gaussian_approx() {
-	return {mean, var, nb_hits*0.3989422804014327*(bin_width/var)}; // 0.39 = 1/sqrt(2*pi)
+	return gapprox(mean, var, std_dev, nb_hits);
+      }
+      
+      /**
+       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance). Here, the histogram is only considered in the SCI interval for the approximation.
+       */
+      std::tuple<double, double, double> get_gaussian_approx_sci() {
+	return gapprox(smean, svar, sstd_dev, nb_hits_sci);
       }
       
     };
