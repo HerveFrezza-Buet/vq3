@@ -42,7 +42,7 @@ namespace vq3 {
   namespace stats {
 
     /**
-     * This allows for computing online the mean and the variance of a scalar collection.
+     * This allows for computing the mean and the variance or standard deviation of a scalar collection.
      */
     class MeanStd {
     private:
@@ -52,7 +52,7 @@ namespace vq3 {
       double sum2;
 	
       friend std::ostream& operator<<(std::ostream& os, const MeanStd& ms) {
-	os << "[mu = " << ms.mean() << ", sigma = " << std::sqrt(ms.variance()) << ", n = " << ms.n << "]";
+	os << "[mu = " << ms.mean() << ", sigma^2 = " << std::sqrt(ms.variance()) << ", n = " << ms.n << "]";
 	return os;
       }
       
@@ -259,6 +259,7 @@ namespace vq3 {
       MeanStd<VALUE, ONLINE_PARAM> mean_std(const ONLINE_PARAM& p) {return  MeanStd<VALUE, ONLINE_PARAM>(p);}
     }
         
+    
     /**
      * This computes the d-shortest confidence interval from a sorted collection of double.
      * @param d belongs to [.5,1], it is the confidence level.
@@ -336,8 +337,8 @@ namespace vq3 {
 
       unsigned int bin_quantile = 0;
       
-      std::tuple<double, double, double> gapprox(double m, double v, double std, double nb) {
-	return {m, v, nb*bin_width*0.3989422804014327/std}; // 0.39 = 1/sqrt(2*pi)
+      double gapprox(double m, double std, double nb) {
+	return nb*bin_width*0.3989422804014327/std; // 0.39 = 1/sqrt(2*pi)
       }
       
     protected:
@@ -354,11 +355,9 @@ namespace vq3 {
       std::pair<double, double> sci;
       
       double mean;
-      double var;
       double std_dev;
       
       double smean;
-      double svar;
       double sstd_dev;
 	
     public:
@@ -428,6 +427,7 @@ namespace vq3 {
 	auto  out = ms.output_iterator();
 	auto sout = sms.output_iterator();
 
+	  
 	nb_hits_sci = 0;
 	for(auto it = values.begin(); it != values.end(); ++it) {
 	  auto v = *it;
@@ -438,14 +438,9 @@ namespace vq3 {
 	  }
 	}
 	
-	std::tie(mean, var) = ms();
-	std_dev = std::sqrt(var);
+	std::tie(mean,  std_dev ) = ms ();
+	std::tie(smean, sstd_dev) = sms(); 
 	
-	std::tie(smean, svar) = sms();
-	sstd_dev = std::sqrt(svar);
-	  
-	
-	  
 	if(bin_quantile != 0) {
 	  auto bin_sci = shortest_confidence_interval(.01*bin_quantile, values.begin(), values.end());
 	  if(bin_sci.first == bin_sci.second)
@@ -492,14 +487,16 @@ namespace vq3 {
        * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance).
        */
       std::tuple<double, double, double> get_gaussian_approx() {
-	return gapprox(mean, var, std_dev, nb_hits);
+	return {mean, std_dev*std_dev, gapprox(mean, std_dev, nb_hits)};
       }
       
       /**
        * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance). Here, the histogram is only considered in the SCI interval for the approximation.
        */
       std::tuple<double, double, double> get_gaussian_approx_sci() {
-	return gapprox(smean, svar, sstd_dev, nb_hits_sci);
+
+	  
+	return {smean, sstd_dev*sstd_dev, gapprox(smean, sstd_dev, nb_hits_sci)};
       }
       
     };
