@@ -832,8 +832,8 @@ namespace vq3 {
 	    }
 	  }
 	  else {
-	    value_min = value_of(0);
-	    value_max = value_of(bin_nb);
+	    value_min = value_of(0 - .5);
+	    value_max = value_of(bin_nb + .5);
 	  }
 	  value_coef = (pB.x - pA.x)/(value_max - value_min);
 

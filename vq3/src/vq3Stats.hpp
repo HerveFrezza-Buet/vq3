@@ -408,7 +408,7 @@ namespace vq3 {
 	  
 	auto [min_iter, max_iter] = std::minmax_element(values.begin(), values.end());
 	bin_min = *min_iter;
-	bin_max = *max_iter;
+	bin_max = (*max_iter)*1.001; // In order to include the maximal value.
       }
 
       /**
