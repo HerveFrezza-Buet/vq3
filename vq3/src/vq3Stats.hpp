@@ -478,7 +478,7 @@ namespace vq3 {
       /**
        * @returns an vector of pairs (v,nb)  (ordered according to v) where v is the center of the value corresponding to the bin and nb the number of data that felt in that bin.
        */
-      std::vector<std::pair<double, unsigned int>> get_bins() {
+      std::vector<std::pair<double, unsigned int>> bins() {
 	unsigned int i = 0;
 	std::vector<std::pair<double, unsigned int>> res;
 	auto out =  std::back_inserter(res);
@@ -491,16 +491,16 @@ namespace vq3 {
       }
 
       /**
-       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the normal that approximates the histogram (i.e. same mean and variance).
+       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance).
        */
-      std::tuple<double, double, double> get_normal_fit() {
+      std::tuple<double, double, double> gaussian_fit() {
 	return {mean, std_dev*std_dev, nfit(mean, std_dev, nb_hits)};
       }
       
       /**
-       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the normal that approximates the histogram (i.e. same mean and variance). Here, the histogram is only considered in the SCI interval for the approximation.
+       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance). Here, the histogram is only considered in the SCI interval for the approximation.
        */
-      std::tuple<double, double, double> get_normal_fit_sci() {
+      std::tuple<double, double, double> gaussian_fit_sci() {
 
 	  
 	return {smean, sstd_dev*sstd_dev, nfit(smean, sstd_dev, nb_hits_sci)};

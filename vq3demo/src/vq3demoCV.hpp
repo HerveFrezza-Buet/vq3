@@ -930,18 +930,18 @@ namespace vq3 {
 	}
 
 	/**
-	 * This draws a normal function, using nb_points points.
+	 * This draws a gaussian function, using nb_points points.
 	 */
-	void normal_stddev(cv::Mat& image, const Frame& frame,
+	void gaussian_stddev(cv::Mat& image, const Frame& frame,
 			   double mean, double std_dev, double amplitude, unsigned nb_points,
 			   const cv::Scalar& color, int thickness, bool clip) {
-	  normal_var(image,frame, mean, std_dev*std_dev, amplitude, nb_points, color, thickness, clip);
+	  gaussian_var(image,frame, mean, std_dev*std_dev, amplitude, nb_points, color, thickness, clip);
 	}
 	
 	/**
-	 * This draws a normal function, using nb_points points.
+	 * This draws a gaussian function, using nb_points points.
 	 */
-	void normal_var(cv::Mat& image, const Frame& frame,
+	void gaussian_var(cv::Mat& image, const Frame& frame,
 			double mean, double var, double amplitude, unsigned nb_points,
 			const cv::Scalar& color, int thickness, bool clip) {
 	  std::vector<demo2d::Point> points;
