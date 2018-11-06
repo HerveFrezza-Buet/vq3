@@ -150,7 +150,7 @@ namespace vq3 {
 	      *(dst++) = *(src++)*darken;
 	      *(dst++) = *(src++)*darken;
 	    }
-	  }
+	}
       };
 
       
@@ -667,12 +667,12 @@ namespace vq3 {
 	
 	template<typename DO_DRAW, typename POINT_OF, typename SEGMENT_OF, typename COLOR_OF, typename THICKNESS_OF>
 	SegmentAtVertexDrawer(cv::Mat& image,
-		     Frame frame,
-		     const DO_DRAW&      do_draw,
-		     const POINT_OF&     point_of,
-		     const SEGMENT_OF&   segment_of,
-		     const COLOR_OF&     color_of,
-		     const THICKNESS_OF& thickness_of)
+			      Frame frame,
+			      const DO_DRAW&      do_draw,
+			      const POINT_OF&     point_of,
+			      const SEGMENT_OF&   segment_of,
+			      const COLOR_OF&     color_of,
+			      const THICKNESS_OF& thickness_of)
 	  : image(image),
 	    frame(frame),
 	    do_draw(do_draw),
@@ -729,7 +729,7 @@ namespace vq3 {
 	
 	histogram(const demo2d::Point& min, const demo2d::Point& max)
 	  : vq3::stats::histogram(),
-	    min(min), max(max){
+	  min(min), max(max){
 	}
 	
       private:
@@ -776,10 +776,10 @@ namespace vq3 {
       public:
 
 	/**
-	 * Toggles the drawing of small confidence interval.
+	 * Toggles the drawing of smallest confidence interval (if sci computation is set).
 	 */
 	void draw_sci(bool on) {
-	  draw_sci_histo = on;
+	  draw_sci_histo = on && sci_conf;
 	}
 
 	/**
@@ -870,24 +870,24 @@ namespace vq3 {
 	}
 
 	void interval(cv::Mat& image, const Frame& frame, double vmin, double vmax, int pix_offset, const cv::Scalar& color, int thickness) {
-	    auto rA = demo2d::Point(abscissa_of(vmin), pA.y);
-	    auto rB = demo2d::Point(abscissa_of(vmax), pA.y);
+	  auto rA = demo2d::Point(abscissa_of(vmin), pA.y);
+	  auto rB = demo2d::Point(abscissa_of(vmax), pA.y);
 
-	    if(rA.x < pA.x)
-	      rA.x = pA.x;
-	    else if(rA.x > pB.x)
-	      rA.x = pB.x;
+	  if(rA.x < pA.x)
+	    rA.x = pA.x;
+	  else if(rA.x > pB.x)
+	    rA.x = pB.x;
 
-	    if(rB.x < pA.x)
-	      rB.x = pA.x;
-	    else if(rB.x > pB.x)
-	      rB.x = pB.x;
+	  if(rB.x < pA.x)
+	    rB.x = pA.x;
+	  else if(rB.x > pB.x)
+	    rB.x = pB.x;
 
-	    auto A = frame(rA);
-	    auto B = frame(rB);
-	    A.y += pix_offset;
-	    B.y += pix_offset;
-	    cv::line(image, A, B, range_color, range_thickness);
+	  auto A = frame(rA);
+	  auto B = frame(rB);
+	  A.y += pix_offset;
+	  B.y += pix_offset;
+	  cv::line(image, A, B, range_color, range_thickness);
 	}
 	
 	/**
@@ -925,25 +925,25 @@ namespace vq3 {
 	    B.y = pA.y + maxh*B.y*y_coef;
 	    prev = (curr++);
 	    if((!clip) || (in_drawing_area(A) && in_drawing_area(B)))
-	       cv::line(image, frame(A), frame(B), color, thickness);
+	      cv::line(image, frame(A), frame(B), color, thickness);
 	  }
 	}
 
 	/**
-	 * This draws a gaussian function, using nb_points points.
+	 * This draws a normal function, using nb_points points.
 	 */
-	void gaussian_stddev(cv::Mat& image, const Frame& frame,
-			  double mean, double std_dev, double amplitude, unsigned nb_points,
-			  const cv::Scalar& color, int thickness, bool clip) {
-	  gaussian_var(image,frame, mean, std_dev*std_dev, amplitude, nb_points, color, thickness, clip);
+	void normal_stddev(cv::Mat& image, const Frame& frame,
+			   double mean, double std_dev, double amplitude, unsigned nb_points,
+			   const cv::Scalar& color, int thickness, bool clip) {
+	  normal_var(image,frame, mean, std_dev*std_dev, amplitude, nb_points, color, thickness, clip);
 	}
 	
 	/**
-	 * This draws a gaussian function, using nb_points points.
+	 * This draws a normal function, using nb_points points.
 	 */
-	void gaussian_var(cv::Mat& image, const Frame& frame,
-			  double mean, double var, double amplitude, unsigned nb_points,
-			  const cv::Scalar& color, int thickness, bool clip) {
+	void normal_var(cv::Mat& image, const Frame& frame,
+			double mean, double var, double amplitude, unsigned nb_points,
+			const cv::Scalar& color, int thickness, bool clip) {
 	  std::vector<demo2d::Point> points;
 	  auto out = std::back_inserter(points);
 	  double coef  = (value_max - value_min)/nb_points;

@@ -436,8 +436,8 @@ int main(int argc, char* argv[]) {
 	evolution.histo.make();
 	evolution.histo.draw(image, frame);
 	
-	auto [mm, ss, aa] = evolution.histo.get_gaussian_approx();
-	evolution.histo.gaussian_var(image, frame, mm, ss, aa, 50, cv::Scalar(255,0,0), 1, false);
+	auto [mm, ss, aa] = evolution.histo.get_normal_fit();
+	evolution.histo.normal_var(image, frame, mm, ss, aa, 50, cv::Scalar(255,0,0), 1, false);
 	evolution.histo.interval(image, frame,
 				 evolution.NT - evolution.radius,
 				 evolution.NT + evolution.radius,
@@ -447,8 +447,8 @@ int main(int argc, char* argv[]) {
 	  auto& vertex = (*(cb.ref_v))();
 	  if(vertex.vq3_online_mean_std) {
 	    auto [m, s] =  vertex.vq3_online_mean_std();
-	    evolution.histo.gaussian_var(image, frame, m, s, aa, 50, cv::Scalar(0,0,0),   5, false);
-	    evolution.histo.gaussian_var(image, frame, m, s, aa, 50, vertex.vq3_color,    3, false);
+	    evolution.histo.normal_var(image, frame, m, s, aa, 50, cv::Scalar(0,0,0),   5, false);
+	    evolution.histo.normal_var(image, frame, m, s, aa, 50, vertex.vq3_color,    3, false);
 	  }
 	}
       }

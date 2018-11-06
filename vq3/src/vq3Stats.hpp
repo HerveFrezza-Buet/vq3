@@ -328,6 +328,7 @@ namespace vq3 {
       std::sort(values.begin(), values.end());
       return shortest_confidence_interval(d, values.begin(), values.end());
     }
+
     
     class histogram {
     private:
@@ -337,13 +338,13 @@ namespace vq3 {
 
       unsigned int bin_quantile = 0;
       
-      double gapprox(double m, double std, double nb) {
+      double nfit(double m, double std, double nb) {
 	return nb*bin_width*0.3989422804014327/std; // 0.39 = 1/sqrt(2*pi)
       }
       
     protected:
 
-      double sci_conf          = .5;
+      std::optional<double> sci_conf;
       double bin_min           =  0;
       double bin_max           =  1;
       unsigned int bin_nb      = 10;
@@ -372,7 +373,7 @@ namespace vq3 {
       auto output_iterator() {return std::back_inserter(values);}
 
       /**
-       * Set sci related stuff.
+       * Set sci related stuff. This triggers the SCI computation.
        * @param confidence in [.5, 1[. The confidence of the shortest confidence interval.
        */
       void set_sci(double confidence) {
@@ -418,28 +419,34 @@ namespace vq3 {
 	nb_hits = values.size();
 	if(nb_hits < 2)
 	  throw std::runtime_error("vq3::stats::histogram::make : at least 2 samples are required.");
-	  
-	std::sort(values.begin(), values.end());
-	sci = shortest_confidence_interval(sci_conf, values.begin(), values.end());
 
+	if(sci_conf) {
+	  std::sort(values.begin(), values.end());
+	  sci = shortest_confidence_interval(*sci_conf, values.begin(), values.end());
+	}
+	
 	auto   ms = mean_std();
 	auto  sms = mean_std();
 	auto  out = ms.output_iterator();
 	auto sout = sms.output_iterator();
 
-	  
-	nb_hits_sci = 0;
-	for(auto it = values.begin(); it != values.end(); ++it) {
-	  auto v = *it;
-	  *(out++) =  v;
-	  if(sci.first <= v && v <= sci.second) {
-	    *(sout++) =  v;
-	    ++nb_hits_sci;
+	if(sci_conf) {
+	  nb_hits_sci = 0;
+	  for(auto it = values.begin(); it != values.end(); ++it) {
+	    auto v = *it;
+	    *(out++) =  v;
+	    if(sci.first <= v && v <= sci.second) {
+	      *(sout++) =  v;
+	      ++nb_hits_sci;
+	    }
 	  }
 	}
+	else
+	  std::copy(values.begin(), values.end(), out);
 	
 	std::tie(mean,  std_dev ) = ms ();
-	std::tie(smean, sstd_dev) = sms(); 
+	if(sci_conf) 
+	  std::tie(smean, sstd_dev) = sms(); 
 	
 	if(bin_quantile != 0) {
 	  auto bin_sci = shortest_confidence_interval(.01*bin_quantile, values.begin(), values.end());
@@ -484,19 +491,19 @@ namespace vq3 {
       }
 
       /**
-       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance).
+       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the normal that approximates the histogram (i.e. same mean and variance).
        */
-      std::tuple<double, double, double> get_gaussian_approx() {
-	return {mean, std_dev*std_dev, gapprox(mean, std_dev, nb_hits)};
+      std::tuple<double, double, double> get_normal_fit() {
+	return {mean, std_dev*std_dev, nfit(mean, std_dev, nb_hits)};
       }
       
       /**
-       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance). Here, the histogram is only considered in the SCI interval for the approximation.
+       * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the normal that approximates the histogram (i.e. same mean and variance). Here, the histogram is only considered in the SCI interval for the approximation.
        */
-      std::tuple<double, double, double> get_gaussian_approx_sci() {
+      std::tuple<double, double, double> get_normal_fit_sci() {
 
 	  
-	return {smean, sstd_dev*sstd_dev, gapprox(smean, sstd_dev, nb_hits_sci)};
+	return {smean, sstd_dev*sstd_dev, nfit(smean, sstd_dev, nb_hits_sci)};
       }
       
     };

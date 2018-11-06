@@ -156,18 +156,27 @@ namespace vq3 {
 	       << "set grid" << std::endl
 	       << "set style fill solid noborder" << std::endl;
 	  if(!yrange) file << "set yrange[0:*]" << std::endl;
-	  file << "plot '-' using 1:2 with boxes lc rgb \"#5555FF\" notitle, \\" << std::endl
-	       << "     '-' using 1:2 with boxes lc rgb \"#5555AA\" title \"SCI " << (unsigned int)(sci_conf*100+.5) << "%\"" << std::endl;
+	  
+	  if(sci_conf)
+	    file << "plot '-' using 1:2 with boxes lc rgb \"#5555FF\" notitle, \\" << std::endl
+		 << "     '-' using 1:2 with boxes lc rgb \"#5555AA\" title \"SCI " << (unsigned int)((*sci_conf)*100+.5) << "%\"" << std::endl;
+	  else
+	    file << "plot '-' using 1:2 with boxes lc rgb \"#5555FF\" notitle" << std::endl;
+	  
 	  unsigned int i=0;
 	  double coef = (bin_max - bin_min)/bin_nb;
 	  for(auto nb : h)
 	    file << bin_min + (i++ + .5)*coef << ' ' << nb << std::endl;
-	  file << 'e' << std::endl;
-	  i = 0;
-	  for(auto nb : h) {
-	    auto val = bin_min + (i++ + .5)*coef;
-	    if(sci.first <= val && val < sci.second) 
-	      file << val << ' ' << nb << std::endl;
+
+	  
+	  if(sci_conf) {
+	    file << 'e' << std::endl;
+	    i = 0;
+	    for(auto nb : h) {
+	      auto val = bin_min + (i++ + .5)*coef;
+	      if(sci.first <= val && val < sci.second) 
+		file << val << ' ' << nb << std::endl;
+	    }
 	  }
 
 	  close();
