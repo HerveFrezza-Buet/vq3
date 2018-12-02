@@ -711,6 +711,7 @@ namespace vq3 {
 
 	demo2d::Point min, max;
 	std::optional<std::pair<double,double>> range;
+	std::optional<std::pair<double,double>> value_bounds;
 	std::optional<double> NT;
 	std::optional<double> max_histo_display;
 	double frame_margin = 0;
@@ -813,7 +814,9 @@ namespace vq3 {
 	  bin_coef = (bin_max - bin_min)/bin_nb;
 	  
 
-	  if(NT) {
+	  if(value_bounds) 
+	    std::tie(value_min, value_max) = value_bounds.value();
+	  else if(NT) {
 	    double vmin = value_of(0 - .5);
 	    double vmax = value_of(bin_nb + .5);
 
@@ -841,7 +844,7 @@ namespace vq3 {
 	    draw_bar(image, frame, bin);
 
 	  if(NT) {
-	    double v = .5*(pA.x + pB.x);
+	    double v = abscissa_of(NT.value());
 	    auto AA = demo2d::Point(v, pA.y);
 	    auto BB = demo2d::Point(v, max.y - frame_margin);
 	    cv::line(image, frame(AA), frame(BB), NT_color, NT_thickness);
