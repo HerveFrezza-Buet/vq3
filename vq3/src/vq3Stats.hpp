@@ -42,13 +42,94 @@ namespace vq3 {
   namespace stats {
 
     /**
-     * This allows for computing the mean and the variance or standard deviation of a scalar collection.
+     * This allows for computing the mean of a scalar collection.
      */
-    class MeanStd {
-    private:
+    class Mean {
+    protected:
       double K;
       unsigned int n;
       double sum;
+      double tmp;
+	
+      friend std::ostream& operator<<(std::ostream& os, const Mean& ms) {
+	os << "[mu = " << ms.mean() << ", n = " << ms.n << "]";
+	return os;
+      }
+      
+    public:
+
+      class iterator {
+      private:
+	Mean& ms;
+	friend class Mean;
+	iterator(Mean& ms) : ms(ms) {}
+      public:
+	using difference_type   = long;
+	using value_type        = double;
+	using pointer           = double*;
+	using reference         = double&;
+	using iterator_category = std::output_iterator_tag;
+	
+	iterator()                           = delete;
+	iterator(const iterator&)            = default;
+	iterator& operator=(const iterator&) = default;
+	iterator& operator++()    {return *this;}
+	iterator& operator++(int) {return *this;}
+	iterator& operator*()     {return *this;}
+	iterator& operator=(double x) {ms = x; return *this;}
+      };
+	
+      Mean(): K(0), n(0), sum(0), tmp(0) {}
+      Mean(const Mean&)            = default;
+      Mean& operator=(const Mean&) = default;
+      Mean(Mean&&)                 = default;
+      Mean& operator=(Mean&&)      = default;
+
+      /** 
+       * This provides an output iterator for submitting values.
+       */
+      iterator output_iterator() {return iterator(*this);}
+      
+
+      void clear() {
+	K=0;
+	n=0;
+	sum=0;
+	tmp=0;
+      }
+      
+      /**
+       * This notifies a value of the scalar collection.
+       */
+      Mean& operator=(double x) {
+	if (n == 0) K = x;
+	n++;
+	tmp = x - K;
+	sum  += tmp;
+	return *this;
+      }
+	
+      double mean()     const {return K + sum / n;}
+	
+
+      unsigned int nb_samples() {return n;}
+
+      /**
+       * @returns the mean.
+       */
+      double operator()() const {
+	return mean();
+      }
+    };
+
+    
+    inline Mean mean() {return Mean();}
+
+    /**
+     * This allows for computing the mean and the variance or standard deviation of a scalar collection.
+     */
+    class MeanStd : public Mean {
+    private:
       double sum2;
 	
       friend std::ostream& operator<<(std::ostream& os, const MeanStd& ms) {
@@ -79,7 +160,7 @@ namespace vq3 {
 	iterator& operator=(double x) {ms = x; return *this;}
       };
 	
-      MeanStd(): K(0), n(0), sum(0), sum2(0) {}
+      MeanStd(): Mean(), sum2(0) {}
       MeanStd(const MeanStd&)            = default;
       MeanStd& operator=(const MeanStd&) = default;
       MeanStd(MeanStd&&)                 = default;
@@ -92,9 +173,7 @@ namespace vq3 {
       
 
       void clear() {
-	K=0;
-	n=0;
-	sum=0;
+	Mean::clear();
 	sum2=0;
       }
       
@@ -102,15 +181,10 @@ namespace vq3 {
        * This notifies a value of the scalar collection.
        */
       MeanStd& operator=(double x) {
-	if (n == 0) K = x;
-	n++;
-	auto tmp = x - K;
-	sum  += tmp;
+	Mean::operator=(x);
 	sum2 += tmp*tmp;
 	return *this;
       }
-	
-      double mean()     const {return K + sum / n;}
 	
       double variance() const {
 	if(n > 1)
@@ -118,8 +192,6 @@ namespace vq3 {
 	else
 	  return 0;
       }
-
-      unsigned int nb_samples() {return n;}
 
       /**
        * @returns the (mean, standard_deviation) pair.
