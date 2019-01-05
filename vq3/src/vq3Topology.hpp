@@ -121,7 +121,7 @@ namespace vq3 {
        * WARNING ! Clear the tags (false) before calling that function.
        * @param ref_v the origin vertex.
        * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance considered. 0 means "no limit".
+       * @param max_dist The maximal distance (max dist and above is not considered). 0 means "no limit".
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
@@ -203,7 +203,7 @@ namespace vq3 {
       }
       
       /**
-       * Updates the vertices and neighbouts (typically after a topology change in terms of vertices and/or edges of the graph).
+       * Updates the vertices and neighbours (typically after a topology change in terms of vertices and/or edges of the graph).
        */
       template<typename VALUE_OF_EDGE_DISTANCE>
       void operator()(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
@@ -261,14 +261,16 @@ namespace vq3 {
       }
 
       /**
-       * @returns the neighborhood of vertex #idx.
+       * @returns the neighborhood of vertex #idx. (*this)(voed, max_dist, min_val) should be called first in order to update the neigborhood of all the vertices.
        */
       auto& operator[](index_type idx) const {
-	return neighborhood_table[idx];
+	auto ref_v = idx2vertex[idx];
+	auto it = neighborhood_table.find(ref_v);
+	return it->second;
       }
 
       /**
-       * @returns the neighborhood of vertex ref_v.
+       * @returns the neighborhood of vertex ref_v. (*this)(voed, max_dist, min_val) should be called first in order to update the neigborhood of all the vertices.
        */
       auto& operator[](const typename graph_type::ref_vertex& ref_v) const {
 	auto it = neighborhood_table.find(ref_v);

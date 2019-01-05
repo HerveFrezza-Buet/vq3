@@ -171,8 +171,9 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   // tag-decorated our node values. 
   vq3::utils::clear_vertex_tags(data.topology.g, false);
   auto n = data.topology.neighborhood(ref_v,
-				      [](unsigned int edge_distance) {return std::pow(.95, edge_distance);},
-				      0, 0.0);
+				      [](unsigned int edge_distance) {return std::pow(.9, edge_distance);},
+				      0,
+				      0.0);
 
   // Now, from value/index pairs in the neighborhood, let us change the nodes.
   for(auto& info : n) {

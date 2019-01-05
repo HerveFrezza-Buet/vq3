@@ -22,7 +22,7 @@
 #define NB_STEPS              250
 
 #define SOM_H_RADIUS            5.1
-#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
+#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS+1)
 
 using sample    = vq3::demo2d::Point;
 using prototype = vq3::demo2d::Point;

@@ -48,7 +48,7 @@ namespace vq3 {
     protected:
       double K;
       unsigned int n;
-      double sum;
+      double s;
       double tmp;
 	
       friend std::ostream& operator<<(std::ostream& os, const Mean& ms) {
@@ -79,7 +79,7 @@ namespace vq3 {
 	iterator& operator=(double x) {ms = x; return *this;}
       };
 	
-      Mean(): K(0), n(0), sum(0), tmp(0) {}
+      Mean(): K(0), n(0), s(0), tmp(0) {}
       Mean(const Mean&)            = default;
       Mean& operator=(const Mean&) = default;
       Mean(Mean&&)                 = default;
@@ -94,7 +94,7 @@ namespace vq3 {
       void clear() {
 	K=0;
 	n=0;
-	sum=0;
+	s=0;
 	tmp=0;
       }
       
@@ -105,11 +105,12 @@ namespace vq3 {
 	if (n == 0) K = x;
 	n++;
 	tmp = x - K;
-	sum  += tmp;
+	s  += tmp;
 	return *this;
       }
-	
-      double mean()     const {return K + sum / n;}
+
+      double sum()  const {return n * K + s;}
+      double mean() const {return K + s / n;}
 	
 
       unsigned int nb_samples() {return n;}
@@ -130,7 +131,7 @@ namespace vq3 {
      */
     class MeanStd : public Mean {
     private:
-      double sum2;
+      double s2;
 	
       friend std::ostream& operator<<(std::ostream& os, const MeanStd& ms) {
 	os << "[mu = " << ms.mean() << ", sigma^2 = " << std::sqrt(ms.variance()) << ", n = " << ms.n << "]";
@@ -160,7 +161,7 @@ namespace vq3 {
 	iterator& operator=(double x) {ms = x; return *this;}
       };
 	
-      MeanStd(): Mean(), sum2(0) {}
+      MeanStd(): Mean(), s2(0) {}
       MeanStd(const MeanStd&)            = default;
       MeanStd& operator=(const MeanStd&) = default;
       MeanStd(MeanStd&&)                 = default;
@@ -174,7 +175,7 @@ namespace vq3 {
 
       void clear() {
 	Mean::clear();
-	sum2=0;
+	s2=0;
       }
       
       /**
@@ -182,13 +183,13 @@ namespace vq3 {
        */
       MeanStd& operator=(double x) {
 	Mean::operator=(x);
-	sum2 += tmp*tmp;
+	s2 += tmp*tmp;
 	return *this;
       }
 	
       double variance() const {
 	if(n > 1)
-	  return (sum2 - (sum*sum)/double(n)) / (n-1.0);
+	  return (s2 - (s*s)/double(n)) / (n-1.0);
 	else
 	  return 0;
       }
