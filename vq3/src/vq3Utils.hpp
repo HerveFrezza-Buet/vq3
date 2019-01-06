@@ -76,6 +76,14 @@ namespace vq3 {
 	value = INCREMENTABLE();
       }
 
+      /** nb = 1, value = v */
+      /** nb += 1; value += v; */
+      accum& operator=(const INCREMENTABLE& v) {
+	nb    = 1;
+	value = v;
+	return *this;
+      }
+
       /** nb += coef; value += v; */
       accum& increment(NB_TYPE coef, const INCREMENTABLE& v) {
 	nb    += coef;
