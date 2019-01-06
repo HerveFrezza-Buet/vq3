@@ -41,6 +41,7 @@
 #include <iterator>
 #include <array>
 #include <tuple>
+#include <string>
 
 #include <vq3.hpp>
 #include <vq3demoPoint.hpp>
@@ -710,6 +711,7 @@ namespace vq3 {
       public:
 
 	demo2d::Point min, max;
+	std::optional<std::string> title;
 	std::optional<std::pair<double,double>> range;
 	std::optional<std::pair<double,double>> value_bounds;
 	std::optional<double> NT;
@@ -795,6 +797,8 @@ namespace vq3 {
 	  
 	  cv::rectangle(image, frame(min), frame(max), frame_background ,              -1);
 	  cv::rectangle(image, frame(min), frame(max), frame_foreground , frame_thickness);
+	  if(title) 
+	    cv::putText(image, *title, frame(min) + cv::Point(0,20), cv::FONT_HERSHEY_PLAIN, 1., cv::Scalar(0,0,0), 1);
 
 	  pA = min + demo2d::Point( frame_margin,  frame_margin);
 	  pB = max + demo2d::Point(-frame_margin, -frame_margin);
