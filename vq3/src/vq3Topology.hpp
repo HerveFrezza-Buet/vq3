@@ -121,7 +121,7 @@ namespace vq3 {
        * WARNING ! Clear the tags (false) before calling that function.
        * @param ref_v the origin vertex.
        * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance (max dist and above is not considered). 0 means "no limit".
+       * @param max_dist The maximal distance considered. 0 means "no limit".
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */

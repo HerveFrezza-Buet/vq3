@@ -23,7 +23,7 @@
 #define GRID_HEIGHT            20
 
 #define SOM_H_RADIUS            5.1
-#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS+1)
+#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
 using sample    = vq3::demo2d::Point;
 using prototype = vq3::demo2d::Point;

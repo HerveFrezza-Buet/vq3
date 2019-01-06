@@ -21,7 +21,7 @@
 #define NB_CHL_SAMPLES        10000
 #define SOM_NB_PROTOTYPES       400
 #define SOM_H_RADIUS            5.1
-#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS+1)
+#define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
 using sample    = vq3::demo2d::Point;
 using prototype = vq3::demo2d::Point;
