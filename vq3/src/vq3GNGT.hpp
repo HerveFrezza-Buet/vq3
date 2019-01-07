@@ -43,91 +43,56 @@ namespace vq3 {
     namespace gngt {
       
       namespace by_default {
-	struct Evolution {
-	  double T          =   0;
-	  double density    =   0;
-	  double sigma_coef = 1.5;
-	  
-	  Evolution()                 = default;
-	  Evolution(const Evolution&) = default;
-	  
-	  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
-	  void operator()(TABLE& table,
-			  const BMU_RESULT& bmu_epoch_result,
-			  const CLONE_PROTOTYPE& clone_prototype) {
 
-	    std::vector<typename TABLE::graph_type::ref_vertex> above;
-	    std::vector<typename TABLE::graph_type::ref_vertex> below;
-	    auto out_above = std::back_inserter(above);
-	    auto out_below = std::back_inserter(below);
-    
-	    double NT = density*T;
-    
-	    vq3::stats::MeanStd mean_std;
-    
-	    for(auto& res : bmu_epoch_result)
-	      if(res.vq3_bmu_accum.nb != 0)
-		mean_std  = res.vq3_bmu_accum.value;
-	    double spatial_dmean = std::sqrt(mean_std.variance());
-    
-	    unsigned int idx = 0;
-	    for(auto& res : bmu_epoch_result) {
-	      auto& ref_v = table(idx++);
-	      if(res.vq3_bmu_accum.nb == 0)
-		ref_v->kill(); // We kill a vertex which has never won the competition.
-	      else if(auto& omstd = (*ref_v)().vq3_online_mean_std; omstd) {
-		auto [m, std] = omstd(); // We get the vertex distortion statistics.
-	  
-		double radius = (std + spatial_dmean)*sigma_coef;
-	  
-		if(NT < m - radius) // There are not enough nodes (cold color).
-		  *(out_above++) = ref_v;
-		else if(m + radius < NT)  // There are too many nodes (hot color).
-		  *(out_below++) = ref_v;
-	      }
-	    }
-
-	    if(above.size() > 0)
-	      for(auto it = above.begin(); it != above.end(); ++it)
-		table.g += clone_prototype((*(*it))().vq3_value);
-    
-	    if(below.size() > 0)
-	      for(auto it = below.begin(); it != below.end(); ++it)
-		(*it)->kill();
-
-	  }
-	};
-
-	inline Evolution evolution() {
-	  return Evolution();
-	}
+	
+	// inline Evolution evolution() {
+	//   return Evolution();
+	// }
       }
+
+
       
-      template<typename PROTOTYPE, typename SAMPLE, typename TABLE>
+      template<typename SAMPLE, typename TABLE>
       class Processor {
       public:
-
+	
 	using topology_table_type = TABLE;
+
 	using graph_type = typename topology_table_type::graph_type;
 	using ref_vertex = typename graph_type::ref_vertex;
 	using ref_edge   = typename graph_type::ref_edge;
 	using vertex     = typename graph_type::vertex_value_type;
 	using edge       = typename graph_type::edge_value_type;
+
+	using prototype_type = typename vertex::decorated_type;
+	using sample_type    = SAMPLE;
       
 	
-	using epoch_bmu = vq3::epoch::data::online::bmu_mean_std<vq3::epoch::data::none<SAMPLE, vertex, PROTOTYPE> >;
-	using epoch_wta = vq3::epoch::data::wta<vq3::epoch::data::none<SAMPLE, vertex, PROTOTYPE> >;
+	using epoch_bmu = vq3::epoch::data::bmu<vq3::epoch::data::none<sample_type, vertex, prototype_type> >;
+	using epoch_wta = vq3::epoch::data::wta<vq3::epoch::data::none<sample_type, vertex, prototype_type> >;
+	using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample_type, vertex, prototype_type> >;
 	       
 
-      public:
+      private:
+
 	topology_table_type& table;
+	topology_table_type  avg_table;
+	std::optional<unsigned int> old_avg_radius;
+	
+      public:
+
+	double alpha             = 0.05; //!< The learning rate for the on-line SOM update performed at the beginning of an epoch.
+	double sample_per_vertex = 10;   //!< The number of samples used for the on-line SOM update is at most sample_per_vertex * nb_vertices.
+	
 	vq3::epoch::wta::Processor<topology_table_type> wta;
-	vq3::epoch::wta::Processor<topology_table_type> bmu;
+	vq3::epoch::wtm::Processor<topology_table_type> wtm;
 	vq3::epoch::chl::Processor<graph_type>          chl;
 
+	std::vector<epoch_bmu> bmu_results;
+
 	Processor(topology_table_type& table)
-	  : table(table), wta(table), bmu(table), chl(table.g) {
-	}
+	  : table(table), avg_table(table.g),
+	    wta(table), wtm(table), chl(table.g) {}
 	
 	Processor()                            = delete;
 	Processor(const Processor&)            = default;
@@ -142,44 +107,112 @@ namespace vq3 {
 	 * @param ref_prototype_of_vertex Returns a reference to the prototype from the vertex value.
 	 * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
 	 * @param distance Compares the vertex value to a sample.
+	 * @param average_radius The error is averaged from the vertices around. The neihgborhood is made of the vertices with an edge distance d <= average_radius. Provide 0 for averaging with all vertices in the connected component. It is an optional value, so if the value is unset, no averaging is performed.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 */
-	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE>
-	void process(unsigned int nb_threads,
-		     const ITER& begin, const ITER& end,
-		     const SAMPLE_OF& sample_of,
-		     const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
-		     const CLONE_PROTOTYPE& clone_prototype,
-		     const DISTANCE& distance,
-		     EVOLUTION& evolution) {
+	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE, typename VALUE_OF_EDGE_DISTANCE>
+	void epoch(unsigned int nb_threads,
+		   const ITER& begin, const ITER& end,
+		   const SAMPLE_OF& sample_of,
+		   const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
+		   const CLONE_PROTOTYPE& clone_prototype,
+		   const DISTANCE& distance,
+		   const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val,
+		   const std::optional<unsigned int>& average_radius,
+		   EVOLUTION& evolution) {
  	  if(begin == end) {
+	    // No samples. We kill all nodes and keep the two topological tables updated.
 	    table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
-	    table();
+	    table(voed, max_dist, min_val);
+	    if(average_radius)
+	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
 	    return;
 	  }
 
-	  if(table.size() == 0) {
-	    // empty graph, we create one vertex, and do one wta pass.
+	  auto nb_vertices = table.g.nb_vertices();
+
+	  if(nb_vertices == 0) {
+	    // Empty graph. We create one vertex, keep the two
+	    // topological tables updated, and do one wta pass.
 	    table.g += sample_of(*begin);
-	    table();
+	    table(voed, max_dist, min_val);
+	    if(average_radius)
+	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
 	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	    return;
 	  }
 
-	  auto bmu_results = bmu.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	  if(average_radius != old_avg_radius) {
+	    // If the average radius is changed from last time, the
+	    // related topological table has to be recomputed.
+	    old_avg_radius = average_radius;
+	    if(average_radius)
+	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
+	  }
+
+	  // This is an online SOM update in order to quickly move the
+	  // graph so that it fits the samples, while topological
+	  // evolution is freezed.
+	  auto sample_it = begin;
+	  auto sample_end = begin + std::min(std::distance(begin, end), (decltype(std::distance(begin, end)))(nb_vertices*sample_per_vertex));
+	  while(sample_it != sample_end)
+	    vq3::online::wtm::learn(table, distance, sample_of(*(sample_it++)), alpha);
+
+	  // We compute the error cumulated values for all the vertices.
+	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+
+	  // bmu_results_ptr refers the collection of values actually
+	  // used in the evolution algorithms. It can be directly
+	  // bmu_results or another set of values obtained by spatial
+	  // averaging, according to average_radius argument.
+	  std::vector<epoch_bmu>* bmu_results_ptr = &bmu_results;
 	  
-	  evolution(table, bmu_results, clone_prototype);
-	  table();
-	  
-	  chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge());
+	  std::vector<epoch_bmu> avg_bmu_results;
+	  if(average_radius) {
+	    // If average radius is set, we average the bmu results.
+	    avg_bmu_results.resize(bmu_results.size());
+	    typename topology_table_type::index_type idx = 0;
+	    for(auto& data : avg_bmu_results) {
+	      auto& neighborhood = avg_table[idx++];
+	      for(auto& info : neighborhood) 
+		if(auto& acc = bmu_results[info.index].vq3_bmu_accum; acc.nb > 0)
+		  data.vq3_bmu_accum += acc.value;
+	    }
+	    
+	    for(auto& data : avg_bmu_results)
+	      if(data.vq3_bmu_accum.nb > 0)
+		data.vq3_bmu_accum = data.vq3_bmu_accum.average();
+	    
+	    bmu_results_ptr = &avg_bmu_results;
+	  }
+
+	  // We call the user evolution method
+	  if(evolution(table, *bmu_results_ptr, clone_prototype)) {
+	    // If the tolopogy has changed, we update both tables.
+	    table(voed, max_dist, min_val);
+	    if(average_radius)
+	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
+	  }
+
+	  // We adjust the vertices position with a single batch update.
+	  wtm.template process<epoch_wtm>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+
+	  // We update the edges thanks to Competitive Hebbian learning.
+	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge())) {
+	    // If the tolopogy has changed, we update both tables.
+	    table(voed, max_dist, min_val);
+	    if(average_radius)
+	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
+	  }
 	}
 	
       };
 
-      template<typename PROTOTYPE, typename SAMPLE, typename TABLE>
-      Processor<PROTOTYPE, SAMPLE, TABLE> processor(TABLE& table) {
-	return Processor<PROTOTYPE, SAMPLE, TABLE>(table);
+      template<typename SAMPLE, typename TABLE>
+      Processor<SAMPLE, TABLE> processor(TABLE& table) {
+	return Processor<SAMPLE, TABLE>(table);
       }
+      
       
     }
   }
