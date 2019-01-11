@@ -448,15 +448,15 @@ int main(int argc, char* argv[]) {
       // We compute the topology evolution of the graph...
       std::optional<unsigned int> spatial_average_radius;
       if(slider_use_average == 1) spatial_average_radius = (unsigned int)slider_average_radius;
-      gngt.epoch(nb_threads,
-		 S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
-		 [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
-		 [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
-		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
-		 dist,                                                                           // compares a prototype to a sample.
-		 [](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0,  // WTM rule. 1-sized neighborhood, neighbors updating strength is 10% (0.1).
-		 spatial_average_radius,                                                         // The spatial radius for topological averaging.
-		 evolution);
+      gngt.process(nb_threads,
+		   S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
+		   [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
+		   [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
+		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
+		   dist,                                                                           // compares a prototype to a sample.
+		   [](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0,  // WTM rule. 1-sized neighborhood, neighbors updating strength is 10% (0.1).
+		   spatial_average_radius,                                                         // The spatial radius for topological averaging.
+		   evolution);
 
       // Display
     

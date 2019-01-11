@@ -3,26 +3,37 @@
 
 #define SPEED_TO_METER .5
 
-// Graph definition
+#define INIT_SLIDER_H            0
+#define INIT_SLIDER_S           80
+#define INIT_SLIDER_V          200
+#define INIT_SLIDER_TOLERANCE   20
+#define INIT_SLIDER_N         5000
+#define INIT_SLIDER_T          400
+#define INIT_SLIDER_E          100
+#define INIT_SLIDER_Z         2000
+
+#define EVOLUTION_MARGIN_ABOVE        .30
+#define EVOLUTION_MARGIN_BELOW        .15
+#define EVOLUTION_TOPOLOGICAL_RATIO   .30
+#define GNGT_ALPHA                    .10
+#define GNGT_NB_SAMPLES_PER_PROTOTYPE  50
+#define GNGT_NEIGHBOUR_DISTANCE_COEF  .10
+#define GNGT_AVERAGE_RADIUS             3
+
+// Graph definition 
 //
 ///////////////
 
 using sample    = vq3::demo2d::Point;
 using prototype = vq3::demo2d::Point;
 
-struct Param {
-  double alpha() {return .1;}
-  unsigned int min_updates() {return 3;}
-};
-
 //                                                                                 ## Node properties :
 using vlayer_0 = prototype;                                                        // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::efficiency<vlayer_0>;                             // for connected components
 using vlayer_2 = vq3::decorator::tagged<vlayer_1>;                                 // we add a tag for topology computation and connected components.
-using vlayer_3 = vq3::decorator::online::mean_std<vlayer_2, double, Param>;        // we add distortion statistics over time. 
-using vlayer_4 = vq3::decorator::smoother<vlayer_3, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
-using vlayer_5 = vq3::decorator::labelled<vlayer_4>;                               // for vertex labelling
-using vertex   = vlayer_5;
+using vlayer_3 = vq3::decorator::smoother<vlayer_2, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
+using vlayer_4 = vq3::decorator::labelled<vlayer_3>;                               // for vertex labelling
+using vertex   = vlayer_4;
 
 //                                                        ## Edge properties :
 using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CHL computation.
@@ -31,13 +42,6 @@ using elayer_2 = vq3::decorator::labelled<elayer_1>;      // for edge labelling
 using edge     = elayer_2;
 
 using graph  = vq3::graph<vertex, edge>;
-  
-
-// Epoch data for SOM-like pass
-//
-////////////////
-
-using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample, vertex, prototype>>;
   
 
 // Distance
@@ -68,18 +72,17 @@ int main(int argc, char* argv[]) {
   auto color_of_label = vq3::demo2d::opencv::colormap::random(random_device);
 
   vq3::demo2d::opencv::HueSelector selector;
-  selector.H_slider =   0;
-  selector.T_slider =  20;
-  selector.S_slider =  80;
-  selector.V_slider = 200;
-  auto video_data = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
+  selector.H_slider = INIT_SLIDER_H;
+  selector.S_slider = INIT_SLIDER_S;
+  selector.V_slider = INIT_SLIDER_V;
+  selector.T_slider = INIT_SLIDER_TOLERANCE;
+  auto video_data   = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
   
-  int N_slider =  5000;
-  int T_slider =   400;
-  int S_slider =   170;
-  int E_slider =   100;
+  int N_slider = INIT_SLIDER_N;
+  int T_slider = INIT_SLIDER_T;
+  int E_slider = INIT_SLIDER_E;
   
-  int Z_slider =  2000;
+  int Z_slider = INIT_SLIDER_Z;
   
   
   // Input distribution
@@ -101,7 +104,6 @@ int main(int argc, char* argv[]) {
   cv::createTrackbar("nb/m^2",               "image", &N_slider, 10000, nullptr);
   cv::createTrackbar("1000*min_edge_length", "image", &E_slider,   500, nullptr);
   cv::createTrackbar("T",                    "image", &T_slider,  1000, nullptr);
-  cv::createTrackbar("100*sigma_coef",       "image", &S_slider,   300, nullptr);
   
   cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
   selector.build_sliders("video");
@@ -163,9 +165,15 @@ int main(int argc, char* argv[]) {
   
   graph g;
   auto topology  = vq3::topology::table(g);
-  auto gngt      = vq3::algo::gngt::processor<prototype, sample>(topology);
-  auto wtm       = vq3::epoch::wtm::processor(topology);
+  auto gngt      = vq3::algo::gngt::processor<sample>(topology);
   auto evolution = vq3::algo::gngt::by_default::evolution();
+  
+  gngt.alpha              = GNGT_ALPHA;
+  gngt.samples_per_vertex = GNGT_NB_SAMPLES_PER_PROTOTYPE;
+  
+  evolution.margin_above  = EVOLUTION_MARGIN_ABOVE;
+  evolution.margin_below  = EVOLUTION_MARGIN_BELOW;
+  evolution.topo_ratio    = EVOLUTION_TOPOLOGICAL_RATIO;
   
   // This is the loop
   //
@@ -194,14 +202,6 @@ int main(int argc, char* argv[]) {
     std::copy(S_.begin(), S_.end(), std::back_inserter(S));
 
     // Step
-
-    topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
-    for(int wta_step = 0; wta_step < 2; ++wta_step)
-      wtm.process<epoch_wtm>(nb_threads,
-			     S.begin(), S.end(),
-			     [](const sample& s) {return s;},
-			     [](vertex& v) -> prototype& {return v.vq3_value;},
-			     dist);
     
     double e = T_slider/1000.0;
     double expo_min = -7;
@@ -209,15 +209,25 @@ int main(int argc, char* argv[]) {
     
     evolution.density    = N_slider;
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
-    evolution.sigma_coef = S_slider*.01;
-    
+
+    // Let us label the connected components
+
+    vq3::utils::clear_vertex_efficiencies(g, true); // All vertices are considered for connected components.
+
     gngt.process(nb_threads,
-		 S.begin(), S.end(),
-		 [](const sample& s) {return s;},
-		 [](vertex& v) -> prototype& {return v.vq3_value;},
-		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
-		 dist,
+		 S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
+		 [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
+		 [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
+		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
+		 dist,                                                                           // compares a prototype to a sample.
+		 [](unsigned int edge_distance) {
+		   return edge_distance == 0 ? 1.0 : GNGT_NEIGHBOUR_DISTANCE_COEF;}, 1, 0,       // WTM rule. 1-sized neighborhood, neighbors updating strength is 10% (0.1).
+		 GNGT_AVERAGE_RADIUS,                                                                              // The spatial radius for topological averaging.
 		 evolution);
+    
+    auto components = vq3::connected_components::make(g);
+    vq3::labelling::conservative(components.begin(), components.end());
+    vq3::labelling::edges_from_vertices(g);
     
     // Temporal update
     
@@ -229,24 +239,6 @@ int main(int argc, char* argv[]) {
 	value.vq3_smoother += value.vq3_value;
 	value.vq3_smoother.set_timestep(delay);
       });
-
-    // Let us label the connected components
-
-    vq3::utils::clear_vertex_efficiencies(g, true); // All vertices are considered for connected components.
-    g.foreach_edge([thresh = E_slider*E_slider*1e-6](graph::ref_edge ref_e) {
-	  auto extr = ref_e->extremities();
-	  if(vq3::invalid_extremities(extr))
-	    ref_e->kill();
-	  else {
-	    auto& A =  (*(extr.first) )().vq3_value;
-	    auto& B =  (*(extr.second))().vq3_value;
-	    // Long edge are not considered for connected components.
-	    (*ref_e)().vq3_efficient = vq3::demo2d::d2(A,B) < thresh;
-	  }
-      });
-    auto components = vq3::connected_components::make(g);
-    vq3::labelling::conservative(components.begin(), components.end());
-    vq3::labelling::edges_from_vertices(g);
     
     
     // Display

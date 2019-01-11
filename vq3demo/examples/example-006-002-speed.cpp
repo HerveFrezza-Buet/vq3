@@ -6,6 +6,21 @@
 #define D_ANGLE (360./ANGLE_PERIOD)
 #define SPEED_TO_METER .5
 
+#define EVOLUTION_MARGIN_ABOVE        .30
+#define EVOLUTION_MARGIN_BELOW        .15
+#define EVOLUTION_TOPOLOGICAL_RATIO   .30
+#define GNGT_ALPHA                    .10
+#define GNGT_NB_SAMPLES_PER_PROTOTYPE  50
+#define GNGT_NEIGHBOUR_DISTANCE_COEF  .10
+#define GNGT_AVERAGE_RADIUS             3
+
+#define FIXED_FRAME_DELAY             .03
+
+#define N_SLIDER_INIT  300
+#define T_SLIDER_INIT  700
+#define Z_SLIDER_INIT 2000
+
+
 // Graph definition
 //
 ///////////////
@@ -13,30 +28,17 @@
 using sample    = vq3::demo2d::Point;
 using prototype = vq3::demo2d::Point;
 
-struct Param {
-  double alpha() {return .1;}
-  unsigned int min_updates() {return 3;}
-};
-
 //                                                                                 ## Node properties :
 using vlayer_0 = prototype;                                                        // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::tagged<vlayer_0>;                                 // we add a tag for topology computation.
-using vlayer_2 = vq3::decorator::online::mean_std<vlayer_1, double, Param>;        // we add distortion statistics over time. 
-using vlayer_3 = vq3::decorator::smoother<vlayer_2, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
-using vertex   = vlayer_3;
+using vlayer_2 = vq3::decorator::smoother<vlayer_1, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
+using vertex   = vlayer_2;
 
 //                                                        ## Edge properties :
 using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CHL computation.
 using edge     = elayer_0;
 
 using graph  = vq3::graph<vertex, edge>;
-  
-
-// Epoch data for SOM-like pass
-//
-////////////////
-
-using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample, vertex, prototype>>;
 
 
 // Distance
@@ -65,14 +67,9 @@ int main(int argc, char* argv[]) {
   std::random_device rd;  
   std::mt19937 random_device(rd());
   
-  int N_slider =   500;
-  int T_slider =   400;
-  int S_slider =   170;
-  int H_slider =   250;
-  int W_slider =     1;
-  int K_slider =     2;
-  
-  int Z_slider =  2000;
+  int N_slider = N_SLIDER_INIT;
+  int T_slider = T_SLIDER_INIT;
+  int Z_slider = Z_SLIDER_INIT;
   
   
   // Input distribution
@@ -103,19 +100,15 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
-  cv::createTrackbar("nb/m^2",              "image", &N_slider,   2000, nullptr);
-  cv::createTrackbar("T",                   "image", &T_slider,   1000, nullptr);
-  cv::createTrackbar("100*sigma_coef",      "image", &S_slider,    300, nullptr);
-  cv::createTrackbar("100*h_radius",        "image", &H_slider,   1000, nullptr);
-  cv::createTrackbar("nb wide SOM steps",   "image", &W_slider,     20, nullptr);
-  cv::createTrackbar("nb narrow SOM steps", "image", &K_slider,     20, nullptr);
+  cv::createTrackbar("nb/m^2",              "image", &N_slider, 1000, nullptr);
+  cv::createTrackbar("T",                   "image", &T_slider, 1000, nullptr);
   
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .1*image.size().width, true);
 
 
   cv::namedWindow("speed", CV_WINDOW_AUTOSIZE);
-  cv::createTrackbar("zoom", "speed", &Z_slider, 3000, nullptr);
+  cv::createTrackbar("zoom", "speed", &Z_slider, 5000, nullptr);
   auto speed_image = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
 
   
@@ -160,9 +153,16 @@ int main(int argc, char* argv[]) {
 
   graph g;
   auto topology  = vq3::topology::table(g);
-  auto gngt      = vq3::algo::gngt::processor<prototype, sample>(topology);
-  auto wtm       = vq3::epoch::wtm::processor(topology);
+  auto gngt      = vq3::algo::gngt::processor<sample>(topology);
   auto evolution = vq3::algo::gngt::by_default::evolution();
+
+  gngt.alpha              = GNGT_ALPHA;
+  gngt.samples_per_vertex = GNGT_NB_SAMPLES_PER_PROTOTYPE;
+  
+  evolution.margin_above  = EVOLUTION_MARGIN_ABOVE;
+  evolution.margin_below  = EVOLUTION_MARGIN_BELOW;
+  evolution.topo_ratio    = EVOLUTION_TOPOLOGICAL_RATIO;
+  
   
   // This is the loop
   //
@@ -177,8 +177,6 @@ int main(int argc, char* argv[]) {
 	    << std::endl
 	    << "##################" << std::endl
 	    << std::endl;
-
-  vq3::temporal::dt_averager frame_delay(.05);
 
   unsigned int step = 0;
   unsigned int mode = 0;
@@ -211,45 +209,30 @@ int main(int argc, char* argv[]) {
 
     // Step
 
-    // The input has evolved. We update the graph so that it fits the
-    // new distribution, keeping the previously computed topology.
 
-    topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
-    for(int wta_step = 0; wta_step < K_slider; ++wta_step)
-      wtm.process<epoch_wtm>(nb_threads,
-			     S.begin(), S.end(),
-			     [](const sample& s) {return s;},
-			     [](vertex& v) -> prototype& {return v.vq3_value;},
-			     dist);
-    
-
-    // Now, we can compute GNG-T topology evolution.
-    
     double e = T_slider/1000.0;
     double expo_min = -5;
     double expo_max = -1;
     
     evolution.density    = N_slider;
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
-    evolution.sigma_coef = S_slider*.01;
     
     gngt.process(nb_threads,
-		 S.begin(), S.end(),
-		 [](const sample& s) {return s;},
-		 [](vertex& v) -> prototype& {return v.vq3_value;},
-		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
-		 dist,
+		 S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
+		 [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
+		 [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
+		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
+		 dist,                                                                           // compares a prototype to a sample.
+		 [](unsigned int edge_distance) {
+		   return edge_distance == 0 ? 1.0 : GNGT_NEIGHBOUR_DISTANCE_COEF;}, 1, 0,       // WTM rule. 1-sized neighborhood, neighbors updating strength is 10% (0.1).
+		 GNGT_AVERAGE_RADIUS,                                                                              // The spatial radius for topological averaging.
 		 evolution);
-    
     // Temporal update
     
-    frame_delay.tick();
-    double delay = frame_delay().value_or(1.);
-    
-    g.foreach_vertex([delay](graph::ref_vertex ref_v) {
+    g.foreach_vertex([](graph::ref_vertex ref_v) {
 	auto& value = (*ref_v)();
 	value.vq3_smoother += value.vq3_value;
-	value.vq3_smoother.set_timestep(delay);
+	value.vq3_smoother.set_timestep(FIXED_FRAME_DELAY);
       });
     
     // Display
