@@ -32,6 +32,7 @@
 #define INIT_SLIDER_AVERAGE_RADIUS     3
 #define INIT_SLIDER_USE_AVERAGE        1
 #define INIT_SLIDER_EVOLUTION_RATIO   30
+#define INIT_SLIDER_POST_EVOLUTION     3
 
 
 // Execution mode
@@ -275,6 +276,7 @@ int main(int argc, char* argv[]) {
   int slider_average_radius  = INIT_SLIDER_AVERAGE_RADIUS;
   int slider_use_average     = INIT_SLIDER_USE_AVERAGE;
   int slider_evolution_ratio = INIT_SLIDER_EVOLUTION_RATIO;
+  int slider_post_evolution  = INIT_SLIDER_POST_EVOLUTION;
 
   // Let us used an histogram for non-averaged error distribution.
   vq3::demo2d::opencv::histogram histo({2.4, 0.2}, {4.4, 0.9});
@@ -286,14 +288,15 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("algorithm", CV_WINDOW_AUTOSIZE);
   cv::namedWindow("params", CV_WINDOW_AUTOSIZE);
   
-  cv::createTrackbar("nb/m^2",                 "params", &slider_N,    50000, nullptr);
-  cv::createTrackbar("T",                      "params", &slider_T,     1000, nullptr);
-  cv::createTrackbar("above_margin*100",       "params", &slider_margin_above,     100, nullptr);
-  cv::createTrackbar("below_margin*100",       "params", &slider_margin_below,     100, nullptr);
-  cv::createTrackbar("right square density",   "params", &slider_density,      100, nullptr);
-  cv::createTrackbar("use spatial average ?",  "params", &slider_use_average,     1, nullptr);
+  cv::createTrackbar("nb/m^2",                 "params", &slider_N,               50000, nullptr);
+  cv::createTrackbar("T",                      "params", &slider_T,                1000, nullptr);
+  cv::createTrackbar("above_margin*100",       "params", &slider_margin_above,      100, nullptr);
+  cv::createTrackbar("below_margin*100",       "params", &slider_margin_below,      100, nullptr);
+  cv::createTrackbar("right square density",   "params", &slider_density,           100, nullptr);
+  cv::createTrackbar("use spatial average ?",  "params", &slider_use_average,         1, nullptr);
   cv::createTrackbar("statial average radius", "params", &slider_average_radius,     10, nullptr);
   cv::createTrackbar("Growth/Shrink ratio",    "params", &slider_evolution_ratio,   100, nullptr);
+  cv::createTrackbar("nb post evol. steps",    "params", &slider_post_evolution,     10, nullptr);
   
   auto image       = cv::Mat(600, 1500, CV_8UC3, cv::Scalar(255,255,255));
   auto params      = cv::Mat(1, 600, CV_8UC3, cv::Scalar(255,255,255));
@@ -454,8 +457,9 @@ int main(int argc, char* argv[]) {
 		   [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
 		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
 		   dist,                                                                           // compares a prototype to a sample.
-		   [](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0,  // WTM rule. 1-sized neighborhood, neighbors updating strength is 10% (0.1).
+		   [](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : .01;}, 1, 0,  // WTM rule. 1-sized neighborhood, neighbors updating strength is 1% (0.01). Keep it small (but non null) for stability.
 		   spatial_average_radius,                                                         // The spatial radius for topological averaging.
+		   slider_post_evolution,                                                          // The number of post-evolution steps.
 		   evolution);
 
       // Display

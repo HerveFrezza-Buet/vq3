@@ -199,6 +199,7 @@ namespace vq3 {
 	 * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
 	 * @param distance Compares the vertex value to a sample.
 	 * @param average_radius The error is averaged from the vertices around. The neihgborhood is made of the vertices with an edge distance d <= average_radius. Provide 0 for averaging with all vertices in the connected component. It is an optional value, so if the value is unset, no averaging is performed.
+	 * @param nb_post_evolution_steps After the topology update, several batch WTM are performed.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 */
 	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE, typename VALUE_OF_EDGE_DISTANCE>
@@ -210,6 +211,7 @@ namespace vq3 {
 		     const DISTANCE& distance,
 		     const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val,
 		     const std::optional<unsigned int>& average_radius,
+		     unsigned int nb_post_evolution_steps,
 		     EVOLUTION& evolution) {
  	  if(begin == end) {
 	    // No samples. We kill all nodes and keep the two topological tables updated.
@@ -300,6 +302,13 @@ namespace vq3 {
 	    table(voed, max_dist, min_val);
 	    if(average_radius)
 	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
+	  }
+
+	  // We performe more batch updates.
+	  if(nb_post_evolution_steps > 1) {
+	    --nb_post_evolution_steps;
+	    for(unsigned int i=0; i < nb_post_evolution_steps; ++i)
+	      wtm.template process<epoch_wtm>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  }
 	}
 	

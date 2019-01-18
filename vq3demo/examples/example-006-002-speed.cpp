@@ -11,8 +11,9 @@
 #define EVOLUTION_TOPOLOGICAL_RATIO   .30
 #define GNGT_ALPHA                    .10
 #define GNGT_NB_SAMPLES_PER_PROTOTYPE  50
-#define GNGT_NEIGHBOUR_DISTANCE_COEF  .10
+#define GNGT_NEIGHBOUR_DISTANCE_COEF  .05
 #define GNGT_AVERAGE_RADIUS             3
+#define GNGT_NB_POST_EVOL_STEPS         8
 
 #define FIXED_FRAME_DELAY             .03
 
@@ -224,8 +225,9 @@ int main(int argc, char* argv[]) {
 		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
 		 dist,                                                                           // compares a prototype to a sample.
 		 [](unsigned int edge_distance) {
-		   return edge_distance == 0 ? 1.0 : GNGT_NEIGHBOUR_DISTANCE_COEF;}, 1, 0,       // WTM rule. 1-sized neighborhood, neighbors updating strength is 10% (0.1).
-		 GNGT_AVERAGE_RADIUS,                                                                              // The spatial radius for topological averaging.
+		   return edge_distance == 0 ? 1.0 : GNGT_NEIGHBOUR_DISTANCE_COEF;}, 1, 0,       // WTM rule. 1-sized neighborhood.
+		 GNGT_AVERAGE_RADIUS,                                                            // The spatial radius for topological averaging.
+		 GNGT_NB_POST_EVOL_STEPS,                                                        // The number of post-evolution steps.
 		 evolution);
     // Temporal update
     
