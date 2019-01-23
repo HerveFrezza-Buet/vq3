@@ -83,6 +83,7 @@ namespace vq3 {
 	unsigned int                         max_dist; //!< The maximal distance considered. 0 means "no limit".
 	double                               min_val;  //!< if voed(dist) < min_val, the node is not included in the neighborhood.
 
+	template<typename VALUE_OF_EDGE_DISTANCE>
 	EdgeDistanceInfo(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val)
 	  : voed(voed), max_dist(max_dist), min_val(min_val) {}
 
@@ -105,7 +106,7 @@ namespace vq3 {
       
       
 
-      friend std::ostream& operator<<(std::ostream& os, Table<graph_type>& v) {
+      friend std::ostream& operator<<(std::ostream& os, Table<graph_type, neighborhood_key_type>& v) {
 	os << "Vertex map : " << std::endl;
 	unsigned int idx = 0;
 	for(auto& ref_v : v.idx2vertex)
@@ -242,11 +243,18 @@ namespace vq3 {
       const index_type size() const {return idx2vertex.size();}
 
       /**
-       * Updates the vertices and neighborhoods (typically after the adding or removal of vertices in the graph).
+       * Updates the vertices only (and not the neighborhoods) (typically after the adding or removal of vertices in the graph).
        */
       void update() {
 	clear_vertices();
 	fill_vertices();
+      }
+      
+      /**
+       * Updates the vertices and neighborhoods (typically after the adding or removal of vertices in the graph).
+       */
+      void update_full() {
+	update();
 	make_neighborhood_tables();
       }
       
@@ -265,7 +273,7 @@ namespace vq3 {
       auto neighborhood(const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	EdgeDistanceInfo edi(voed, max_dist, min_val);
 	auto minimap = std::make_pair(0, edi);
-	return edge_based_neighborhood((*this)(ref_v), ref_v, &minimap, &minimap+1);
+	return edge_based_neighborhood((*this)(ref_v), ref_v, &minimap, &minimap+1)[0];
       }
       
       /**
@@ -280,7 +288,7 @@ namespace vq3 {
       auto neighborhood(index_type vertex_index, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	EdgeDistanceInfo edi(voed, max_dist, min_val);
 	auto minimap = std::make_pair(0, edi);
-	return edge_based_neighborhood(vertex_index, (*this)(vertex_index), &minimap, &minimap+1);
+	return edge_based_neighborhood(vertex_index, (*this)(vertex_index), &minimap, &minimap+1)[0];
       }
 	  
 
@@ -315,14 +323,14 @@ namespace vq3 {
        * @returns the neighborhood named key of vertex ref_v. The method update() should be called first in order to update the neigborhood of all the vertices.
        */
       auto& neighborhood(const typename graph_type::ref_vertex& ref_v, const neighborhood_key_type& key) const {
-	auto it = neighborhood_table.find(ref_v);
+	auto it = neighborhood_tables.find(ref_v);
 	return it->second[key];
       }
     };
 
-    template<typename GRAPH>
+    template<typename KEY, typename GRAPH>
     auto table(GRAPH& g) {
-      return Table<GRAPH>(g);
+      return Table<GRAPH, KEY>(g);
     }
     
   }

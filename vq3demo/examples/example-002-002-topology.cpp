@@ -43,16 +43,22 @@ using vertex        = tagged_vertex;
 
 using graph = vq3::graph<vertex, void>;
 
+/* We can register global neighborhood computations in a single
+   topology table.  This is why each computation is referred by a
+   key. Such computation is not performed in this example, but the key
+   type has to be defined. Here, let us use strings */
+using key_type = std::string;
+
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value.pos, p);}
 
 struct callback_data {
-  vq3::demo2d::opencv::Frame& frame;
-  vq3::topology::Table<graph>& topology;
+  vq3::demo2d::opencv::Frame&            frame;
+  vq3::topology::Table<graph, key_type>& topology;
 
   callback_data(vq3::demo2d::opencv::Frame& frame,
-		vq3::topology::Table<graph>& topology)
+		vq3::topology::Table<graph, key_type>& topology)
     : frame(frame),
       topology(topology) {}
   callback_data()                                = delete;
@@ -104,8 +110,8 @@ int main(int argc, char* argv[]) {
     [](unsigned int w, unsigned int h, unsigned int ww, unsigned int hh) {return some_edge_value;});
   */
 
-  auto topology = vq3::topology::table(g);
-  topology(); // We only inform the topology table about vertices, ignoring edge-based neighborhoods.
+  auto topology = vq3::topology::table<key_type>(g);
+  topology.update(); // We only inform the topology table about vertices, ignoring edge-based neighborhoods.
   
   // Let us draw the graph
   
