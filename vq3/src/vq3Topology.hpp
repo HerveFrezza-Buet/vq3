@@ -37,6 +37,8 @@
 #include <iterator>
 #include <stdexcept>
 #include <functional>
+#include <iterator>
+#include <type_traits>
 
 
 #include <vq3Graph.hpp>
@@ -142,8 +144,9 @@ namespace vq3 {
        */
       template<typename EDGE_DISTANCE_INFO_IT>
       auto edge_based_neighborhood(index_type vertex_index, const typename graph_type::ref_vertex& ref_v,
-				   const EDGE_DISTANCE_INFO_IT& begin, const EDGE_DISTANCE_INFO_IT& end) {
-	std::map<decltype(begin->first),std::list<Info>> res;
+				   EDGE_DISTANCE_INFO_IT begin, EDGE_DISTANCE_INFO_IT end) {
+	std::string s;
+	std::map<typename std::remove_const<decltype(begin->first)>::type, std::list<Info>> res;
 	std::deque<std::pair<unsigned int, typename graph_type::ref_vertex> > to_do;
 
 	// Let us init info lists with the first vertex (one list for each key).
@@ -323,8 +326,9 @@ namespace vq3 {
        * @returns the neighborhood named key of vertex ref_v. The method update() should be called first in order to update the neigborhood of all the vertices.
        */
       auto& neighborhood(const typename graph_type::ref_vertex& ref_v, const neighborhood_key_type& key) const {
-	auto it = neighborhood_tables.find(ref_v);
-	return it->second[key];
+	auto it  = neighborhood_tables.find(ref_v);
+	auto iit = it->second.find(key);
+	return iit->second;
       }
     };
 

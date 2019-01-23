@@ -9,8 +9,8 @@
 #define NB_VERTICES_PER_M2    500
 #define NB_SAMPLES_PER_M2   10000
 
-#define GRID_WIDTH        28
-#define GRID_HEIGHT       21
+#define GRID_WIDTH        40
+#define GRID_HEIGHT       30
 
 // This is what we want for vertex value.
 struct ScalarAt {
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
   // let us register different neighbourhood distances. Keys are strings here (see key_type definition).
   topology.declare_distance("linear truncated",   [](unsigned int edge_distance) {return         1-edge_distance*.05;}, 10, 0.00);
   topology.declare_distance("exponential",        [](unsigned int edge_distance) {return std::pow(.9, edge_distance);},  0, 0.01);
-  topology.declare_distance("piecewise constant", [](unsigned int edge_distance) {return  .25*(int)(edge_distance/5);},  20, 0.01);
+  topology.declare_distance("piecewise constant", [](unsigned int edge_distance) {return       .25*(edge_distance/5);}, 20, 0.00);
 
   // As the graph topology won't change, we can compute all
   // neighborhoods for all distances at once, and then use it withaout
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
   // Let us draw the graph
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
-  auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
+  auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(50, 50, 50));
   double unit_size  = 640/(GRID_WIDTH+1.0);
   auto frame        = vq3::demo2d::opencv::direct_orthonormal_frame(unit_size, unit_size,
 								    vq3::demo2d::Point(unit_size, 480 - unit_size));
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
   								     [](const vertex& v1, const vertex& v2) {return   true;},  // always draw
   								     [](const vertex& v) {return           v.vq3_value.pos;},  // position
-  								     []()                {return cv::Scalar(200, 200, 200);},  // color
+  								     []()                {return       cv::Scalar(0, 0, 0);},  // color
   								     []()                {return                         1;}); // thickness
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                                      true;},  // always draw
