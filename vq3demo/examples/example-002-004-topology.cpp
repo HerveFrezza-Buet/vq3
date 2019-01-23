@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <string>
+#include <algorithm>
 #include <cmath>
 
 #define NB_VERTICES_PER_M2    500
@@ -10,7 +11,6 @@
 
 #define GRID_WIDTH        28
 #define GRID_HEIGHT       21
-#define GRID_SQUARE_SIZE .04
 
 // This is what we want for vertex value.
 struct ScalarAt {
@@ -32,22 +32,16 @@ struct ScalarAt {
 using user_vertex   = ScalarAt;
 using tagged_vertex = vq3::decorator::tagged<user_vertex>;
 // ... so finally
-using vertex        = tagged_vertex; 
+using vertex        = tagged_vertex;
 
-/* Usage :
- 
-   graph::ref_vertex ref_v;
-   vertex&           vertex_full_value = (*ref_v)(); 
-   ScalarAt&         user_content      = vertex_full_value.vq3_value;
-*/
 
 using graph = vq3::graph<vertex, void>;
 
 /* We can register global neighborhood computations in a single
    topology table.  This is why each computation is referred by a
-   key. Such computation is not performed in this example, but the key
-   type has to be defined. Here, let us use strings */
+   key. Here, let us use strings as identifiers for distances. */
 using key_type = std::string;
+
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
@@ -66,7 +60,7 @@ struct callback_data {
   callback_data& operator=(const callback_data&) = delete;
 };
 
-void on_mouse( int event, int x, int y, int, void* user_data);
+void on_mouse(int event, int x, int y, int, void* user_data);
 
 int main(int argc, char* argv[]) {
   std::random_device rd;  
@@ -78,45 +72,29 @@ int main(int argc, char* argv[]) {
 
   graph g; 
 
-  // Component #1
-  
-  double intensity    = 1. ;
-  double crown_radius =  .55;
-  double hole_radius  =  .3;
-  vq3::demo2d::Point crown_center{-.6, 0};
-
-  auto density = (vq3::demo2d::sample::disk(crown_radius, intensity) - vq3::demo2d::sample::disk(hole_radius, intensity)) + crown_center;
-  
-  // First, we add vertices
-  for(auto& prototype : vq3::demo2d::sample::sample_set(random_device, density, NB_VERTICES_PER_M2)) g += ScalarAt(prototype);
-
-  // Then, we sample points, and connect the two closest prototypes (if not connected yet).
-  for(auto& sample : vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2)) {
-    auto closest = vq3::utils::two_closest(g, sample, d2);
-    if(g.get_edge(closest.first, closest.second) == nullptr) 
-      g.connect(closest.first, closest.second);
-  }
-
-  // Component #2
-
   vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
-			[](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));});
+			[](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w, h));});
   
-  // If edges had values, we would have used
-  /*
-    vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
-    [](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));},
-    [](unsigned int w, unsigned int h, unsigned int ww, unsigned int hh) {return some_edge_value;});
-  */
 
   auto topology = vq3::topology::table<key_type>(g);
-  topology.update(); // We only inform the topology table about vertices, ignoring edge-based neighborhoods.
+
+  // let us register different neighbourhood distances. Keys are strings here (see key_type definition).
+  topology.declare_distance("linear truncated",   [](unsigned int edge_distance) {return         1-edge_distance*.05;}, 10, 0.00);
+  topology.declare_distance("exponential",        [](unsigned int edge_distance) {return std::pow(.9, edge_distance);},  0, 0.01);
+  topology.declare_distance("piecewise constant", [](unsigned int edge_distance) {return  .25*(int)(edge_distance/5);},  20, 0.01);
+
+  // As the graph topology won't change, we can compute all
+  // neighborhoods for all distances at once, and then use it withaout
+  // any further computation.
+  topology.update_full(); 
   
   // Let us draw the graph
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame        = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
+  double unit_size  = 640/(GRID_WIDTH+1.0);
+  auto frame        = vq3::demo2d::opencv::direct_orthonormal_frame(unit_size, unit_size,
+								    vq3::demo2d::Point(unit_size, 480 - unit_size));
   callback_data user_data(frame, topology);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   
@@ -142,7 +120,7 @@ int main(int argc, char* argv[]) {
 	    << std::endl
 	    << "##################" << std::endl
 	    << std::endl
-	    << "click in the image, press ESC to quit." << std::endl
+	    << "click in the image (try left, middle and right button), press ESC to quit." << std::endl
 	    << std::endl
 	    << "##################" << std::endl
 	    << std::endl;
@@ -158,9 +136,18 @@ int main(int argc, char* argv[]) {
 
 }
 
-void on_mouse( int event, int x, int y, int, void* user_data) {
-  if(event != cv::EVENT_LBUTTONDOWN )
-    return;
+void on_mouse(int event, int x, int y, int, void* user_data) {
+  std::string key;
+
+  switch(event) {
+  case cv::EVENT_LBUTTONDOWN : key = "linear truncated";   break;
+  case cv::EVENT_MBUTTONDOWN : key = "exponential";        break;
+  case cv::EVENT_RBUTTONDOWN : key = "piecewise constant"; break;
+  default: return;
+  }
+
+  std::cout << "Using distance \"" << key << "\"." << std::endl;
+  
   auto& data = *(reinterpret_cast<callback_data*>(user_data));
 
   // Get the coordinates of the clicked point.
@@ -175,16 +162,11 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   // Now, let us compute its neighborhood. This is why we have
   // tag-decorated our node values. 
   vq3::utils::clear_vertex_tags(data.topology.g, false);
-  auto n = data.topology.neighborhood(ref_v,
-				      [](unsigned int edge_distance) {return std::pow(.9, edge_distance);},
-				      0,
-				      0.0);
+  auto n = data.topology.neighborhood(ref_v, key); // This is an acces to the pre-computed neighborhood information.
 
   // Now, from value/index pairs in the neighborhood, let us change the nodes.
   for(auto& info : n) {
     auto& ref_v = data.topology(info.index);
     (*(ref_v))().vq3_value.value = info.value;
   }
-  
-
 }
