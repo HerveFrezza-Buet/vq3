@@ -13,6 +13,8 @@ namespace vq3 {
 	  auto& w = (*(table(info.index)))().vq3_value;
 	  w += alpha*info.value*(xi-w);
 	}
+
+	return ref_v;
       }
     }
     
@@ -22,6 +24,8 @@ namespace vq3 {
 	auto ref_v = vq3::utils::closest(g, xi , [&dist ](const typename GRAPH::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
 	auto& w = (*(ref_v))().vq3_value;
 	w += alpha*(xi-w);
+	
+	return ref_v;
       }
     }
   }
