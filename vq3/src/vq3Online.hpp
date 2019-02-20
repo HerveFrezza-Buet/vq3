@@ -11,7 +11,7 @@ namespace vq3 {
 	auto& n = table[ref_v];
 	for(auto& info : n) {
 	  auto& w = (*(table(info.index)))().vq3_value;
-	  w += alpha*info.value*(xi-w);
+	  w += (alpha*info.value)*(xi-w);
 	}
 
 	return ref_v;
