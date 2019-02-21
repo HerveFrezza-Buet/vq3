@@ -27,6 +27,7 @@
 
 #include <memory>
 #include <queue>
+#include <iterator>
 
 namespace vq3 {
   namespace path {
@@ -74,6 +75,35 @@ namespace vq3 {
       Info(const Info&)            = default;
       Info& operator=(const Info&) = default;
     };
+
+
+    template<typename REF_EDGE>
+    class iterator {
+    private:
+      using ref_vertex = decltype(std::declval<REF_EDGE>()->extremities().first);
+      
+      REF_EDGE ref_e;
+      hhhhh
+      
+    public:
+      iterator()                           = default;
+      iterator(const iterator&)            = default;
+      iterator& operator=(const iterator&) = default;
+
+      bool operator==(const iterator& other) {return ref_e == other.ref_e;}
+      bool operator!=(const iterator& other) {return ref_e != other.ref_e;}
+      REF_EDGE operator*() const             {return ref_e;}
+      
+      bool operator++() {
+	
+      }
+
+      using value_type = REF_EDGE;
+      using difference_type = std::size_t;
+      using iterator_category = std::input_iterator_tag,
+      
+    };
+    
   }
 
  
