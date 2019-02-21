@@ -55,6 +55,7 @@
    @example example-002-002-topology.cpp
    @example example-002-003-connected.cpp
    @example example-002-004-topology.cpp
+   @example example-002-005-dijkstra.cpp
    @example example-003-001-chl.cpp
    @example example-003-002-wta.cpp
    @example example-003-003-lbg.cpp

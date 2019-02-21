@@ -169,11 +169,11 @@ namespace vq3 {
   namespace decorator {
     
     
-    /* ########## */
-    /* #        # */
+    /* ######## */
+    /* #      # */
     /* # None # */
-    /* #        # */
-    /* ########## */
+    /* #      # */
+    /* ######## */
     
     template<typename MOTHER, typename KIND> 
     struct None : public MOTHER {
