@@ -68,7 +68,7 @@ namespace vq3 {
 	state = status::done;
       }
 
-      bool operator<(const Info& other) {return accum < other.accum;}
+      bool operator<(const Info& other) {return cost < other.cost;}
       
       Info() {raz();}
       Info(const Info&)            = default;
@@ -90,43 +90,43 @@ namespace vq3 {
 
       
       template<typename MOTHER, typename KIND>
-      struct ShortestPath: public MOTHER {
+      struct Shortest: public MOTHER {
 	using decorated_type = typename MOTHER::decorated_type;
 	vq3::path::Info vq3_shortest_path;
-	ShortestPath(const decorated_type& val) : MOTHER(val), vq3_shortest_path() {}
-	ShortestPath& operator=(const decorated_type& val) {this->vq3_value = val;}
+	Shortest(const decorated_type& val) : MOTHER(val), vq3_shortest_path() {}
+	Shortest& operator=(const decorated_type& val) {this->vq3_value = val;}
       };
 
       //When we decorate a non decorated value
       template<typename MOTHER>
-      struct ShortestPath<MOTHER, not_decorated> {
+      struct Shortest<MOTHER, not_decorated> {
 	using decorated_type = MOTHER;
 	MOTHER vq3_value;
 	vq3::path::Info vq3_shortest_path;
-	ShortestPath(const decorated_type& val) : vq3_value(val), vq3_shortest_path() {}
+	Shortest(const decorated_type& val) : vq3_value(val), vq3_shortest_path() {}
 	/** Affectation from a value has to work */
-	ShortestPath& operator=(const decorated_type& val) {vq3_value = val;}
+	Shortest& operator=(const decorated_type& val) {vq3_value = val;}
       };
 
       // When we decorate a decorated type with no value.
       template<typename MOTHER>
-      struct ShortestPath<MOTHER, unvalued_decoration> : public MOTHER {
+      struct Shortest<MOTHER, unvalued_decoration> : public MOTHER {
 	using decorated_type = MOTHER;
 	vq3::path::Info vq3_shortest_path;
-	ShortestPath() : MOTHER(), vq3_shortest_path() {}
+	Shortest() : MOTHER(), vq3_shortest_path() {}
       };
 
       // When we decorate void
       template<>
-      struct ShortestPath<void, not_decorated> {
+      struct Shortest<void, not_decorated> {
 	using decorated_type = void;
 	vq3::path::Info vq3_shortest_path;
-	ShortestPath() : vq3_shortest_path() {}
+	Shortest() : vq3_shortest_path() {}
       };
 
       // User-friendly decorator  
       template<typename MOTHER>
-      using shortest_path = ShortestPath<MOTHER, typename decoration<MOTHER>::value_type>;
+      using shortest = Shortest<MOTHER, typename decoration<MOTHER>::value_type>;
     }
 
     
@@ -155,12 +155,13 @@ namespace vq3 {
       (*dest)().vq3_shortest_path.set(0);
       q.insert(dest);
       while(!q.empty()) {
-	auto curr = q.top();
-	q.pop();
-	curr.ended();
+	auto curr = *(q.begin());
+	auto& curr_path_info = (*curr)().vq3_shortest_path;
+	curr_path_info.ended();
 	if(curr == start) break;
 	
-	curr->foreach_edge([curr, &edge_cost, &q](typename GRAPH::ref_ref_edge ref_e) {
+	q.erase(q.begin());
+	curr->foreach_edge([curr, &edge_cost, &q, &curr_path_info](typename GRAPH::ref_edge ref_e) {
 	    auto extr_pair = ref_e->extremities();           
 	    if(vq3::invalid_extremities(extr_pair)) {
 	      ref_e->kill();
@@ -173,11 +174,11 @@ namespace vq3 {
 	    case status::done :
 	      break;
 	    case status::unprocessed :
-	      other_path_info.set(cost + (*curr)().vq3_shortest_path.cost, ref_e);
+	      other_path_info.set(cost + curr_path_info.cost, ref_e);
 	      q.insert(other);
 	      break;
 	    case status::processing :
-	      if(double cost_candidate = cost + (*curr)().vq3_shortest_path.cost; cost_candidate < other_path_info.cost) {
+	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
 		q.erase(other);
 		other_path_info.set(cost_candidate, ref_e);
 		q.insert(other);

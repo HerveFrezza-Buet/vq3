@@ -34,6 +34,7 @@
 #include <vq3GNGT.hpp>
 #include <vq3LBG.hpp>
 #include <vq3Online.hpp>
+#include <vq3ShortestPath.hpp>
 #include <vq3SOM.hpp>
 #include <vq3Stats.hpp>
 #include <vq3Temporal.hpp>

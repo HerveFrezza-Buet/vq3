@@ -88,10 +88,10 @@ int main(int argc, char* argv[]) {
 							     image.size().height,
 							     {0., image.size().height - 1.0});
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
-  								     [](const vertex_value_type& v1, const vertex_value_type&, const edge_value_type& e) {return true;},  // always draw
-  								     [](const vertex_value_type& v)                     {return                                 v.pos;},  // position
-  								     [](const edge_value_type& e)                       {return cv::Scalar(255 - e.i, 255 - e.i, 255);},  // color
-  								     [](const edge_value_type& e)                       {return                                     3;}); // thickness
+  								     [](const vertex_value_type&, const vertex_value_type&, const edge_value_type&) {return true;},  // always draw
+  								     [](const vertex_value_type& v)                {return                                 v.pos;},  // position
+  								     [](const edge_value_type& e)                  {return cv::Scalar(255 - e.i, 255 - e.i, 255);},  // color
+  								     [](const edge_value_type&)                    {return                                     3;}); // thickness
 
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex_value_type& v) {return                                  true;},  // always draw
