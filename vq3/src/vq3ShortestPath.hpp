@@ -42,6 +42,7 @@ namespace vq3 {
      * This is what shortest path calculation algorithms need to store at each node.
      */
     struct Info {
+      
       status state;                 //!< Tells whether best path is found for this node.
       std::shared_ptr<void> to_src; //!< The ref edge leading to the source.
       double cost;                  //!< The cumulated cost.
@@ -75,6 +76,20 @@ namespace vq3 {
       Info(const Info&)            = default;
       Info& operator=(const Info&) = default;
     };
+
+    inline std::ostream& operator<<(std::ostream& os, const Info& i) {
+      if(i.cost == std::numeric_limits<double>::max())
+	os << "{Inf, ";
+      else
+	os << '{' << i.cost << ", ";
+      switch(i.state) {
+      case status::done : os << "done"; break;
+      case status::processing : os << "processing"; break;
+      case status::unprocessed : os << "unprocessed"; break;
+      }
+      os << '}';
+      return os;
+    }
 
 
     template<typename REF_VERTEX>
@@ -220,7 +235,7 @@ namespace vq3 {
       auto accum_comp = [](const typename GRAPH::ref_vertex& ref_v1,
 			   const typename GRAPH::ref_vertex& ref_v2) {return (*ref_v1)().vq3_shortest_path < (*ref_v2)().vq3_shortest_path;};
       std::set<typename GRAPH::ref_vertex, decltype(accum_comp)> q(accum_comp);
-
+      
       (*dest)().vq3_shortest_path.set(0);
       q.insert(dest);
       while(!q.empty()) {
@@ -236,8 +251,8 @@ namespace vq3 {
 	      ref_e->kill();
 	      return;
 	    }
-	    double cost = edge_cost(ref_e);
-	    auto& other = vq3::other_extremity(extr_pair, curr);
+	    double cost           = edge_cost(ref_e);
+	    auto& other           = vq3::other_extremity(extr_pair, curr);
 	    auto& other_path_info = (*other)().vq3_shortest_path;
 	    switch(other_path_info.state) {
 	    case status::done :

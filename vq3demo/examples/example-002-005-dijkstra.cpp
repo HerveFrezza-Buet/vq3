@@ -46,8 +46,8 @@ double edge_cost(const typename graph::ref_edge& ref_e) {
   if(!opt_cost) { // if cost not calculated yet.
     auto extr_pair = ref_e->extremities();
     const auto& pt1 = (*(extr_pair.first))().vq3_value;
-    const auto& pt2 = (*(extr_pair.first))().vq3_value;
-    opt_cost = vq3::demo2d::d2(pt1, pt2);
+    const auto& pt2 = (*(extr_pair.second))().vq3_value;
+    opt_cost = vq3::demo2d::d(pt1, pt2);
   }
   return *opt_cost;
 }

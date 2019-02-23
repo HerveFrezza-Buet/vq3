@@ -682,7 +682,7 @@ namespace vq3 {
 	    color_of(color_of),
 	    thickness_of(thickness_of) {}
 
-	SegmentAtVertexDrawer()                               = delete;
+	SegmentAtVertexDrawer()                                        = delete;
 	SegmentAtVertexDrawer(const SegmentAtVertexDrawer&)            = default;
 	SegmentAtVertexDrawer& operator=(const SegmentAtVertexDrawer&) = default;
 
