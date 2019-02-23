@@ -26,7 +26,7 @@
 #pragma once
 
 #include <memory>
-#include <queue>
+#include <set>
 #include <iterator>
 
 namespace vq3 {
@@ -221,13 +221,16 @@ namespace vq3 {
 
     /**
      * This function fills the vq3_shortest_path values at each vertex
-     * according to the shortest path linking each vertex to the destination vertex.
+     * according to the shortest path linking each vertex to the
+     * destination vertex. The boolean template parameters
+     * VERTEX_EFFICIENCY and EDGE_EFFICIENCY toggle the efficiency
+     * test on vertices and edges (see the efficiency decorator).
      * @param g the graph
      * @param start the start vertex. Provide nullptr for computing shortest path from all the vertices to dest.
      * @param dest the destination vertex
      * @param edge_cost a function such as edge_cost(ref_edge) is the cost of the edge.
      */
-    template<typename GRAPH, typename EDGE_COST>
+    template<bool VERTEX_EFFICIENCY, bool EDGE_EFFICIENCY, typename GRAPH, typename EDGE_COST>
     void dijkstra(GRAPH& g, typename GRAPH::ref_vertex& start, typename GRAPH::ref_vertex& dest, const EDGE_COST& edge_cost) {
       // Init
       g.foreach_vertex([](typename GRAPH::ref_vertex ref_v){(*ref_v)().vq3_shortest_path.raz();});
@@ -235,9 +238,20 @@ namespace vq3 {
       auto accum_comp = [](const typename GRAPH::ref_vertex& ref_v1,
 			   const typename GRAPH::ref_vertex& ref_v2) {return (*ref_v1)().vq3_shortest_path < (*ref_v2)().vq3_shortest_path;};
       std::set<typename GRAPH::ref_vertex, decltype(accum_comp)> q(accum_comp);
+
+      if constexpr(VERTEX_EFFICIENCY) {
+	  if((*dest)().vq3_efficient) {
+	    (*dest)().vq3_shortest_path.set(0);
+	    q.insert(dest);
+	  }
+	  else
+	    return;
+	}
+      else {
+	(*dest)().vq3_shortest_path.set(0);
+	q.insert(dest);
+      }
       
-      (*dest)().vq3_shortest_path.set(0);
-      q.insert(dest);
       while(!q.empty()) {
 	auto curr = *(q.begin());
 	auto& curr_path_info = (*curr)().vq3_shortest_path;
@@ -251,9 +265,23 @@ namespace vq3 {
 	      ref_e->kill();
 	      return;
 	    }
+
+	    if constexpr(EDGE_EFFICIENCY) {
+		if(!(*ref_e)().vq3_efficient)
+		  return;
+	      }
+			  
 	    double cost           = edge_cost(ref_e);
 	    auto& other           = vq3::other_extremity(extr_pair, curr);
 	    auto& other_path_info = (*other)().vq3_shortest_path;
+
+	    if constexpr(VERTEX_EFFICIENCY) {
+		if(!(*other)().vq3_efficient) {
+		  other_path_info.ended();
+		  return;
+		}
+	      }
+	    
 	    switch(other_path_info.state) {
 	    case status::done :
 	      break;

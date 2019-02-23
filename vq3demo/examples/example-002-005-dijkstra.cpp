@@ -1,6 +1,9 @@
 #include <vq3.hpp>
 #include <vq3demo.hpp>
 #include <opencv2/opencv.hpp>
+#include <algorithm>
+#include <vector>
+#include <iterator>
 
 
 // This example shows the use of the dijkstra algorithm.
@@ -21,10 +24,11 @@ using vertex   = vlayer_2;
 // Here, each edge hosts its cost value.  It is the optional value
 // (not mandatory) so that it is not recomputed once it has been
 // calculated first.
-//                                                    ## Node properties :
-using elayer_0 = vq3::decorator::optional_cost<void>; // Edge cost.
-using elayer_1 = vq3::decorator::tagged<elayer_0>;    // We will tag edges belonging to a shortest path for display.
-using edge     = elayer_1;
+//                                                        ## Node properties :
+using elayer_0 = vq3::decorator::efficiency<void>;        // We consider only efficient edges for paths.
+using elayer_1 = vq3::decorator::optional_cost<elayer_0>; // Edge cost.
+using elayer_2 = vq3::decorator::tagged<elayer_1>;        // We will tag edges belonging to a shortest path for display.
+using edge     = elayer_2;
 
 
 using graph   = vq3::graph<vertex, edge>;
@@ -82,7 +86,8 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   if(data.start) (*(data.start))().vq3_tag = true;
   if(data.dest)  (*(data.dest))().vq3_tag  = true;
 
-  vq3::path::dijkstra(data.g, data.start, data.dest, edge_cost);
+  // false true : we do not consider vertex efficiency, but only edge efficiency.
+  vq3::path::dijkstra<false,true>(data.g, data.start, data.dest, edge_cost);
 
   // This draws the path by tagging the edges belonging to it.
   auto end = vq3::path::end(data.g);
@@ -111,8 +116,9 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
 //
 //////////////
 
-#define NB_VERTICES_PER_M2  200
-#define NB_SAMPLES_PER_M2  1000
+#define NB_VERTICES_PER_M2      200
+#define NB_SAMPLES_PER_M2    100000
+#define NB_UNEFFICIENT_EDGES    100
 
 int main(int argc, char* argv[]) {
 
@@ -139,6 +145,15 @@ int main(int argc, char* argv[]) {
       g.connect(closest.first, closest.second);
   }
 
+  // We handle edge efficiencies. Only NB_UNEFFICIENT_EDGES are unefficient.
+  vq3::utils::clear_edge_efficiencies(g, true);
+  std::vector<graph::ref_edge> edges;
+  vq3::utils::collect_edges(g, std::back_inserter(edges));
+  std::shuffle(edges.begin(), edges.end(), random_device);
+  auto end = edges.begin() + NB_UNEFFICIENT_EDGES;
+  for(auto it = edges.begin(); it != end; ++it)
+    (*(*it))().vq3_efficient = false;
+
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
@@ -150,21 +165,23 @@ int main(int argc, char* argv[]) {
   								     [](const vertex&, const vertex&, const edge&) {return   true;},  // always draw
   								     [](const vertex& v) {return                      v.vq3_value;},  // position
   								     [](const edge& e)   {
-								       if(e.vq3_tag) return cv::Scalar(000, 000, 000);
-								       else          return cv::Scalar(255, 180, 180);},              // color
+								       if(e.vq3_tag)            return cv::Scalar(000, 000, 000);
+								       else if(e.vq3_efficient) return cv::Scalar(255, 100, 100);
+								       else                     return cv::Scalar(200, 200, 200);},   // color
   								     [](const edge& e)   {
-								       if(e.vq3_tag) return 3;
-								       else          return 1;});                                     // thickness
+								       if(e.vq3_tag)            return 3;
+								       else if(e.vq3_efficient) return 2;
+								       else                     return 2;});                          // thickness
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                  true;},  // always draw
 									   [](const vertex& v) {return           v.vq3_value;},  // position
 									   [](const vertex& v) {
 									     if(v.vq3_tag) return 6;
-									     else return 4;},                                    // radius
+									     else return          4;},                           // radius
 									   [](const vertex& v) {
-									     if(v.vq3_tag) return cv::Scalar(255, 100, 000);
-									     else          return cv::Scalar(000, 000, 180);},   // color
-									   [](const vertex& v) {return                    -1;}); // thickness
+									     if(v.vq3_tag) return cv::Scalar(000, 000, 200);
+									     else          return cv::Scalar(200,  80,  80);},   // color
+									   [](const vertex& v) {return                   -1;});  // thickness
   
     
   std::cout << std::endl
