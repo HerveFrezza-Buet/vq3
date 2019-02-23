@@ -15,7 +15,8 @@
 //                                                         ## Node properties :
 using vlayer_0 = vq3::demo2d::Point;                       // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
-using vertex   = vlayer_1;
+using vlayer_2 = vq3::decorator::tagged<vlayer_1>;         // We will tag extermities of the shortest path for display.
+using vertex   = vlayer_2;
 
 // Here, each edge hosts its cost value.  It is the optional value
 // (not mandatory) so that it is not recomputed once it has been
@@ -70,11 +71,39 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   // A mouse click reinitializes the graph.
   if(event != cv::EVENT_LBUTTONDOWN )
     return;
+  
   auto& data = *(reinterpret_cast<callback_data*>(user_data));
+  
+  vq3::utils::clear_all_tags(data.g, false);
   data.start = data.dest;
   data.dest  = vq3::utils::closest(data.g, data.frame(cv::Point(x,y)), d2);
+  if(data.start == data.dest) data.start = nullptr;
+
+  if(data.start) (*(data.start))().vq3_tag = true;
+  if(data.dest)  (*(data.dest))().vq3_tag  = true;
 
   vq3::path::dijkstra(data.g, data.start, data.dest, edge_cost);
+
+  // This draws the path by tagging the edges belonging to it.
+  auto end = vq3::path::end(data.g);
+  if(data.start == nullptr) {
+    // Dijkstra has computed the full tree.
+    data.g.foreach_vertex([end](const graph::ref_vertex ref_v) {
+	for(auto it = vq3::path::begin(ref_v); it != end; ++it) {
+	  // *it is a ref_vertex
+	  if(auto ref_e = it.get_edge(); ref_e)
+	    (*ref_e)().vq3_tag = true;
+	}
+      });
+  }
+  else {
+    for(auto it = vq3::path::begin(data.start); it != end; ++it) {
+      // *it is a ref_vertex
+      if(auto ref_e = it.get_edge(); ref_e)
+	(*ref_e)().vq3_tag = true;
+    }
+  }
+  
 }
 
 
@@ -129,8 +158,12 @@ int main(int argc, char* argv[]) {
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                  true;},  // always draw
 									   [](const vertex& v) {return           v.vq3_value;},  // position
-									   [](const vertex& v) {return                     4;},  // radius
-									   [](const vertex& v) {return cv::Scalar(0, 0, 180);},  // color
+									   [](const vertex& v) {
+									     if(v.vq3_tag) return 6;
+									     else return 4;},                                    // radius
+									   [](const vertex& v) {
+									     if(v.vq3_tag) return cv::Scalar(255, 100, 000);
+									     else          return cv::Scalar(000, 000, 180);},   // color
 									   [](const vertex& v) {return                    -1;}); // thickness
   
     
@@ -139,7 +172,9 @@ int main(int argc, char* argv[]) {
             << std::endl
             << "##################" << std::endl
             << std::endl
-            << "click in the image to restart, press ESC to quit." << std::endl
+            << "Click on vertices to compute a path. If you click twice on the same" << std::endl
+	    << "vertex, you will get a full Dijkstra computation." << std::endl
+	    << "Press ESC to quit." << std::endl
             << std::endl
             << "##################" << std::endl
             << std::endl;

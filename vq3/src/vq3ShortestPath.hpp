@@ -54,15 +54,15 @@ namespace vq3 {
 
       template<typename REF_VERTEX>
       void set(double new_val, const REF_VERTEX& parent_edge) {
-	to_src     = parent_edge;
-	cost = new_val;
-	state      = status::processing;
+	to_src = parent_edge;
+	cost   = new_val;
+	state  = status::processing;
       }
 
       void set(double new_val) {
-	to_src     = nullptr;
-	cost = new_val;
-	state      = status::processing;
+	to_src = nullptr;
+	cost   = new_val;
+	state  = status::processing;
       }
 
       void ended() {
@@ -77,34 +77,73 @@ namespace vq3 {
     };
 
 
-    template<typename REF_EDGE>
+    template<typename REF_VERTEX>
     class iterator {
     private:
-      using ref_vertex = decltype(std::declval<REF_EDGE>()->extremities().first);
-      
-      REF_EDGE ref_e;
-      hhhhh
+      REF_VERTEX curr;
+
       
     public:
+      using difference_type   = long;
+      using value_type        = REF_VERTEX;
+      using pointer           = REF_VERTEX*;
+      using reference         = REF_VERTEX&;
+      using iterator_category = std::input_iterator_tag;
+
+      using edge_type = typename REF_VERTEX::element_type::ref_edge_type::element_type;
+      
+      /**
+       * This is the end iterator.
+       */
       iterator()                           = default;
       iterator(const iterator&)            = default;
       iterator& operator=(const iterator&) = default;
+      iterator(const REF_VERTEX& curr) : curr(curr) {}
 
-      bool operator==(const iterator& other) {return ref_e == other.ref_e;}
-      bool operator!=(const iterator& other) {return ref_e != other.ref_e;}
-      REF_EDGE operator*() const             {return ref_e;}
-      
-      bool operator++() {
-	
+      bool operator==(const iterator& other) {return curr == other.curr;}
+      bool operator!=(const iterator& other) {return curr != other.curr;}
+      REF_VERTEX operator*() const           {return curr;}
+
+      /**
+       * This returns the edge from the vertex pointed by the iterator to the next vertex.
+       */
+      auto get_edge() {
+	return std::reinterpret_pointer_cast<edge_type>((*curr)().vq3_shortest_path.to_src);
       }
-
-      using value_type = REF_EDGE;
-      using difference_type = std::size_t;
-      using iterator_category = std::input_iterator_tag,
       
-    };
+      auto& operator++() {
+	if(auto& sp = (*curr)().vq3_shortest_path.to_src; sp) {
+	  auto to_src = std::reinterpret_pointer_cast<edge_type>(sp);
+	  auto extr   = to_src->extremities();
+	  curr        = vq3::other_extremity(extr, curr);
+	}
+	else
+	  curr = nullptr;
+	return *this;
+      }
     
+      auto operator++(int) {
+	auto res = *this;
+	(*this)++;
+	return res;
+      }
+    };
+
+  /**
+   * Get an iterator on the past starting from a vertex.
+   */
+  template<typename REF_VERTEX>
+  auto begin(const REF_VERTEX& ref_v) {
+    return iterator(ref_v);
   }
+
+  /**
+   * Get a end interator. The graph is provided for type inference only.
+   */
+  template<typename GRAPH>
+  auto end(const GRAPH& g) {return iterator<typename GRAPH::ref_vertex>();}
+  
+}
 
  
 
