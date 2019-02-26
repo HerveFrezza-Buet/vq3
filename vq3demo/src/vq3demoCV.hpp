@@ -53,7 +53,7 @@ namespace vq3 {
   
   namespace demo2d {
     namespace opencv {
-
+      
       class HueSelector {
       private:
 	cv::Mat hsv;
@@ -343,6 +343,14 @@ namespace vq3 {
 	  return Frame(demo2d::Point(0, size.height-1), Ox, Oy);
       
       }
+      
+      /**
+       * This draws a bounding box.
+       */
+      inline void draw(cv::Mat& image, const Frame& frame, const vq3::demo2d::sample::BBox& bbox, const cv::Scalar& color, int thickness) {
+	cv::rectangle(image, frame(bbox.bottom_left()), frame(bbox.top_right()), color, thickness);
+      }
+
 
       template<typename OBJECT>
       class DotDrawer {
@@ -970,7 +978,9 @@ namespace vq3 {
       namespace sample {
 
 	/**
-	 * This handles image-based distributions information.
+	 * This handles image-based distributions information. This is
+	 * passed to an actual image based distribution for storing all the
+	 * required information.
 	 */
 	struct ImageData {
 	  cv::Mat image; //!< a share pointer to the handled image.
@@ -986,14 +996,22 @@ namespace vq3 {
 	  ImageData(const PIXEL_TO_DENSITY& pixel_to_density) : image(), frame(), pixel_to_density(pixel_to_density) {}
 	};
 	
+	/**
+	 * Makes a data that handles image-based distributions
+	 * information. This is passed to an actual image distribution
+	 * for storing all the required information.
+	 */
 	template<typename PIXEL_TO_DENSITY>
 	ImageData image_data(const PIXEL_TO_DENSITY& pixel_to_density) {
 	  return ImageData(pixel_to_density);
 	}
 	
 	/**
-	 * This handles video-based distributions information.
+	 * This handles video-based distributions information. This is
+	 * passed to an actual video-based distribution for storing all the
+	 * required information.
 	 */
+
 	struct VideoData : ImageData {
 	  cv::VideoCapture cap;
 	  
@@ -1023,6 +1041,11 @@ namespace vq3 {
 	  }
 	};
 	
+	/**
+	 * Makes a data that handles video-based distributions
+	 * information. This is passed to an actual video-based
+	 * distribution for storing all the required information.
+	 */
 	template<typename PIXEL_TO_DENSITY>
 	VideoData video_data(int device, const PIXEL_TO_DENSITY& pixel_to_density) {
 	  return VideoData(device, pixel_to_density);
@@ -1030,7 +1053,11 @@ namespace vq3 {
 	
 
 	class Webcam;
-	
+
+	/**
+	 * This is a density related to an image (see
+	 * vq3::demo2d::opencv::sample::image).
+	 */
 	class Image : public vq3::demo2d::sample::Density {
 	private:
 
@@ -1061,11 +1088,20 @@ namespace vq3 {
 	  }
 	  
 	};
-	
+
+	/**
+	 * This builds an image-based distribution.
+	 * @param image_data The image data for storing image-related information.
+	 */
 	inline vq3::demo2d::sample::density image(ImageData& image_data) {
 	  return vq3::demo2d::sample::density(new Image(image_data));
 	}
 
+
+	/**
+	 * This is a density related to images taken from a webcam (see
+	 * vq3::demo2d::opencv::sample::webcam).
+	 */
 
 	class Webcam : public vq3::demo2d::sample::Density {
 	  
@@ -1093,14 +1129,15 @@ namespace vq3 {
 
 	};
 	
+	/**
+	 * This builds webcam-based distribution.
+	 * @param video_data The video data for storing webcam-related information.
+	 */
 	inline vq3::demo2d::sample::density webcam(VideoData& video_data) {
 	  return vq3::demo2d::sample::density(new Webcam(video_data));
 	}
       }
 
-      inline void draw(cv::Mat& image, const Frame& frame, const vq3::demo2d::sample::BBox& bbox, const cv::Scalar& color, int thickness) {
-	cv::rectangle(image, frame(bbox.bottom_left()), frame(bbox.top_right()), color, thickness);
-      }
     }
   }
 }
