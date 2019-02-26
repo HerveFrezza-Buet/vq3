@@ -28,6 +28,7 @@
 #include <memory>
 #include <set>
 #include <iterator>
+#include <optional>
 
 namespace vq3 {
   namespace path {
@@ -410,12 +411,47 @@ namespace vq3 {
       }
     }
 
+    /**
+     * Computes a position along the path. Some shortest path
+     * algorithm allowing to compute the path from start to dest has
+     * to have been performed beforehand. The vertex dest is the one with
+     * a 0 cummulated cost.
+     * @param start, dest The extremities of the path
+     * @param lambda 0 means start, 1 means dest, inbetween value leads to an interpolation.
+     * @param interpolate A function such as interpolate(ref_v1, ref_v2, lambda) returnes something inbetween ref_v1 (lambda = 0) and ref_v2 (lambda = 1). If ref_v1 is nullptr, the result corresponds to ref_v2, whatever lambda. The same stands is ref_v2 is nullptr.
+     * @return An interpolated value. It is optional, since the path may not extist.
+     */
+    template<typename REF_VERTEX, typename INTERPOLATE>
+    auto travel_path(const REF_VERTEX& start, const REF_VERTEX& dest, double lambda, const INTERPOLATE& interpolate) -> std::optional<decltype(interpolate(start, nullptr, 0))> {
+      if(start == dest)
+	return interpolate(start, nullptr, 0);
 
+      if((*start)().vq3_shortest_path.state == status::unprocessed)
+	return std::optional<decltype(interpolate(start, nullptr, 0))>();
+      
+      double l = 1.0 - std::max(0.0, std::min(lambda, 1.0));
+      if(l == 1)
+	return interpolate(start, nullptr, 0);
+      if(l == 0)
+	return interpolate(dest, nullptr, 0);
 
-
-
-    
+      auto prev_cost    = (*start)().vq3_shortest_path.cost;
+      auto to_dest_cost = l * prev_cost;
+      REF_VERTEX prev   = start;
+      auto it           = begin(start);
+      auto cur          = *(++it);
+      auto cur_cost     = (*cur)().vq3_shortest_path.cost;
+      while(cur_cost > to_dest_cost) {
+	prev      = cur;
+	prev_cost = cur_cost;
+	auto cur          = *(++it);
+	auto cur_cost     = (*cur)().vq3_shortest_path.cost;
+      }
+      
+      double lbd = .5;
+      if(double dif = prev_cost - cur_cost; dif > 0)
+	lbd = (to_dest_cost - cur_cost) / dif;
+      return interpolate(cur, prev, lbd);
+    }
   }
-
-  
 }

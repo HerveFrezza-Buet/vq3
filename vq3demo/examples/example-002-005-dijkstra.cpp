@@ -62,10 +62,9 @@ double edge_cost(const typename graph::ref_edge& ref_e) {
 
 struct callback_data {
   graph& g;
-  std::mt19937& rd;
   vq3::demo2d::opencv::Frame& frame;
   graph::ref_vertex start, dest;
-  callback_data(graph& g, std::mt19937& rd, vq3::demo2d::opencv::Frame& frame) : g(g), rd(rd), frame(frame) {}
+  callback_data(graph& g, vq3::demo2d::opencv::Frame& frame) : g(g), frame(frame) {}
   callback_data()                                = delete;
   callback_data(const callback_data&)            = delete;
   callback_data& operator=(const callback_data&) = delete;
@@ -87,7 +86,7 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   if(data.dest)  (*(data.dest))().vq3_tag  = true;
 
   // false true : we do not consider vertex efficiency, but only edge efficiency.
-  vq3::path::dijkstra<false,true>(data.g, data.start, data.dest, edge_cost);
+  vq3::path::dijkstra<false, true>(data.g, data.start, data.dest, edge_cost);
 
   // This draws the path by tagging the edges belonging to it.
   auto end = vq3::path::end(data.g);
@@ -158,7 +157,7 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
-  callback_data user_data(g, random_device, frame);
+  callback_data user_data(g, frame);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,

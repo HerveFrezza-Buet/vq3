@@ -6,7 +6,7 @@
 #include <iterator>
 
 
-// This example shows the use of the A* algorithm.
+// This example shows the use of path walking.
 
 
 // Graph definition
@@ -19,16 +19,16 @@
 using vlayer_0 = vq3::demo2d::Point;                       // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
 using vlayer_2 = vq3::decorator::tagged<vlayer_1>;         // We will tag extermities of the shortest path for display.
-using vertex   = vlayer_2;
+using vlayer_3 = vq3::decorator::efficiency<vlayer_2>;     // We consider only efficient edges for paths.
+using vertex   = vlayer_3;
 
 // Here, each edge hosts its cost value.  It is the optional value
 // (not mandatory) so that it is not recomputed once it has been
 // calculated first.
 //                                                        ## Node properties :
-using elayer_0 = vq3::decorator::efficiency<void>;        // We consider only efficient edges for paths.
-using elayer_1 = vq3::decorator::optional_cost<elayer_0>; // Edge cost.
-using elayer_2 = vq3::decorator::tagged<elayer_1>;        // We will tag edges belonging to a shortest path for display.
-using edge     = elayer_2;
+using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
+using elayer_1 = vq3::decorator::tagged<elayer_0>;        // We will tag edges belonging to a shortest path for display.
+using edge     = elayer_1;
 
 
 using graph   = vq3::graph<vertex, edge>;
@@ -45,7 +45,7 @@ double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(
 
 // We compute the edge cost as being its length. As we use an optional
 // cost, we can check if the computation is necessary.
-double edge_cost(const typename graph::ref_edge& ref_e) {
+double edge_cost(const graph::ref_edge& ref_e) {
   auto& opt_cost = (*ref_e)().vq3_cost; 
   if(!opt_cost) { // if cost not calculated yet.
     auto extr_pair = ref_e->extremities();
@@ -56,6 +56,7 @@ double edge_cost(const typename graph::ref_edge& ref_e) {
   return *opt_cost;
 }
 
+				  
 
 // Callback
 //
@@ -69,6 +70,24 @@ struct callback_data {
   callback_data()                                = delete;
   callback_data(const callback_data&)            = delete;
   callback_data& operator=(const callback_data&) = delete;
+  
+  void make_path() {
+    
+    vq3::utils::clear_all_tags(g, false);
+    (*(start))().vq3_tag = true;
+    (*(dest ))().vq3_tag = true;
+    
+    // true false: we do not consider edge efficiency, but only vertex efficiency.
+    vq3::path::dijkstra<true, false>(g, start, dest, edge_cost);
+    
+    // This draws the path by tagging the edges belonging to it.
+    auto end = vq3::path::end(g);
+    for(auto it = vq3::path::begin(start); it != end; ++it)
+      if(auto ref_e = it.get_edge(); ref_e)
+	(*ref_e)().vq3_tag = true;
+    
+  }
+					
 };
 
 void on_mouse( int event, int x, int y, int, void* user_data) {
@@ -76,45 +95,15 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   if(event != cv::EVENT_LBUTTONDOWN )
     return;
   
-  auto& data = *(reinterpret_cast<callback_data*>(user_data));
-  
-  vq3::utils::clear_all_tags(data.g, false);
-  data.start = data.dest;
-  data.dest  = vq3::utils::closest(data.g, data.frame(cv::Point(x,y)), d2);
-  if(data.start == data.dest) data.start = nullptr;
+  auto& data   = *(reinterpret_cast<callback_data*>(user_data));
+  auto closest = vq3::utils::closest(data.g, data.frame(cv::Point(x,y)), d2);
 
-  if(data.start) (*(data.start))().vq3_tag = true;
-  if(data.dest)  (*(data.dest))().vq3_tag  = true;
-
-  // false true : we do not consider vertex efficiency, but only edge efficiency.
-  vq3::path::a_star<false, true>(data.g, data.start, data.dest, edge_cost,
-				 [start = data.start](const graph::ref_vertex& ref_v){ // This is the heuristic
-				   if(start)
-				     return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); // direct distance is lower than real cost.
-				   else
-				     return 0.0;
-				 });
-
-  // This draws the path by tagging the edges belonging to it.
-  auto end = vq3::path::end(data.g);
-  if(data.start == nullptr) {
-    // Dijkstra has computed the full tree.
-    data.g.foreach_vertex([end](const graph::ref_vertex ref_v) {
-	for(auto it = vq3::path::begin(ref_v); it != end; ++it) {
-	  // *it is a ref_vertex
-	  if(auto ref_e = it.get_edge(); ref_e)
-	    (*ref_e)().vq3_tag = true;
-	}
-      });
+  if(closest != data.start && closest != data.dest) {
+    auto& efficient = (*closest)().vq3_efficient;
+    efficient = !efficient;
   }
-  else {
-    for(auto it = vq3::path::begin(data.start); it != end; ++it) {
-      // *it is a ref_vertex
-      if(auto ref_e = it.get_edge(); ref_e)
-	(*ref_e)().vq3_tag = true;
-    }
-  }
-  
+
+  data.make_path();
 }
 
 
@@ -124,7 +113,6 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
 
 #define NB_VERTICES_PER_M2      200
 #define NB_SAMPLES_PER_M2    100000
-#define NB_UNEFFICIENT_EDGES    100
 
 int main(int argc, char* argv[]) {
 
@@ -136,8 +124,8 @@ int main(int argc, char* argv[]) {
   //////////////
 
   double intensity = 1.;
-  double side      = 1.;
-  auto   density   = vq3::demo2d::sample::rectangle(side, side, intensity);
+  double radius    = 0.5;
+  auto density     = vq3::demo2d::sample::disk(radius, intensity);
 
   graph g;
 
@@ -151,20 +139,19 @@ int main(int argc, char* argv[]) {
       g.connect(closest.first, closest.second);
   }
 
-  // We handle edge efficiencies. Only NB_UNEFFICIENT_EDGES are unefficient.
-  vq3::utils::clear_edge_efficiencies(g, true);
-  std::vector<graph::ref_edge> edges;
-  vq3::utils::collect_edges(g, std::back_inserter(edges));
-  std::shuffle(edges.begin(), edges.end(), random_device);
-  auto end = edges.begin() + NB_UNEFFICIENT_EDGES;
-  for(auto it = edges.begin(); it != end; ++it)
-    (*(*it))().vq3_efficient = false;
-
+  // We handle vertex efficiencies. 
+  vq3::utils::clear_vertex_efficiencies(g, true);
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
+  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);  
   callback_data user_data(g, frame);
+
+  user_data.start = vq3::utils::closest(g, vq3::demo2d::Point(-100, 0), d2);
+  user_data.dest  = vq3::utils::closest(g, vq3::demo2d::Point( 100, 0), d2);
+  user_data.make_path();
+
+  
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
@@ -172,22 +159,21 @@ int main(int argc, char* argv[]) {
   								     [](const vertex& v) {return                      v.vq3_value;},  // position
   								     [](const edge& e)   {
 								       if(e.vq3_tag)            return cv::Scalar(000, 000, 000);
-								       else if(e.vq3_efficient) return cv::Scalar(255, 100, 100);
-								       else                     return cv::Scalar(200, 200, 200);},   // color
+								       else                     return cv::Scalar(200,  80,  80);},   // color
   								     [](const edge& e)   {
 								       if(e.vq3_tag)            return 3;
-								       else if(e.vq3_efficient) return 2;
-								       else                     return 2;});                          // thickness
+								       else                     return 1;});                          // thickness
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
-									   [](const vertex& v) {return                  true;},  // always draw
-									   [](const vertex& v) {return           v.vq3_value;},  // position
+									   [](const vertex& v) {return                  true;},           // always draw
+									   [](const vertex& v) {return           v.vq3_value;},           // position
 									   [](const vertex& v) {
 									     if(v.vq3_tag) return 6;
-									     else return          4;},                           // radius
+									     else return          4;},                                    // radius
 									   [](const vertex& v) {
-									     if(v.vq3_tag) return cv::Scalar(000, 000, 200);
-									     else          return cv::Scalar(200,  80,  80);},   // color
-									   [](const vertex& v) {return                   -1;});  // thickness
+									     if(v.vq3_tag)            return cv::Scalar(000, 000, 200);
+									     else if(v.vq3_efficient) return cv::Scalar(200,  80,  80);
+									     else                     return cv::Scalar(255, 200, 200);}, // color
+									   [](const vertex& v) {return -1;});                             // thickness
   
     
   std::cout << std::endl
@@ -195,8 +181,7 @@ int main(int argc, char* argv[]) {
             << std::endl
             << "##################" << std::endl
             << std::endl
-            << "Click on vertices to compute a path. If you click twice on the same" << std::endl
-	    << "vertex, you will get a full Dijkstra computation." << std::endl
+            << "Click on vertices to toggle their efficiency." << std::endl
 	    << "Press ESC to quit." << std::endl
             << std::endl
             << "##################" << std::endl
