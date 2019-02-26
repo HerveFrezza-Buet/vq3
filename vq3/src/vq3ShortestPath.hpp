@@ -422,7 +422,7 @@ namespace vq3 {
      * @return An interpolated value. It is optional, since the path may not extist.
      */
     template<typename REF_VERTEX, typename INTERPOLATE>
-    auto travel_path(const REF_VERTEX& start, const REF_VERTEX& dest, double lambda, const INTERPOLATE& interpolate) -> std::optional<decltype(interpolate(start, nullptr, 0))> {
+    auto travel(const REF_VERTEX& start, const REF_VERTEX& dest, double lambda, const INTERPOLATE& interpolate) -> std::optional<decltype(interpolate(start, nullptr, 0))> {
       if(start == dest)
 	return interpolate(start, nullptr, 0);
 
@@ -444,8 +444,8 @@ namespace vq3 {
       while(cur_cost > to_dest_cost) {
 	prev      = cur;
 	prev_cost = cur_cost;
-	auto cur          = *(++it);
-	auto cur_cost     = (*cur)().vq3_shortest_path.cost;
+	cur       = *(++it);
+	cur_cost  = (*cur)().vq3_shortest_path.cost;
       }
       
       double lbd = .5;

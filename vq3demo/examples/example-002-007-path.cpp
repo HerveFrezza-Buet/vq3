@@ -70,24 +70,7 @@ struct callback_data {
   callback_data()                                = delete;
   callback_data(const callback_data&)            = delete;
   callback_data& operator=(const callback_data&) = delete;
-  
-  void make_path() {
-    
-    vq3::utils::clear_all_tags(g, false);
-    (*(start))().vq3_tag = true;
-    (*(dest ))().vq3_tag = true;
-    
-    // true false: we do not consider edge efficiency, but only vertex efficiency.
-    vq3::path::dijkstra<true, false>(g, start, dest, edge_cost);
-    
-    // This draws the path by tagging the edges belonging to it.
-    auto end = vq3::path::end(g);
-    for(auto it = vq3::path::begin(start); it != end; ++it)
-      if(auto ref_e = it.get_edge(); ref_e)
-	(*ref_e)().vq3_tag = true;
-    
-  }
-					
+  					
 };
 
 void on_mouse( int event, int x, int y, int, void* user_data) {
@@ -97,13 +80,14 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   
   auto& data   = *(reinterpret_cast<callback_data*>(user_data));
   auto closest = vq3::utils::closest(data.g, data.frame(cv::Point(x,y)), d2);
-
+    
   if(closest != data.start && closest != data.dest) {
     auto& efficient = (*closest)().vq3_efficient;
     efficient = !efficient;
   }
-
-  data.make_path();
+    
+  // true false: we do not consider edge efficiency, but only vertex efficiency.
+  vq3::path::dijkstra<true, false>(data.g, data.start, data.dest, edge_cost);
 }
 
 
@@ -149,10 +133,20 @@ int main(int argc, char* argv[]) {
 
   user_data.start = vq3::utils::closest(g, vq3::demo2d::Point(-100, 0), d2);
   user_data.dest  = vq3::utils::closest(g, vq3::demo2d::Point( 100, 0), d2);
-  user_data.make_path();
 
+  // This is for path drawing.
+  vq3::utils::clear_vertex_tags(g, false);
+  (*(user_data.start))().vq3_tag = true;
+  (*(user_data.dest ))().vq3_tag = true;
   
+  // true false: we do not consider edge efficiency, but only vertex efficiency.
+  vq3::path::dijkstra<true, false>(g, user_data.start, user_data.dest, edge_cost);
+
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
+
+  int slider = 500;
+  cv::createTrackbar("walk ratio", "image", &slider, 1000, nullptr);
+  
   
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
   								     [](const vertex&, const vertex&, const edge&) {return   true;},  // always draw
@@ -188,11 +182,40 @@ int main(int argc, char* argv[]) {
             << std::endl;
   int keycode = 0;
   while(keycode != 27) {    
+
+    // Let us recompute the path drawing info
+    
+    vq3::utils::clear_edge_tags(g, false);
+    auto end = vq3::path::end(g);
+    for(auto it = vq3::path::begin(user_data.start); it != end; ++it)
+      if(auto ref_e = it.get_edge(); ref_e)
+	(*ref_e)().vq3_tag = true;
+
+    // Let us draw
+    
     image = cv::Scalar(255, 255, 255);
     g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
+
+    // Let us compute and draw the walking position on the path.
+    auto position = vq3::path::travel(user_data.start, user_data.dest,
+				      slider*.001,
+				      [](const graph::ref_vertex& start,
+					 const graph::ref_vertex& dest,
+					 double lambda) {
+					// This is interpolation.
+					if(start == nullptr) return (*dest )().vq3_value;
+					if(dest  == nullptr) return (*start)().vq3_value;
+					auto& start_value = (*start)().vq3_value;
+					auto& dest_value  = (*dest )().vq3_value;
+					return (1 - lambda) * start_value + lambda * dest_value;
+				      });
+    if(position) // position is an optional
+      cv::circle(image, frame(*position), 5, cv::Scalar(000, 200, 200), -1);
+    
+    
     cv::imshow("image", image);
-    keycode = cv::waitKey(100) & 0xFF;
+    keycode = cv::waitKey(50) & 0xFF;
   }
 
   return 0;
