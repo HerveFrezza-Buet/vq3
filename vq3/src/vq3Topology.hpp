@@ -39,6 +39,7 @@
 #include <functional>
 #include <iterator>
 #include <type_traits>
+#include <sstream>
 
 
 #include <vq3Graph.hpp>
@@ -314,6 +315,8 @@ namespace vq3 {
 	return it->second;
       }
 
+      
+
       /**
        * @returns the neighborhood named key of vertex #idx. The method update() should be called first in order to update the neigborhoods of all the vertices.
        */
@@ -323,10 +326,15 @@ namespace vq3 {
       }
 
       /**
-       * @returns the neighborhood named key of vertex ref_v. The method update() should be called first in order to update the neigborhood of all the vertices.
+       * @returns the neighborhood named key of vertex ref_v. The method update_full() should be called first in order to update the neigborhood of all the vertices.
        */
       auto& neighborhood(const typename graph_type::ref_vertex& ref_v, const neighborhood_key_type& key) const {
 	auto it  = neighborhood_tables.find(ref_v);
+	if(it == neighborhood_tables.end()) {
+	  std::ostringstream msg;
+	  msg << "Neighborhood key " << key << " is not in the table.";
+	  throw std::invalid_argument(msg.str());
+	}
 	auto iit = it->second.find(key);
 	return iit->second;
       }

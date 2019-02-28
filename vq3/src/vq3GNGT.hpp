@@ -167,8 +167,6 @@ namespace vq3 {
       private:
 
 	topology_table_type& table;
-	topology_table_type  avg_table;
-	std::optional<unsigned int> old_avg_radius;
 	
       public:
 
@@ -180,9 +178,10 @@ namespace vq3 {
 	vq3::epoch::chl::Processor<graph_type>          chl;
 
 	std::vector<epoch_bmu> bmu_results;
+	std::vector<epoch_bmu> avg_bmu_results;
 
 	Processor(topology_table_type& table)
-	  : table(table), avg_table(table.g),
+	  : table(table),
 	    wta(table), wtm(table), chl(table.g) {}
 	
 	Processor()                            = delete;
@@ -198,27 +197,26 @@ namespace vq3 {
 	 * @param ref_prototype_of_vertex Returns a reference to the prototype from the vertex value.
 	 * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
 	 * @param distance Compares the vertex value to a sample.
-	 * @param average_radius The error is averaged from the vertices around. The neihgborhood is made of the vertices with an edge distance d <= average_radius. Provide 0 for averaging with all vertices in the connected component. It is an optional value, so if the value is unset, no averaging is performed.
+	 * @param som_key The neighborhood key for computing SOM-like computation.
+	 * @param avg_key The neighborhood key for computing the average.
 	 * @param nb_post_evolution_steps After the topology update, several batch WTM are performed.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 */
-	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE, typename VALUE_OF_EDGE_DISTANCE>
+	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE>
 	void process(unsigned int nb_threads,
 		     const ITER& begin, const ITER& end,
 		     const SAMPLE_OF& sample_of,
 		     const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
 		     const CLONE_PROTOTYPE& clone_prototype,
 		     const DISTANCE& distance,
-		     const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val,
-		     const std::optional<unsigned int>& average_radius,
+		     const typename topology_table_type::neighborhood_key_type& som_key,
+		     const typename topology_table_type::neighborhood_key_type& avg_key,
 		     unsigned int nb_post_evolution_steps,
 		     EVOLUTION& evolution) {
  	  if(begin == end) {
 	    // No samples. We kill all nodes and keep the two topological tables updated.
 	    table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
-	    table(voed, max_dist, min_val);
-	    if(average_radius)
-	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
+	    table.update_full();
 	    return;
 	  }
 
@@ -228,20 +226,11 @@ namespace vq3 {
 	    // Empty graph. We create one vertex, keep the two
 	    // topological tables updated, and do one wta pass.
 	    table.g += sample_of(*begin);
-	    table(voed, max_dist, min_val);
-	    if(average_radius)
-	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
+	    table.update_full();
 	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	    return;
 	  }
-
-	  if(average_radius != old_avg_radius) {
-	    // If the average radius is changed from last time, the
-	    // related topological table has to be recomputed.
-	    old_avg_radius = average_radius;
-	    if(average_radius)
-	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
-	  }
+	  
 
 	  // This is an online SOM update in order to quickly move the
 	  // graph so that it fits the samples, while topological
@@ -251,65 +240,50 @@ namespace vq3 {
 	  while(nb_remaining_samples != 0) {
 	    auto to_do = std::min(std::distance(sample_it, end), nb_remaining_samples);
 	    auto sample_end = sample_it + to_do;
-	    while(sample_it != sample_end) vq3::online::wtm::learn(table, distance, sample_of(*(sample_it++)), alpha);
+	    while(sample_it != sample_end) vq3::online::wtm::learn(table, som_key, distance, sample_of(*(sample_it++)), alpha);
 	    nb_remaining_samples -= to_do;
 	    if(sample_it == end) sample_it = begin;
 	  }
 	    
-
-	  // We compute the error cumulated values for all the vertices.
-	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
-
-	  // bmu_results_ptr refers the collection of values actually
-	  // used in the evolution algorithms. It can be directly
-	  // bmu_results or another set of values obtained by spatial
-	  // averaging, according to average_radius argument.
-	  std::vector<epoch_bmu>* bmu_results_ptr = &bmu_results;
 	  
-	  std::vector<epoch_bmu> avg_bmu_results;
-	  if(average_radius) {
-	    // If average radius is set, we average the bmu results.
-	    avg_bmu_results.resize(bmu_results.size());
-	    typename topology_table_type::index_type idx = 0;
-	    for(auto& data : avg_bmu_results) {
-	      auto& neighborhood = avg_table[idx++];
-	      for(auto& info : neighborhood) 
-		if(auto& acc = bmu_results[info.index].vq3_bmu_accum; acc.nb > 0)
-		  data.vq3_bmu_accum += acc.value;
-	    }
-	    
-	    for(auto& data : avg_bmu_results)
-	      if(data.vq3_bmu_accum.nb > 0)
-		data.vq3_bmu_accum = data.vq3_bmu_accum.average();
-	    
-	    bmu_results_ptr = &avg_bmu_results;
+	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	  avg_bmu_results.resize(bmu_results.size());
+
+	  
+	  typename topology_table_type::index_type idx = 0;
+	  for(auto& data : avg_bmu_results) {
+	    auto& neighborhood = table.neighborhood(idx++, avg_key);
+	    for(auto& info : neighborhood) 
+	      if(auto& acc = bmu_results[info.index].vq3_bmu_accum; acc.nb > 0)
+		data.vq3_bmu_accum += acc.value;
 	  }
+
+	  
+	  for(auto& data : avg_bmu_results)
+	    if(data.vq3_bmu_accum.nb > 0)
+	      data.vq3_bmu_accum = data.vq3_bmu_accum.average();
+	  
 
 	  // We call the user evolution method
-	  if(evolution(table, *bmu_results_ptr, clone_prototype)) {
-	    // If the tolopogy has changed, we update both tables.
-	    table(voed, max_dist, min_val);
-	    if(average_radius)
-	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
-	  }
+	  if(evolution(table, avg_bmu_results, clone_prototype))
+	    table.update_full();
 
+	  
 	  // We adjust the vertices position with a single batch update.
-	  wtm.template process<epoch_wtm>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	  wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 
+	  
 	  // We update the edges thanks to Competitive Hebbian learning.
-	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge())) {
-	    // If the tolopogy has changed, we update both tables.
-	    table(voed, max_dist, min_val);
-	    if(average_radius)
-	      avg_table([](unsigned int) {return 1;}, *average_radius, 0);
-	  }
-
+	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge())) 
+	    table.update_full();
+	  
 	  // We performe more batch updates.
 	  if(nb_post_evolution_steps > 1) {
 	    --nb_post_evolution_steps;
 	    for(unsigned int i=0; i < nb_post_evolution_steps; ++i)
-	      wtm.template process<epoch_wtm>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	      wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  }
+	  
 	}
 	
       };

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <string>
 
 #include <opencv2/opencv.hpp>
 
@@ -13,6 +14,11 @@
 // Histograms configuration.
 
 #define NB_BINS 20
+
+#define SOM_H_RADIUS 3.1
+#define SOM_MAX_DIST (unsigned int)(SOM_H_RADIUS)
+
+#define AVG_RADIUS 2
 
 
 // Vertex colors
@@ -108,6 +114,8 @@ using elayer_0 = vq3::decorator::tagged<void>; // we add a tag for CHL computati
 using edge     = elayer_0;
 
 using graph  = vq3::graph<vertex, edge>;
+
+using neighbour_key_type = std::string;
 
 
 // Distance
@@ -217,7 +225,7 @@ struct Evolution {
 
     if(unfreezed) {
 
-      // We clone a topo_ration fraction of the above vertices.
+      // We clone a topo_ratio fraction of the above vertices.
       
       auto above_end = above.begin();
       if(above_end != above.end()) {// if not empty
@@ -388,8 +396,14 @@ int main(int argc, char* argv[]) {
   // is iterated several times.
   std::vector<vq3::demo2d::Point> S;
 
-  // This keeps up to date inforlation about the graph topology.
-  auto topology = vq3::topology::table(g);
+  // This keeps up to date information about the graph topology.
+  auto topology = vq3::topology::table<neighbour_key_type>(g);
+  topology.declare_distance("som",
+			    [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+			    SOM_MAX_DIST,
+			    1e-3);
+  topology.declare_distance("avg",
+			    [](unsigned int edge_distance) {return 1;}, AVG_RADIUS, 0.0);
 
   // This processes the topology evolution (number of vertices and edges)
   auto gngt     = vq3::algo::gngt::processor<sample>(topology);
@@ -456,9 +470,8 @@ int main(int argc, char* argv[]) {
 		   [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
 		   [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
 		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
-		   dist,                                                                           // compares a prototype to a sample.
-		   [](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : .01;}, 1, 0,  // WTM rule. 1-sized neighborhood, neighbors updating strength is 1% (0.01). Keep it small (but non null) for stability.
-		   spatial_average_radius,                                                         // The spatial radius for topological averaging.
+		   dist,                      
+		   "som", "avg",                                                                   // Neighborhood keys.
 		   slider_post_evolution,                                                          // The number of post-evolution steps.
 		   evolution);
 
