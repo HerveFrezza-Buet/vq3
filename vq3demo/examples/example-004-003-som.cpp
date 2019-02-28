@@ -148,11 +148,13 @@ int main(int argc, char* argv[]) {
   // template argument is the type of input samples. For the sake of
   // function notation homogeneity, let us use the alias algo::som
   // indtead of epoch::wtm.
-  auto topology = vq3::topology::table(g);
-  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-	   SOM_MAX_DIST,
-	   1e-3); // We consider node and edge-based neihborhoods.
-  auto som      = vq3::algo::som::processor(topology);
+  auto topology = vq3::topology::table<int>(g);
+  topology.declare_distance(0,
+			    [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+			    SOM_MAX_DIST,
+			    1e-3); // We consider node and edge-based neihborhoods.
+  topology.update_full();
+  auto som = vq3::algo::som::processor(topology);
 
 
   std::cout << std::endl;
@@ -160,7 +162,7 @@ int main(int argc, char* argv[]) {
   std::vector<epoch_data> epoch_results;
   for(unsigned int step = 0; step < NB_STEPS; ++step) {
     // Learning : the returned value of this function is ignored here. See next examples.
-    epoch_results = som.process<epoch_data>(nb_threads,
+    epoch_results = som.process<epoch_data>(nb_threads, 0,
 					    S.begin(), S.end(),
 					    [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},
 					    [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;},
