@@ -23,6 +23,8 @@ using vertex = prototype;
 using graph  = vq3::graph<vertex, void>;
 
 
+using topology_key_type = int;
+
 // Distance
 //
 ////////////////
@@ -163,9 +165,9 @@ int main(int argc, char* argv[]) {
   cv::waitKey(0);
 
   // Now, let us plot the histogram of local distortions. This is why
-  // we have built up an epoch data stack.<graph::ref_vertex>
-  auto topology = vq3::topology::table(g);
-  topology();
+  // we have built up an epoch data stack.
+  auto topology = vq3::topology::table<topology_key_type>(g);
+  topology.update();
   auto wta = vq3::epoch::wta::processor(topology);
   auto epoch_result = wta.process<epoch_data>(nb_threads,
 					      S.begin(), S.end(), 

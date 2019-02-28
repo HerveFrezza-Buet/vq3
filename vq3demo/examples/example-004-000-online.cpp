@@ -43,6 +43,9 @@ using vertex  = layer_2;
 
 using graph  = vq3::graph<vertex, void>;
 
+using topology_key_type = int;
+
+
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
@@ -79,10 +82,12 @@ int main(int argc, char* argv[]) {
 			  return value;
 			});
 
-  auto topology = vq3::topology::table(g);
-  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-	   SOM_MAX_DIST,
-	   1e-3); // We consider node and edge-based neihborhoods.
+  auto topology = vq3::topology::table<topology_key_type>(g);
+  topology.declare_distance(0, // This the key of the single neighborhood declared in this example.
+			    [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+			    SOM_MAX_DIST,
+			    1e-3); // We consider node and edge-based neihborhoods.
+  topology.update_full(); // Update the neighborhoods.... neighborhood #0 here.
 
   bool wtm_mode = true; // false means wta.
   
@@ -136,21 +141,27 @@ int main(int argc, char* argv[]) {
 	    << std::endl;
   int keycode = 0;
   auto sample_it = S.begin();
+  graph::ref_vertex bmu;
+  
   while(keycode != 27) {
 
     if(wtm_mode)
       for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
-	vq3::online::wtm::learn(topology, d2, *(sample_it++), ALPHA);
+	bmu = vq3::online::wtm::learn(topology, 0, // 0 is our neighbourhood key.
+				      d2, *(sample_it++), ALPHA);
 	if(sample_it == S.end()) sample_it=S.begin();
       }
     else
       for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
-	vq3::online::wta::learn(g, d2, *(sample_it++), ALPHA);
+	bmu = vq3::online::wta::learn(g, d2, *(sample_it++), ALPHA);
 	if(sample_it == S.end()) sample_it=S.begin();
       }
 
     
     image = cv::Scalar(255, 255, 255);
+
+    cv::circle(image, frame((*bmu)().vq3_value), 10, cv::Scalar(0,0,0), -1);
+    
     std::copy(S.begin(), S.end(), dd);
     if(wtm_mode)
       g.foreach_edge(draw_edge); 

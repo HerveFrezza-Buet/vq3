@@ -6,9 +6,9 @@ namespace vq3 {
   namespace online {
     namespace wtm {
       template<typename TABLE, typename SAMPLE, typename DISTANCE>
-      auto learn(TABLE& table, const DISTANCE& dist, const SAMPLE& xi, double alpha) {
+      auto learn(TABLE& table, const typename TABLE::neighborhood_key_type& topology_key, const DISTANCE& dist, const SAMPLE& xi, double alpha) {
 	auto ref_v = vq3::utils::closest(table.g, xi , [&dist](const typename TABLE::graph_type::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
-	auto& n = table[ref_v];
+	auto& n = table.neighborhood(ref_v, topology_key);
 	for(auto& info : n) {
 	  auto& w = (*(table(info.index)))().vq3_value;
 	  w += (alpha*info.value)*(xi-w);

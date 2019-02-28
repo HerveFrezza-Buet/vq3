@@ -240,7 +240,7 @@ namespace vq3 {
     template<typename GRAPH, typename VERTEX_VALUE_OF, typename EDGE_VALUE_OF>
     auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
 		   const VERTEX_VALUE_OF& v_of, const EDGE_VALUE_OF& e_of,
-		   bool loop_w = true, bool loop_h = false) {
+		   bool loop_w = false, bool loop_h = false) {
       std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
       std::vector<typename GRAPH::ref_vertex> line(width);
       auto lout = std::back_inserter(lines);
@@ -290,7 +290,7 @@ namespace vq3 {
     template<typename GRAPH, typename VERTEX_VALUE_OF>
     auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
 		   const VERTEX_VALUE_OF& v_of,
-		   bool loop_w = true, bool loop_h = false) {
+		   bool loop_w = false, bool loop_h = false) {
       std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
       std::vector<typename GRAPH::ref_vertex> line(width);
       auto lout = std::back_inserter(lines);

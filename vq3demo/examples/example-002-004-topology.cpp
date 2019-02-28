@@ -73,7 +73,8 @@ int main(int argc, char* argv[]) {
   graph g; 
 
   vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
-			[](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w, h));});
+			[](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w, h));},
+			false, true); // Do not loop on with, loop on height.
   
 
   auto topology = vq3::topology::table<key_type>(g);
