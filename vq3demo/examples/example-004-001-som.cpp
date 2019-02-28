@@ -37,6 +37,8 @@ using vertex  = layer_3;
 
 using graph  = vq3::graph<vertex, void>;
 
+using topology_key_type = int;
+
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
@@ -72,10 +74,12 @@ int main(int argc, char* argv[]) {
 			  return value;
 			});
 
-  auto topology = vq3::topology::table(g);
-  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-	   SOM_MAX_DIST,
-	   1e-3); // We consider node and edge-based neihborhoods.
+  auto topology = vq3::topology::table<topology_key_type>(g);
+  topology.declare_distance(0,
+			    [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+			    SOM_MAX_DIST,
+			    1e-3); // We consider node and edge-based neihborhoods.
+  topology.update_full();
 
 
   double intensity = 1. ;
@@ -141,7 +145,7 @@ int main(int argc, char* argv[]) {
 
     // Step #1 : submit all samples.
     for(auto& sample : S)
-      for(auto& topo_info : topology[vq3::utils::closest(g, sample, d2)])
+      for(auto& topo_info : topology.neighborhood(vq3::utils::closest(g, sample, d2), 0))
 	(*(topology(topo_info.index)))().vq3_sum.increment(topo_info.value, sample);
     
     // Step #2 : update prototypes.

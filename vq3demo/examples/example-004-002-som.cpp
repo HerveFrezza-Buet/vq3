@@ -34,6 +34,8 @@ using vertex  = layer_2;
 
 using graph  = vq3::graph<vertex, void>;
 
+using topology_key_type = int;
+
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
@@ -171,19 +173,22 @@ int main(int argc, char* argv[]) {
   // First, we need a structure for handling SOM-like computation. The
   // template argument is the type of input samples.
 
-  auto topology = vq3::topology::table(g);
-  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-	   SOM_MAX_DIST,
-	   1e-3); // We consider node and edge-based neihborhoods.
+  auto topology = vq3::topology::table<int>(g);
+  topology.declare_distance(0,
+			    [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
+			    SOM_MAX_DIST,
+			    1e-3); // We consider node and edge-based neihborhoods.
+  topology.update_full();
   // This is the winner-take-most parallel processor.
   auto winner_take_most = vq3::epoch::wtm::processor(topology);
+			    
 
   
   while(keycode != 27) {
 
     auto t_start = std::chrono::high_resolution_clock::now();
     // Learning : the returned value of thus function is ignored here. See next examples.
-    winner_take_most.process<epoch_data>(nb_threads,
+    winner_take_most.process<epoch_data>(nb_threads, 0,
 					 data.begin(), data.end(),
 					 [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},         // how to get the sample from a data content (*it).
 					 [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;}, // how to get a **reference** to the prototype from the vertex value.
