@@ -18,7 +18,7 @@
 #define SOM_H_RADIUS 3.1
 #define SOM_MAX_DIST (unsigned int)(SOM_H_RADIUS)
 
-#define AVG_RADIUS 2
+#define NARROW_SOM_COEF .02
 
 
 // Vertex colors
@@ -33,12 +33,10 @@
 #define INIT_SLIDER_N               5000
 #define INIT_SLIDER_T                150
 #define INIT_SLIDER_DENSITY           25
-#define INIT_SLIDER_MARGIN_ABOVE      30
-#define INIT_SLIDER_MARGIN_BELOW      15
-#define INIT_SLIDER_AVERAGE_RADIUS     3
-#define INIT_SLIDER_USE_AVERAGE        1
-#define INIT_SLIDER_EVOLUTION_RATIO   30
-#define INIT_SLIDER_POST_EVOLUTION     3
+#define INIT_SLIDER_MARGIN_ABOVE      35
+#define INIT_SLIDER_MARGIN_BELOW      20
+#define INIT_SLIDER_AVERAGE_RADIUS     8
+#define INIT_SLIDER_EVOLUTION_RATIO   10
 
 
 // Execution mode
@@ -282,9 +280,9 @@ int main(int argc, char* argv[]) {
   int slider_margin_above    = INIT_SLIDER_MARGIN_ABOVE;
   int slider_margin_below    = INIT_SLIDER_MARGIN_BELOW;
   int slider_average_radius  = INIT_SLIDER_AVERAGE_RADIUS;
-  int slider_use_average     = INIT_SLIDER_USE_AVERAGE;
   int slider_evolution_ratio = INIT_SLIDER_EVOLUTION_RATIO;
-  int slider_post_evolution  = INIT_SLIDER_POST_EVOLUTION;
+  
+  int old_slider_average_radius = slider_average_radius;
 
   // Let us used an histogram for non-averaged error distribution.
   vq3::demo2d::opencv::histogram histo({2.4, 0.2}, {4.4, 0.9});
@@ -301,10 +299,8 @@ int main(int argc, char* argv[]) {
   cv::createTrackbar("above_margin*100",       "params", &slider_margin_above,      100, nullptr);
   cv::createTrackbar("below_margin*100",       "params", &slider_margin_below,      100, nullptr);
   cv::createTrackbar("right square density",   "params", &slider_density,           100, nullptr);
-  cv::createTrackbar("use spatial average ?",  "params", &slider_use_average,         1, nullptr);
   cv::createTrackbar("statial average radius", "params", &slider_average_radius,     10, nullptr);
   cv::createTrackbar("Growth/Shrink ratio",    "params", &slider_evolution_ratio,   100, nullptr);
-  cv::createTrackbar("nb post evol. steps",    "params", &slider_post_evolution,     10, nullptr);
   
   auto image       = cv::Mat(600, 1500, CV_8UC3, cv::Scalar(255,255,255));
   auto params      = cv::Mat(1, 600, CV_8UC3, cv::Scalar(255,255,255));
@@ -398,12 +394,9 @@ int main(int argc, char* argv[]) {
 
   // This keeps up to date information about the graph topology.
   auto topology = vq3::topology::table<neighbour_key_type>(g);
-  topology.declare_distance("som",
-			    [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-			    SOM_MAX_DIST,
-			    1e-3);
-  topology.declare_distance("avg",
-			    [](unsigned int edge_distance) {return 1;}, AVG_RADIUS, 0.0);
+  topology.declare_distance("wide som",   [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},          SOM_MAX_DIST, 1e-3);
+  topology.declare_distance("narrow som", [](unsigned int edge_distance) {return edge_distance == 0 ? 1 : NARROW_SOM_COEF;            },                     1,  0.0);
+  topology.declare_distance("avg",        [](unsigned int edge_distance) {return 1;                                                   }, slider_average_radius,  0.0);
 
   // This processes the topology evolution (number of vertices and edges)
   auto gngt     = vq3::algo::gngt::processor<sample>(topology);
@@ -421,6 +414,12 @@ int main(int argc, char* argv[]) {
   int wait_ms;
 
   while(keycode != 27) {       // no ESC key pressed.
+    if(slider_average_radius != old_slider_average_radius) {
+      // we need to redeclare avg neighborhoods.
+      topology.declare_distance("avg", [](unsigned int edge_distance) {return 1;}, slider_average_radius, 0.0);
+      old_slider_average_radius = slider_average_radius;
+    }
+
     
     compute = mode != Mode::Step;
     
@@ -463,16 +462,13 @@ int main(int argc, char* argv[]) {
       evolution.topo_ratio    = .01*slider_evolution_ratio;
 
       // We compute the topology evolution of the graph...
-      std::optional<unsigned int> spatial_average_radius;
-      if(slider_use_average == 1) spatial_average_radius = (unsigned int)slider_average_radius;
       gngt.process(nb_threads,
 		   S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
 		   [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
 		   [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
 		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
 		   dist,                      
-		   "som", "avg",                                                                   // Neighborhood keys.
-		   slider_post_evolution,                                                          // The number of post-evolution steps.
+		   "wide som", "narrow som", "avg",                                                // Neighborhood keys.
 		   evolution);
 
       // Display

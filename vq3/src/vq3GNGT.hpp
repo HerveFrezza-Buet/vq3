@@ -178,7 +178,6 @@ namespace vq3 {
 	vq3::epoch::chl::Processor<graph_type>          chl;
 
 	std::vector<epoch_bmu> bmu_results;
-	std::vector<epoch_bmu> avg_bmu_results;
 
 	Processor(topology_table_type& table)
 	  : table(table),
@@ -199,7 +198,6 @@ namespace vq3 {
 	 * @param distance Compares the vertex value to a sample.
 	 * @param som_key The neighborhood key for computing SOM-like computation.
 	 * @param avg_key The neighborhood key for computing the average.
-	 * @param nb_post_evolution_steps After the topology update, several batch WTM are performed.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 */
 	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE>
@@ -209,9 +207,9 @@ namespace vq3 {
 		     const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
 		     const CLONE_PROTOTYPE& clone_prototype,
 		     const DISTANCE& distance,
-		     const typename topology_table_type::neighborhood_key_type& som_key,
+		     const typename topology_table_type::neighborhood_key_type& wide_som_key,
+		     const typename topology_table_type::neighborhood_key_type& narrow_som_key,
 		     const typename topology_table_type::neighborhood_key_type& avg_key,
-		     unsigned int nb_post_evolution_steps,
 		     EVOLUTION& evolution) {
  	  if(begin == end) {
 	    // No samples. We kill all nodes and keep the two topological tables updated.
@@ -232,7 +230,7 @@ namespace vq3 {
 	  }
 	  
 
-	  // This is an online SOM update in order to quickly move the
+	  // This is an online wide SOM update in order to quickly move the
 	  // graph so that it fits the samples, while topological
 	  // evolution is freezed.
 	  decltype(std::distance(begin, end)) nb_remaining_samples = (int)(nb_vertices*samples_per_vertex);
@@ -240,18 +238,19 @@ namespace vq3 {
 	  while(nb_remaining_samples != 0) {
 	    auto to_do = std::min(std::distance(sample_it, end), nb_remaining_samples);
 	    auto sample_end = sample_it + to_do;
-	    while(sample_it != sample_end) vq3::online::wtm::learn(table, som_key, distance, sample_of(*(sample_it++)), alpha);
+	    while(sample_it != sample_end) vq3::online::wtm::learn(table, wide_som_key, distance, sample_of(*(sample_it++)), alpha);
 	    nb_remaining_samples -= to_do;
 	    if(sample_it == end) sample_it = begin;
 	  }
 	    
 	  
 	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
-	  avg_bmu_results.resize(bmu_results.size());
+	  std::vector<epoch_bmu> avg_bmu_results(bmu_results.size());
 
 	  
 	  typename topology_table_type::index_type idx = 0;
 	  for(auto& data : avg_bmu_results) {
+	    data.vq3_bmu_accum.clear();
 	    auto& neighborhood = table.neighborhood(idx++, avg_key);
 	    for(auto& info : neighborhood) 
 	      if(auto& acc = bmu_results[info.index].vq3_bmu_accum; acc.nb > 0)
@@ -270,19 +269,14 @@ namespace vq3 {
 
 	  
 	  // We adjust the vertices position with a single batch update.
-	  wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	  wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
 
 	  
 	  // We update the edges thanks to Competitive Hebbian learning.
 	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge())) 
 	    table.update_full();
 	  
-	  // We performe more batch updates.
-	  if(nb_post_evolution_steps > 1) {
-	    --nb_post_evolution_steps;
-	    for(unsigned int i=0; i < nb_post_evolution_steps; ++i)
-	      wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
-	  }
+	  wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  
 	}
 	
