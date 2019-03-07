@@ -45,7 +45,7 @@ using vertex   = vlayer_2;
 using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CHL computation.
 using edge     = elayer_0;
 
-using graph  = vq3::graph<vertex, edge>;
+using graph    = vq3::graph<vertex, edge>;
 
 using neighbour_key_type = std::string;
 

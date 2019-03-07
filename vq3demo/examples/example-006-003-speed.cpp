@@ -7,19 +7,24 @@
 #define INIT_SLIDER_S           80
 #define INIT_SLIDER_V          200
 #define INIT_SLIDER_TOLERANCE   20
+
 #define INIT_SLIDER_N         5000
-#define INIT_SLIDER_T          400
-#define INIT_SLIDER_E          100
+#define INIT_SLIDER_T          600
+
 #define INIT_SLIDER_Z         2000
 
-#define EVOLUTION_MARGIN_ABOVE        .30
-#define EVOLUTION_MARGIN_BELOW        .15
+#define EVOLUTION_MARGIN_ABOVE        .35
+#define EVOLUTION_MARGIN_BELOW        .25
 #define EVOLUTION_TOPOLOGICAL_RATIO   .30
+
 #define GNGT_ALPHA                    .05
 #define GNGT_NB_SAMPLES_PER_PROTOTYPE  10
-#define GNGT_NEIGHBOUR_DISTANCE_COEF  .02
-#define GNGT_AVERAGE_RADIUS             3
-#define GNGT_NB_POST_EVOL_STEPS         8
+#define GNGT_NB_WTA_POST_CHL            1
+
+#define SOM_H_RADIUS                  3.1
+#define SOM_MAX_DIST                  (unsigned int)(SOM_H_RADIUS)
+#define NARROW_SOM_COEF               .02
+#define AVERAGE_RADIUS                8
 
 // Graph definition 
 //
@@ -42,7 +47,9 @@ using elayer_1 = vq3::decorator::efficiency<elayer_0>;    // for connected compo
 using elayer_2 = vq3::decorator::labelled<elayer_1>;      // for edge labelling     
 using edge     = elayer_2;
 
-using graph  = vq3::graph<vertex, edge>;
+using graph    = vq3::graph<vertex, edge>;
+
+using neighbour_key_type = std::string;
   
 
 // Distance
@@ -81,8 +88,6 @@ int main(int argc, char* argv[]) {
   
   int N_slider = INIT_SLIDER_N;
   int T_slider = INIT_SLIDER_T;
-  int E_slider = INIT_SLIDER_E;
-  
   int Z_slider = INIT_SLIDER_Z;
   
   
@@ -103,7 +108,6 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   cv::createTrackbar("nb/m^2",               "image", &N_slider, 10000, nullptr);
-  cv::createTrackbar("1000*min_edge_length", "image", &E_slider,   500, nullptr);
   cv::createTrackbar("T",                    "image", &T_slider,  1000, nullptr);
   
   cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
@@ -163,18 +167,25 @@ int main(int argc, char* argv[]) {
   // to both use and display them.
   std::vector<vq3::demo2d::Point> S;
 
-  
   graph g;
-  auto topology  = vq3::topology::table(g);
-  auto gngt      = vq3::algo::gngt::processor<sample>(topology);
-  auto evolution = vq3::algo::gngt::by_default::evolution();
   
+  auto topology = vq3::topology::table<neighbour_key_type>(g);
+  topology.declare_distance("wide som",   [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},   SOM_MAX_DIST, 1e-3);
+  topology.declare_distance("narrow som", [](unsigned int edge_distance) {return edge_distance == 0 ? 1 : NARROW_SOM_COEF ;           },              1,  0.0);
+  topology.declare_distance("avg",        [](unsigned int edge_distance) {return 1;                                                   }, AVERAGE_RADIUS,  0.0);
+  
+  auto gngt = vq3::algo::gngt::processor<sample>(topology);
+  
+  auto evolution = vq3::algo::gngt::by_default::evolution();
+
   gngt.alpha              = GNGT_ALPHA;
   gngt.samples_per_vertex = GNGT_NB_SAMPLES_PER_PROTOTYPE;
+  gngt.nb_wta_after       = GNGT_NB_WTA_POST_CHL;
   
   evolution.margin_above  = EVOLUTION_MARGIN_ABOVE;
   evolution.margin_below  = EVOLUTION_MARGIN_BELOW;
   evolution.topo_ratio    = EVOLUTION_TOPOLOGICAL_RATIO;
+  
   
   // This is the loop
   //
@@ -213,20 +224,18 @@ int main(int argc, char* argv[]) {
 
     // Let us label the connected components
 
-    vq3::utils::clear_vertex_efficiencies(g, true); // All vertices are considered for connected components.
-
+    // We compute the topology evolution of the graph...
     gngt.process(nb_threads,
 		 S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
 		 [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
 		 [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
 		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
-		 dist,                                                                           // compares a prototype to a sample.
-		 [](unsigned int edge_distance) {
-		   return edge_distance == 0 ? 1.0 : GNGT_NEIGHBOUR_DISTANCE_COEF;}, 1, 0,       // WTM rule. 1-sized neighborhood, neighbors updating strength is 10% (0.1).
-		 GNGT_AVERAGE_RADIUS,                                                            // The spatial radius for topological averaging.
-		 GNGT_NB_POST_EVOL_STEPS,                                                        // The number of post-evolution steps.
+		 dist,                      
+		 "wide som", "narrow som", "avg",                                                // Neighborhood keys.
 		 evolution);
     
+    vq3::utils::clear_vertex_efficiencies(g, true); // All vertices are considered for connected components.
+
     auto components = vq3::connected_components::make(g);
     vq3::labelling::conservative(components.begin(), components.end());
     vq3::labelling::edges_from_vertices(g);
