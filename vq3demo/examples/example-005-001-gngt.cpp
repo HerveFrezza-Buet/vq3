@@ -245,7 +245,7 @@ struct Evolution {
 	  topology(it->first)->kill();
       }
       
-      topology_changed = (above.begin() != above_end) || (below.begin() != below_end);
+      topology_changed = topology_changed || (above.begin() != above_end) || (below.begin() != below_end);
     }
 
     // We tell GNG-T if any change in the vertices (add/remove) has occurred.

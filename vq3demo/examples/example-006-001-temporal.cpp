@@ -1,5 +1,6 @@
 #include <vq3demo.hpp>
 #include <random>
+#include <string>
 
 #define GRID_WIDTH             15
 #define GRID_HEIGHT             8
@@ -14,6 +15,8 @@ using layer_2 = vq3::decorator::smoother<layer_1, vq3::demo2d::Point, 1, 21, 2>;
 using vertex  = layer_2;
 
 using graph  = vq3::graph<vertex, void>;
+
+using neighbour_key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
@@ -123,15 +126,15 @@ int main(int argc, char* argv[]) {
   // to both use and display them.
   std::vector<vq3::demo2d::Point> S;
   
-  // First, we need a structure for handling SOM-like computation. The
-  // template argument is the type of input samples. For the sake of
-  // function notation homogeneity, let us use the alias algo::som
-  // indtead of epoch::wtm.
-  auto topology = vq3::topology::table(g);
-  topology([](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},
-	   SOM_MAX_DIST,
-	   1e-3); // We consider node and edge-based neihborhoods.
+  // This keeps up to date information about the graph topology.
+  auto topology = vq3::topology::table<neighbour_key_type>(g);
+  topology.declare_distance("som",   [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));}, SOM_MAX_DIST, 1e-3);
+
+  // This is the SOM algorithm.
   auto som = vq3::algo::som::processor(topology);
+
+  // We compute all the neighborhoods once, beforehand.
+  topology.update_full();
 
   
   // This is the loop
@@ -162,7 +165,7 @@ int main(int argc, char* argv[]) {
 
     // SOM update
     
-    som.process<epoch_data>(nb_threads,
+    som.process<epoch_data>(nb_threads, "som",
 			    S.begin(), S.end(),
 			    [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},
 			    [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;},

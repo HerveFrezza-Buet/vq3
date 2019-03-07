@@ -53,8 +53,8 @@ namespace vq3 {
   
 	  double T;                   //!< The target.
 	  double density;             //!< The N value. 
-	  double margin_above = .30;  //!< If bmu_error > T*density*(1+margin_above), the vertex is cloned.
-	  double margin_below = .15;  //!< If bmu_error < T*density*(1-margin_below), the vertex is killed.
+	  double margin_above = .35;  //!< If bmu_error > T*density*(1+margin_above), the vertex is cloned.
+	  double margin_below = .20;  //!< If bmu_error < T*density*(1-margin_below), the vertex is killed.
 	  double topo_ratio   = .30;  //!< Add/remove topo_ratio*nb_vertices_out_of_margin.
 
 	private:
@@ -74,7 +74,7 @@ namespace vq3 {
 	  // modification of the number of vertices.
 	  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
 	  bool operator()(TABLE&                 topology,
-			  const BMU_RESULT&      bmu_epoch_result,
+			  const BMU_RESULT&      neighboring_bmu_epoch_result,
 			  const CLONE_PROTOTYPE& clone_prototype) {
 	    double topology_changed = false;
 
@@ -84,21 +84,20 @@ namespace vq3 {
 	    below.clear();
 	    auto below_out = std::back_inserter(below);
     
-	    double NT = density*T;
+	    auto NT = density*T;
 
 	    double above_bound = NT*(1+margin_above);
 	    double below_bound = NT*(1-margin_below);
 
 	    // Let us consider all the errors.
 	    std::size_t vertex_idx = 0;
-	    for(auto& res : bmu_epoch_result) {
+	    for(auto& res : neighboring_bmu_epoch_result) {
 	      if(res.vq3_bmu_accum.nb != 0) { // We consider only the vertices which have been a bmu at least once.
-		double error  = res.vq3_bmu_accum.value;
-		if     (error > above_bound) *(above_out++) = {vertex_idx, error};
+		double error  = res.vq3_bmu_accum.average();
+		if(error > above_bound)      *(above_out++) = {vertex_idx, error};
 		else if(error < below_bound) *(below_out++) = {vertex_idx, error};
 	      }
 	      else {
-		// We remove from the graph the vertices that have never been selected as a BMU.
 		topology(vertex_idx)->kill();
 		topology_changed = true;
 	      }
@@ -113,22 +112,22 @@ namespace vq3 {
 		      [](const std::pair<std::size_t, double>& p1, const std::pair<std::size_t, double>& p2) {
 			return p1.second < p2.second;});
 
-
-	    // We clone a topo_ration fraction of the above vertices.
 	    auto above_end = above.begin();
 	    if(above_end != above.end()) {// if not empty
-	      std::advance(above_end, std::max((std::size_t)(above.size()*topo_ratio), (std::size_t)1));
-	      for(auto it = above.begin(); it != above_end; ++it) topology.g += clone_prototype((*(topology(it->first)))().vq3_value);
+	      std::advance(above_end, std::max((std::size_t)(above.size()*topo_ratio), (size_t)1));
+	      for(auto it = above.begin(); it != above_end; ++it)
+		topology.g += clone_prototype((*(topology(it->first)))().vq3_value);
 	    }
 
 	    // we delete a topo_ration fraction of the below vertices.
 	    auto below_end = below.begin();
 	    if(below_end != below.end()) {// if not empty
-	      std::advance(below_end, std::max((std::size_t)(below.size()*topo_ratio), (std::size_t)1));
-	      for(auto it = below.begin(); it != below_end; ++it) topology(it->first)->kill();
+	      std::advance(below_end, std::max((std::size_t)(below.size()*topo_ratio), (size_t)1));
+	      for(auto it = below.begin(); it != below_end; ++it) 
+		topology(it->first)->kill();
 	    }
       
-	    topology_changed = (above.begin() != above_end) || (below.begin() != below_end);
+	    topology_changed = topology_changed || (above.begin() != above_end) || (below.begin() != below_end);
 
 	    // We tell GNG-T if any change in the vertices (add/remove) has occurred.
 	    return topology_changed;
