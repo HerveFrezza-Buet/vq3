@@ -7,12 +7,12 @@
 #define D_ANGLE (360./ANGLE_PERIOD)
 #define SPEED_TO_METER .5
 
-#define EVOLUTION_MARGIN_ABOVE        .30
-#define EVOLUTION_MARGIN_BELOW        .15
+#define EVOLUTION_MARGIN_ABOVE        .35
+#define EVOLUTION_MARGIN_BELOW        .25
 #define EVOLUTION_TOPOLOGICAL_RATIO   .30
 
-#define GNGT_ALPHA                    .10
-#define GNGT_NB_SAMPLES_PER_PROTOTYPE  50
+#define GNGT_ALPHA                    .05
+#define GNGT_NB_SAMPLES_PER_PROTOTYPE  10
 #define GNGT_NB_WTA_POST_CHL            1
 
 
@@ -200,22 +200,22 @@ int main(int argc, char* argv[]) {
   int keycode = 0;
   while(keycode != 27) {
 
-    // // Ubdate the distribution
-    // switch(mode) {
-    // case 0: // Rotation
-    //   ++bar_theta; 
-    //   break;
-    // case 1: // stretch
-    //   ++bar_size_x;
-    //   ++bar_size;
-    //   break;
-    // case 2: // translation
-    //   ++bar_pos_x;
-    //   ++bar_pos;
-    //   break;
-    // default:
-    //   break;
-    // }
+    // Ubdate the distribution
+    switch(mode) {
+    case 0: // Rotation
+      ++bar_theta; 
+      break;
+    case 1: // stretch
+      ++bar_size_x;
+      ++bar_size;
+      break;
+    case 2: // translation
+      ++bar_pos_x;
+      ++bar_pos;
+      break;
+    default:
+      break;
+    }
     
     // Get the samples and plot them.
     
