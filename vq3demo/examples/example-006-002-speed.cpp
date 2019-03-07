@@ -1,6 +1,7 @@
 #include <vq3demo.hpp>
 #include <random>
 #include <algorithm>
+#include <string>
 
 #define ANGLE_PERIOD 500
 #define D_ANGLE (360./ANGLE_PERIOD)
@@ -9,11 +10,16 @@
 #define EVOLUTION_MARGIN_ABOVE        .30
 #define EVOLUTION_MARGIN_BELOW        .15
 #define EVOLUTION_TOPOLOGICAL_RATIO   .30
+
 #define GNGT_ALPHA                    .10
 #define GNGT_NB_SAMPLES_PER_PROTOTYPE  50
-#define GNGT_NEIGHBOUR_DISTANCE_COEF  .05
-#define GNGT_AVERAGE_RADIUS             3
-#define GNGT_NB_POST_EVOL_STEPS         8
+#define GNGT_NB_WTA_POST_CHL            1
+
+
+#define SOM_H_RADIUS                  3.1
+#define SOM_MAX_DIST                  (unsigned int)(SOM_H_RADIUS)
+#define NARROW_SOM_COEF               .02
+#define AVERAGE_RADIUS                8
 
 #define FIXED_FRAME_DELAY             .03
 
@@ -40,6 +46,8 @@ using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CH
 using edge     = elayer_0;
 
 using graph  = vq3::graph<vertex, edge>;
+
+using neighbour_key_type = std::string;
 
 
 // Distance
@@ -153,12 +161,19 @@ int main(int argc, char* argv[]) {
   std::vector<vq3::demo2d::Point> S;
 
   graph g;
-  auto topology  = vq3::topology::table(g);
-  auto gngt      = vq3::algo::gngt::processor<sample>(topology);
+  
+  auto topology = vq3::topology::table<neighbour_key_type>(g);
+  topology.declare_distance("wide som",   [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},   SOM_MAX_DIST, 1e-3);
+  topology.declare_distance("narrow som", [](unsigned int edge_distance) {return edge_distance == 0 ? 1 : NARROW_SOM_COEF ;           },              1,  0.0);
+  topology.declare_distance("avg",        [](unsigned int edge_distance) {return 1;                                                   }, AVERAGE_RADIUS,  0.0);
+  
+  auto gngt = vq3::algo::gngt::processor<sample>(topology);
+  
   auto evolution = vq3::algo::gngt::by_default::evolution();
 
   gngt.alpha              = GNGT_ALPHA;
   gngt.samples_per_vertex = GNGT_NB_SAMPLES_PER_PROTOTYPE;
+  gngt.nb_wta_after       = GNGT_NB_WTA_POST_CHL;
   
   evolution.margin_above  = EVOLUTION_MARGIN_ABOVE;
   evolution.margin_below  = EVOLUTION_MARGIN_BELOW;
@@ -185,22 +200,22 @@ int main(int argc, char* argv[]) {
   int keycode = 0;
   while(keycode != 27) {
 
-    // Ubdate the distribution
-    switch(mode) {
-    case 0: // Rotation
-      ++bar_theta; 
-      break;
-    case 1: // stretch
-      ++bar_size_x;
-      ++bar_size;
-      break;
-    case 2: // translation
-      ++bar_pos_x;
-      ++bar_pos;
-      break;
-    default:
-      break;
-    }
+    // // Ubdate the distribution
+    // switch(mode) {
+    // case 0: // Rotation
+    //   ++bar_theta; 
+    //   break;
+    // case 1: // stretch
+    //   ++bar_size_x;
+    //   ++bar_size;
+    //   break;
+    // case 2: // translation
+    //   ++bar_pos_x;
+    //   ++bar_pos;
+    //   break;
+    // default:
+    //   break;
+    // }
     
     // Get the samples and plot them.
     
@@ -217,20 +232,18 @@ int main(int argc, char* argv[]) {
     
     evolution.density    = N_slider;
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
-    
+
+    // We compute the topology evolution of the graph...
     gngt.process(nb_threads,
 		 S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
 		 [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
 		 [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
 		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
-		 dist,                                                                           // compares a prototype to a sample.
-		 [](unsigned int edge_distance) {
-		   return edge_distance == 0 ? 1.0 : GNGT_NEIGHBOUR_DISTANCE_COEF;}, 1, 0,       // WTM rule. 1-sized neighborhood.
-		 GNGT_AVERAGE_RADIUS,                                                            // The spatial radius for topological averaging.
-		 GNGT_NB_POST_EVOL_STEPS,                                                        // The number of post-evolution steps.
+		 dist,                      
+		 "wide som", "narrow som", "avg",                                                // Neighborhood keys.
 		 evolution);
-    // Temporal update
     
+    // Temporal update
     g.foreach_vertex([](graph::ref_vertex ref_v) {
 	auto& value = (*ref_v)();
 	value.vq3_smoother += value.vq3_value;

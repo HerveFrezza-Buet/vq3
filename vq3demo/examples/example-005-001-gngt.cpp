@@ -410,7 +410,7 @@ int main(int argc, char* argv[]) {
   topology.declare_distance("avg",        [](unsigned int edge_distance) {return 1;                                                   }, slider_average_radius,  0.0);
 
   // This processes the topology evolution (number of vertices and edges)
-  auto gngt     = vq3::algo::gngt::processor<sample>(topology);
+  auto gngt = vq3::algo::gngt::processor<sample>(topology);
   
   // This is how the default evolution would have been obtained.
   //   auto evolution = vq3::algo::gngt::by_default::evolution();
