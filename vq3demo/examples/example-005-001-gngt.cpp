@@ -397,7 +397,7 @@ int main(int argc, char* argv[]) {
   // This keeps up to date information about the graph topology.
   auto topology = vq3::topology::table<neighbour_key_type>(g);
   topology.declare_distance("wide som",   [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},          SOM_MAX_DIST, 1e-3);
-  topology.declare_distance("narrow som", [](unsigned int edge_distance) {auto res = 1-edge_distance*.8; std::cout << edge_distance << std::endl; return res;           },                     1,  0.0);
+  topology.declare_distance("narrow som", [](unsigned int edge_distance) {return edge_distance == 0 ? 1 : NARROW_SOM_COEF ;           },                     1,  0.0);
   topology.declare_distance("avg",        [](unsigned int edge_distance) {return 1;                                                   }, slider_average_radius,  0.0);
 
   // This processes the topology evolution (number of vertices and edges)

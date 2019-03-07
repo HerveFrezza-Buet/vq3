@@ -168,9 +168,6 @@ namespace vq3 {
 	  auto [edge_distance, ref_vertex] = to_do.front();
 	  to_do.pop_front();
 
-
-	  std::cout << to_do.size() << " remaining, poping (dist =" << edge_distance << ", v = " << (*this)(ref_vertex) << ")" << std::endl;
-
 	  bool push_neighbors = false;
 
 	  // We determine the distance-related weight value
@@ -180,7 +177,6 @@ namespace vq3 {
 	      if(auto val = edge_distance_info.voed(edge_distance); val > edge_distance_info.min_val) {
 		push_neighbors = true;
 		res[key].push_back({val, (*this)(ref_vertex)});
-		std::cout << "  res(" << key << ").append(" << val << ", " << (*this)(ref_vertex) << ")" << std::endl;
 	      }
 	    
 	  }
