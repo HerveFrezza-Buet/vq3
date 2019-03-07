@@ -164,7 +164,7 @@ struct Evolution {
   // modification of the number of vertices.
   template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
   bool operator()(TABLE&                 topology,
-		  const BMU_RESULT&      bmu_epoch_result,
+		  const BMU_RESULT&      neighboring_bmu_epoch_result,
 		  const CLONE_PROTOTYPE& clone_prototype) {
     double topology_changed = false;
 
@@ -187,9 +187,9 @@ struct Evolution {
 
     // Let us consider all the errors.
     std::size_t vertex_idx = 0;
-    for(auto& res : bmu_epoch_result) {
+    for(auto& res : neighboring_bmu_epoch_result) {
       if(res.vq3_bmu_accum.nb != 0) { // We consider only the vertices which have been a bmu at least once.
-	double error  = res.vq3_bmu_accum.value;
+	double error  = res.vq3_bmu_accum.average();
 	auto& color = (*(topology(vertex_idx)))().vq3_color; // This is a reference to the vertex color.
 	*(hout++) = error;
 	if(error > above_bound) {
@@ -268,6 +268,8 @@ int main(int argc, char* argv[]) {
   else
     std::cout << std::endl
 	      << "I use " << nb_threads << " thread(s)." << std::endl;
+
+
   
   std::random_device rd;  
   std::mt19937 random_device(rd());
@@ -395,7 +397,7 @@ int main(int argc, char* argv[]) {
   // This keeps up to date information about the graph topology.
   auto topology = vq3::topology::table<neighbour_key_type>(g);
   topology.declare_distance("wide som",   [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},          SOM_MAX_DIST, 1e-3);
-  topology.declare_distance("narrow som", [](unsigned int edge_distance) {return edge_distance == 0 ? 1 : NARROW_SOM_COEF;            },                     1,  0.0);
+  topology.declare_distance("narrow som", [](unsigned int edge_distance) {auto res = 1-edge_distance*.8; std::cout << edge_distance << std::endl; return res;           },                     1,  0.0);
   topology.declare_distance("avg",        [](unsigned int edge_distance) {return 1;                                                   }, slider_average_radius,  0.0);
 
   // This processes the topology evolution (number of vertices and edges)

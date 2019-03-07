@@ -5,6 +5,7 @@
 #include <string>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #define NB_VERTICES_PER_M2    500
 #define NB_SAMPLES_PER_M2   10000
@@ -81,7 +82,7 @@ int main(int argc, char* argv[]) {
 
   // let us register different neighbourhood distances. Keys are strings here (see key_type definition).
   topology.declare_distance("linear truncated",   [](unsigned int edge_distance) {return         1-edge_distance*.05;}, 10, 0.00);
-  topology.declare_distance("exponential",        [](unsigned int edge_distance) {return std::pow(.9, edge_distance);},  0, 0.01);
+  topology.declare_distance("exponential",        [](unsigned int edge_distance) {return std::pow(.9, edge_distance);}, std::numeric_limits<unsigned int>::max(), 0.01);
   topology.declare_distance("piecewise constant", [](unsigned int edge_distance) {return       .25*(edge_distance/5);}, 20, 0.00);
 
   // As the graph topology won't change, we can compute all

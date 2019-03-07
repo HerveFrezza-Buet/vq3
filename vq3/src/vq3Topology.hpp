@@ -150,47 +150,50 @@ namespace vq3 {
 	std::map<typename std::remove_const<decltype(begin->first)>::type, std::list<Info>> res;
 	std::deque<std::pair<unsigned int, typename graph_type::ref_vertex> > to_do;
 
-	// Let us init info lists with the first vertex (one list for each key).
-	for(auto it =  begin; it != end; ++it) {
-	  std::list<Info> l;
-	  l.push_back({(double)(it->second.voed(0)),vertex_index});
-	  res[it->first] = std::move(l);
-	}
-	(*ref_v)().vq3_tag = true;
+	// begin end iterates on (key, (voed, maxdist, min_val)) pairs.
+	// ref[key] = [(val, ref_v), (val_ref_v) ...], the key-neighborhood that we compute.
+	// to_do contains ordered [(dist, ref_v), (dist, ref_v)] vertices to be processed.
+	
+	// Let us init info lists (one list for each key).
+	for(auto it =  begin; it != end; ++it)
+	  res[it->first] = std::list<Info>();
 
+	// Let us initialize the to_do list
 	auto job_out = std::back_inserter(to_do);
-
-	// Let us put direct neighbors in the job queue.
-	ref_v->foreach_edge([&job_out, &ref_v](const typename graph_type::ref_edge ref_e) {
-	    auto extr = ref_e->extremities();
-	    if(invalid_extremities(extr)) {ref_e->kill(); return;}
-	    auto& other = other_extremity(extr, ref_v);
-	    (*other)().vq3_tag = true;
-	    *(job_out++) = {1, other};
-	  });
+	*(job_out++) = {0, ref_v};
+	(*ref_v)().vq3_tag = true; // We tag the vertices which are or have been in the to_do list.
 
 	// Let us flush the to do list.
 	while(!(to_do.empty())) {
-	  auto d_v = to_do.front();
+	  auto [edge_distance, ref_vertex] = to_do.front();
 	  to_do.pop_front();
-	  bool push_others = false;
-	  
+
+
+	  std::cout << to_do.size() << " remaining, poping (dist =" << edge_distance << ", v = " << (*this)(ref_vertex) << ")" << std::endl;
+
+	  bool push_neighbors = false;
+
+	  // We determine the distance-related weight value
 	  for(auto it =  begin; it != end; ++it) {
-	    auto& edi = it->second;
-	    if(double val = edi.voed(d_v.first); val > edi.min_val) {
-	      res[it->first].push_back({val, (*this)(d_v.second)});
-	      if(edi.max_dist == 0 || d_v.first < edi.max_dist)
-		push_others = true;
-	    }
+	    auto& [key, edge_distance_info] = *it;
+	    if(edge_distance <= edge_distance_info.max_dist) 
+	      if(auto val = edge_distance_info.voed(edge_distance); val > edge_distance_info.min_val) {
+		push_neighbors = true;
+		res[key].push_back({val, (*this)(ref_vertex)});
+		std::cout << "  res(" << key << ").append(" << val << ", " << (*this)(ref_vertex) << ")" << std::endl;
+	      }
+	    
 	  }
-	  
-	  if(push_others) 
-	    d_v.second->foreach_edge([&job_out, &v = d_v.second, dist = d_v.first + 1](const typename graph_type::ref_edge ref_e) {
+
+	  // We add in the to_do list the neighbors, if one of the
+	  // neighborhoods still requires exploring the neighbors
+	  // further.
+	  if(push_neighbors) 
+	    ref_vertex->foreach_edge([&job_out, &ref_vertex, dist = edge_distance + 1](const typename graph_type::ref_edge ref_e) {
 		auto extr = ref_e->extremities();
 		if(invalid_extremities(extr)) {ref_e->kill(); return;}
-		auto& other = other_extremity(extr, v);
-		auto& tag = (*other)().vq3_tag;
-		if(!tag) {
+		auto& other = other_extremity(extr, ref_vertex);
+		if(auto& tag = (*other)().vq3_tag; !tag) {
 		  tag = true;
 		  *(job_out++) = {dist, other};
 		}
@@ -230,7 +233,7 @@ namespace vq3 {
        * This adds a (voed, max_dist, min_val) distance for computing neighborhoods in the edge_distances map.
        * @param key The key for further reference to this distance.
        * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance considered. 0 means "no limit".
+       * @param max_dist The maximal distance considered.
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        */
       template<typename VALUE_OF_EDGE_DISTANCE>
@@ -269,7 +272,7 @@ namespace vq3 {
        * WARNING ! Clear the tags (false) before calling that function.
        * @param ref_v the origin vertex.
        * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance considered. 0 means "no limit".
+       * @param max_dist The maximal distance considered.
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
@@ -284,7 +287,7 @@ namespace vq3 {
        * WARNING ! Clear the tags (false) before calling that function.
        * @param vertex_index the index of the origin vertex.
        * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance considered. 0 means "no limit".
+       * @param max_dist The maximal distance considered. 
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */

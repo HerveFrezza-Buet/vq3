@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <limits>
 
 #define NB_VERTICES_PER_M2    500
 #define NB_SAMPLES_PER_M2   10000
@@ -177,7 +178,7 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   vq3::utils::clear_vertex_tags(data.topology.g, false);
   auto n = data.topology.neighborhood(ref_v,
 				      [](unsigned int edge_distance) {return std::pow(.9, edge_distance);},
-				      0,
+				      std::numeric_limits<unsigned int>::max(),
 				      0.0);
 
   // Now, from value/index pairs in the neighborhood, let us change the nodes.

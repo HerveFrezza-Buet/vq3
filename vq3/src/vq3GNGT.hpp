@@ -258,17 +258,12 @@ namespace vq3 {
 	  }
 
 	  
-	  for(auto& data : avg_bmu_results)
-	    if(data.vq3_bmu_accum.nb > 0)
-	      data.vq3_bmu_accum = data.vq3_bmu_accum.average();
-	  
-
 	  // We call the user evolution method
 	  if(evolution(table, avg_bmu_results, clone_prototype))
 	    table.update_full();
 
 	  
-	  // We adjust the vertices position with a single batch update.
+	  // // We adjust the vertices position with a single batch update.
 	  wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
 
 	  
