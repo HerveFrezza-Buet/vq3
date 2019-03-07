@@ -172,6 +172,7 @@ namespace vq3 {
 
 	double alpha              = 0.05; //!< The learning rate for the on-line SOM update performed at the beginning of an epoch.
 	double samples_per_vertex = 10;   //!< The number of samples used for the on-line SOM update is at most samples_per_vertex * nb_vertices.
+	unsigned int nb_wta_after = 1; //!< Number of WTA (narrow SOM) computation after CHL.
 	
 	vq3::epoch::wta::Processor<topology_table_type> wta;
 	vq3::epoch::wtm::Processor<topology_table_type> wtm;
@@ -196,7 +197,8 @@ namespace vq3 {
 	 * @param ref_prototype_of_vertex Returns a reference to the prototype from the vertex value.
 	 * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
 	 * @param distance Compares the vertex value to a sample.
-	 * @param som_key The neighborhood key for computing SOM-like computation.
+	 * @param wide_som_key The neighborhood key for computing online SOM-like computation before evolution.
+	 * @param narrow_som_key The neighborhood key for computing batch WTA.
 	 * @param avg_key The neighborhood key for computing the average.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 */

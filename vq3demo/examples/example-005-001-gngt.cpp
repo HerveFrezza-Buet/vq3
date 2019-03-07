@@ -36,7 +36,10 @@
 #define INIT_SLIDER_MARGIN_ABOVE      35
 #define INIT_SLIDER_MARGIN_BELOW      20
 #define INIT_SLIDER_AVERAGE_RADIUS     8
-#define INIT_SLIDER_EVOLUTION_RATIO   10
+#define INIT_SLIDER_EVOLUTION_RATIO   30
+#define INIT_SLIDER_NB_WTA_AFTER       1
+#define INIT_SLIDER_ALPHA             50
+#define INIT_SLIDER_SAMPLE_PER_VERTEX 10
 
 
 // Execution mode
@@ -276,13 +279,16 @@ int main(int argc, char* argv[]) {
 
   graph g;
   
-  int slider_N               = INIT_SLIDER_N;
-  int slider_T               = INIT_SLIDER_T;
-  int slider_density         = INIT_SLIDER_DENSITY;
-  int slider_margin_above    = INIT_SLIDER_MARGIN_ABOVE;
-  int slider_margin_below    = INIT_SLIDER_MARGIN_BELOW;
-  int slider_average_radius  = INIT_SLIDER_AVERAGE_RADIUS;
-  int slider_evolution_ratio = INIT_SLIDER_EVOLUTION_RATIO;
+  int slider_N                 = INIT_SLIDER_N;
+  int slider_T                 = INIT_SLIDER_T;
+  int slider_density           = INIT_SLIDER_DENSITY;
+  int slider_margin_above      = INIT_SLIDER_MARGIN_ABOVE;
+  int slider_margin_below      = INIT_SLIDER_MARGIN_BELOW;
+  int slider_average_radius    = INIT_SLIDER_AVERAGE_RADIUS;
+  int slider_evolution_ratio   = INIT_SLIDER_EVOLUTION_RATIO;
+  int slider_nb_wta_after      = INIT_SLIDER_NB_WTA_AFTER;
+  int slider_alpha             = INIT_SLIDER_ALPHA;
+  int slider_sample_per_vertex = INIT_SLIDER_SAMPLE_PER_VERTEX;
   
   int old_slider_average_radius = slider_average_radius;
 
@@ -302,7 +308,10 @@ int main(int argc, char* argv[]) {
   cv::createTrackbar("below_margin*100",       "params", &slider_margin_below,      100, nullptr);
   cv::createTrackbar("right square density",   "params", &slider_density,           100, nullptr);
   cv::createTrackbar("statial average radius", "params", &slider_average_radius,     10, nullptr);
-  cv::createTrackbar("Growth/Shrink ratio",    "params", &slider_evolution_ratio,   100, nullptr);
+  cv::createTrackbar("growth/shrink ratio",    "params", &slider_evolution_ratio,   100, nullptr);
+  cv::createTrackbar("nb_wta_after",           "params", &slider_nb_wta_after,       20, nullptr);
+  cv::createTrackbar("alpha",                  "params", &slider_alpha,             200, nullptr);
+  cv::createTrackbar("online samples/vertex",  "params", &slider_sample_per_vertex, 100, nullptr);
   
   auto image       = cv::Mat(600, 1500, CV_8UC3, cv::Scalar(255,255,255));
   auto params      = cv::Mat(1, 600, CV_8UC3, cv::Scalar(255,255,255));
@@ -462,6 +471,10 @@ int main(int argc, char* argv[]) {
       evolution.margin_above  = .01*slider_margin_above;
       evolution.margin_below  = .01*slider_margin_below;
       evolution.topo_ratio    = .01*slider_evolution_ratio;
+
+      gngt.nb_wta_after       = slider_nb_wta_after;
+      gngt.alpha              = .001*slider_alpha;
+      gngt.samples_per_vertex = slider_sample_per_vertex;
 
       // We compute the topology evolution of the graph...
       gngt.process(nb_threads,
