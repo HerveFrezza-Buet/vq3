@@ -8,7 +8,7 @@
 #define SPEED_TO_METER .5
 
 #define EVOLUTION_MARGIN_ABOVE        .35
-#define EVOLUTION_MARGIN_BELOW        .25
+#define EVOLUTION_MARGIN_BELOW        .20
 #define EVOLUTION_TOPOLOGICAL_RATIO   .30
 
 #define GNGT_ALPHA                    .05
@@ -16,7 +16,7 @@
 #define GNGT_NB_WTA_POST_CHL            1
 
 
-#define SOM_H_RADIUS                  3.1
+#define SOM_H_RADIUS                  5.1
 #define SOM_MAX_DIST                  (unsigned int)(SOM_H_RADIUS)
 #define NARROW_SOM_COEF               .02
 #define AVERAGE_RADIUS                8

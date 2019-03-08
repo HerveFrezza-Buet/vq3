@@ -510,8 +510,9 @@ int main(int argc, char* argv[]) {
 	// This is the istogram of actual vertex errors, with settings
 	// similar to the previous one.
 	histo.NT           = evolution.histo.NT;
-	histo.value_bounds = evolution.histo.value_bounds;
+	histo.value_bounds = {0, 4*histo.NT.value()};
 	histo.range        = evolution.histo.range;
+	
 	auto hout = histo.output_iterator();
 	for(auto& data : gngt.bmu_results)
 	  if(data.vq3_bmu_accum.nb > 0)
