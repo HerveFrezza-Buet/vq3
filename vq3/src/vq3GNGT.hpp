@@ -103,7 +103,7 @@ namespace vq3 {
 	      }
 	      ++vertex_idx;
 	    }
-
+	    
 	    // We sort out of bounds vertices (small error first for below, big error first for above).
 	    std::sort(above.begin(), above.end(),
 		      [](const std::pair<std::size_t, double>& p1, const std::pair<std::size_t, double>& p2) {
@@ -124,7 +124,7 @@ namespace vq3 {
 	    if(below_end != below.end()) {// if not empty
 	      std::advance(below_end, std::max((std::size_t)(below.size()*topo_ratio), (size_t)1));
 	      for(auto it = below.begin(); it != below_end; ++it) 
-		topology(it->first)->kill();
+	    	topology(it->first)->kill();
 	    }
       
 	    topology_changed = topology_changed || (above.begin() != above_end) || (below.begin() != below_end);
@@ -171,7 +171,9 @@ namespace vq3 {
 
 	double alpha              = 0.05; //!< The learning rate for the on-line SOM update performed at the beginning of an epoch.
 	double samples_per_vertex = 10;   //!< The number of samples used for the on-line SOM update is at most samples_per_vertex * nb_vertices.
-	unsigned int nb_wta_after = 1; //!< Number of WTA (narrow SOM) computation after CHL.
+	unsigned int nb_wta_1 = 10;  //!< Number of WTA (narrow SOM) between wide online SOM adaptation and evolution.
+	unsigned int nb_wta_2  = 5;  //!< Number of WTA (narrow SOM) before CHL (update newly still unconnected vertices).
+	unsigned int nb_wta_3  = 1;  //!< Number of WTA (narrow SOM) computation after CHL.
 	
 	vq3::epoch::wta::Processor<topology_table_type> wta;
 	vq3::epoch::wtm::Processor<topology_table_type> wtm;
@@ -243,7 +245,15 @@ namespace vq3 {
 	    nb_remaining_samples -= to_do;
 	    if(sample_it == end) sample_it = begin;
 	  }
-	    
+
+	  // After online some, due to the hustle and bustle of
+	  // prototypes, prototypes are not at the center of Voronoï
+	  // cells. Some of them contain many more elements than
+	  // others. We have to make things right to that target can
+	  // be measurered. To do so, we perform batch wtm.
+	  for(unsigned int i = 0; i < nb_wta_1; ++i)
+	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
+
 	  
 	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  std::vector<epoch_bmu> avg_bmu_results(bmu_results.size());
@@ -258,21 +268,41 @@ namespace vq3 {
 		data.vq3_bmu_accum += acc.value;
 	  }
 
+	  // DEBUG INFO
+	  // std::cout << std::endl;
+	  // std::cout << "Y1 = [";
+	  // for(auto& data : bmu_results)
+	  //   std::cout << ',' << data.vq3_bmu_accum.value;
+	  // std::cout << ']' << std::endl;
+	  // std::cout << "Y2 = [";
+	  // for(auto& data : avg_bmu_results)
+	  //   std::cout << ',' << data.vq3_bmu_accum.average();
+	  // std::cout << ']' << std::endl;
+	  // std::cout << "N = [";
+	  // for(auto& data : bmu_results)
+	  //   std::cout << ',' << data.vq3_bmu_accum.nb;
+	  // std::cout << ']' << std::endl;
+	  // std::cout << std::endl;
+	  
+
 	  
 	  // We call the user evolution method
 	  if(evolution(table, avg_bmu_results, clone_prototype))
 	    table.update_full();
 
 	  
-	  // // We adjust the vertices position with a single batch update.
-	  wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	  // We adjust the vertices position with a single batch update (newly created nodes).
+	  for(unsigned int i = 0; i < nb_wta_2; ++i)
+	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
 
 	  
 	  // We update the edges thanks to Competitive Hebbian learning.
 	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge())) 
 	    table.update_full();
-	  
-	  wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
+
+	  //  We update more once the edges are created.
+	  for(unsigned int i = 0; i < nb_wta_3; ++i)
+	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
 	  
 	}
 	

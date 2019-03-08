@@ -13,7 +13,9 @@
 
 #define GNGT_ALPHA                    .05
 #define GNGT_NB_SAMPLES_PER_PROTOTYPE  10
-#define GNGT_NB_WTA_POST_CHL            1
+#define GNGT_NB_WTA_1                   5
+#define GNGT_NB_WTA_2                   2
+#define GNGT_NB_WTA_3                   0
 
 
 #define SOM_H_RADIUS                  5.1
@@ -23,8 +25,8 @@
 
 #define FIXED_FRAME_DELAY             .03
 
-#define N_SLIDER_INIT  300
-#define T_SLIDER_INIT  700
+#define N_SLIDER_INIT  600
+#define T_SLIDER_INIT  500
 #define Z_SLIDER_INIT 2000
 
 
@@ -72,6 +74,7 @@ int main(int argc, char* argv[]) {
   else
     std::cout << "I use " << nb_threads << " thread(s)." << std::endl;
   std::cout << std::endl;
+
 
   std::random_device rd;  
   std::mt19937 random_device(rd());
@@ -173,7 +176,9 @@ int main(int argc, char* argv[]) {
 
   gngt.alpha              = GNGT_ALPHA;
   gngt.samples_per_vertex = GNGT_NB_SAMPLES_PER_PROTOTYPE;
-  gngt.nb_wta_after       = GNGT_NB_WTA_POST_CHL;
+  gngt.nb_wta_1           = GNGT_NB_WTA_1;
+  gngt.nb_wta_2           = GNGT_NB_WTA_2;
+  gngt.nb_wta_3           = GNGT_NB_WTA_3;
   
   evolution.margin_above  = EVOLUTION_MARGIN_ABOVE;
   evolution.margin_below  = EVOLUTION_MARGIN_BELOW;
