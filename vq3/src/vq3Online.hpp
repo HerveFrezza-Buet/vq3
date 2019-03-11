@@ -28,5 +28,4 @@ namespace vq3 {
 	return ref_v;
       }
     }
-  }
 }
