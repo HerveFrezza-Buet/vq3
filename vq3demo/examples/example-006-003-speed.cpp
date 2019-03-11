@@ -19,7 +19,9 @@
 
 #define GNGT_ALPHA                    .05
 #define GNGT_NB_SAMPLES_PER_PROTOTYPE  10
-#define GNGT_NB_WTA_POST_CHL            1
+#define GNGT_NB_WTA_1                   5
+#define GNGT_NB_WTA_2                   2
+#define GNGT_NB_WTA_3                   0
 
 #define SOM_H_RADIUS                  3.1
 #define SOM_MAX_DIST                  (unsigned int)(SOM_H_RADIUS)
@@ -180,7 +182,9 @@ int main(int argc, char* argv[]) {
 
   gngt.alpha              = GNGT_ALPHA;
   gngt.samples_per_vertex = GNGT_NB_SAMPLES_PER_PROTOTYPE;
-  gngt.nb_wta_after       = GNGT_NB_WTA_POST_CHL;
+  gngt.nb_wta_1           = GNGT_NB_WTA_1;
+  gngt.nb_wta_2           = GNGT_NB_WTA_2;
+  gngt.nb_wta_3           = GNGT_NB_WTA_3;
   
   evolution.margin_above  = EVOLUTION_MARGIN_ABOVE;
   evolution.margin_below  = EVOLUTION_MARGIN_BELOW;

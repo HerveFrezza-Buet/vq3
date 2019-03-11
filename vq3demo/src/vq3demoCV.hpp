@@ -920,7 +920,7 @@ namespace vq3 {
 	/**
 	 * This draws a curve over the histogram. Be sure that draw has been called before.
 	 * @param begin, end The range of dato to be plotted.
-	 * @param to_point The call to_point(*it) must produce a demo2d::Point.
+	 * @param point_of The call point_of(*it) must produce a demo2d::Point.
 	 * @param clip true means that the curve is clipped in the drawing area.
 	 */
 	template<typename Iter, typename PointOf>

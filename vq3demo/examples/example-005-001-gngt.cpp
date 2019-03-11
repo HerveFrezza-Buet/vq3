@@ -37,7 +37,9 @@
 #define INIT_SLIDER_MARGIN_BELOW      20
 #define INIT_SLIDER_AVERAGE_RADIUS     8
 #define INIT_SLIDER_EVOLUTION_RATIO   30
-#define INIT_SLIDER_NB_WTA_AFTER       1
+#define INIT_SLIDER_NB_WTA_1           5
+#define INIT_SLIDER_NB_WTA_2           2
+#define INIT_SLIDER_NB_WTA_3           0
 #define INIT_SLIDER_ALPHA             50
 #define INIT_SLIDER_SAMPLE_PER_VERTEX 10
 
@@ -286,7 +288,9 @@ int main(int argc, char* argv[]) {
   int slider_margin_below      = INIT_SLIDER_MARGIN_BELOW;
   int slider_average_radius    = INIT_SLIDER_AVERAGE_RADIUS;
   int slider_evolution_ratio   = INIT_SLIDER_EVOLUTION_RATIO;
-  int slider_nb_wta_after      = INIT_SLIDER_NB_WTA_AFTER;
+  int slider_nb_wta_1          = INIT_SLIDER_NB_WTA_1;
+  int slider_nb_wta_2          = INIT_SLIDER_NB_WTA_2;
+  int slider_nb_wta_3          = INIT_SLIDER_NB_WTA_3;
   int slider_alpha             = INIT_SLIDER_ALPHA;
   int slider_sample_per_vertex = INIT_SLIDER_SAMPLE_PER_VERTEX;
   
@@ -309,7 +313,9 @@ int main(int argc, char* argv[]) {
   cv::createTrackbar("right square density",   "params", &slider_density,           100, nullptr);
   cv::createTrackbar("statial average radius", "params", &slider_average_radius,     10, nullptr);
   cv::createTrackbar("growth/shrink ratio",    "params", &slider_evolution_ratio,   100, nullptr);
-  cv::createTrackbar("nb_wta_after",           "params", &slider_nb_wta_after,       20, nullptr);
+  cv::createTrackbar("nb_wta_1",               "params", &slider_nb_wta_1,           20, nullptr);
+  cv::createTrackbar("nb_wta_2",               "params", &slider_nb_wta_2,           20, nullptr);
+  cv::createTrackbar("nb_wta_3",               "params", &slider_nb_wta_3,           20, nullptr);
   cv::createTrackbar("alpha",                  "params", &slider_alpha,             200, nullptr);
   cv::createTrackbar("online samples/vertex",  "params", &slider_sample_per_vertex, 100, nullptr);
   
@@ -472,9 +478,11 @@ int main(int argc, char* argv[]) {
       evolution.margin_below  = .01*slider_margin_below;
       evolution.topo_ratio    = .01*slider_evolution_ratio;
 
-      gngt.nb_wta_after       = slider_nb_wta_after;
       gngt.alpha              = .001*slider_alpha;
       gngt.samples_per_vertex = slider_sample_per_vertex;
+      gngt.nb_wta_1           = slider_nb_wta_1;
+      gngt.nb_wta_2           = slider_nb_wta_2;
+      gngt.nb_wta_3           = slider_nb_wta_3;
 
       // We compute the topology evolution of the graph...
       gngt.process(nb_threads,
