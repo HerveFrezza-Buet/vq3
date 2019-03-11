@@ -186,6 +186,7 @@ namespace vq3 {
 }
 
  
+
   namespace decorator {
     namespace path {
 
@@ -453,3 +454,4 @@ namespace vq3 {
       return interpolate(cur, prev, lbd);
     }
   }
+}

@@ -327,7 +327,7 @@ namespace vq3 {
     struct OptionalCost<MOTHER, unvalued_decoration> : public MOTHER {
       using decorated_type = MOTHER;
       std::optional<double> vq3_cost;
-      OptionalCost() : MOTHER(), vq3_cost(0) {}
+      OptionalCost() : MOTHER(), vq3_cost() {}
     };
     
     // When we decorate void.
@@ -335,7 +335,7 @@ namespace vq3 {
     struct OptionalCost<void, not_decorated> {
       using decorated_type = void;
       std::optional<double> vq3_cost;
-      OptionalCost() : vq3_cost(0) {}
+      OptionalCost() : vq3_cost() {}
     };
     
     template<typename MOTHER>
