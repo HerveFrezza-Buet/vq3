@@ -31,6 +31,7 @@
 #include <memory>
 #include <list> 
 #include <utility>
+#include <atomic>
 
 
 namespace vq3 {
@@ -56,7 +57,7 @@ namespace vq3 {
 
     friend class graph_<VERTEX_VALUE, EDGE_VALUE>;
     
-    bool killed;
+    std::atomic_bool killed;
       
     graph_element() : killed(false) {}
       
@@ -120,20 +121,13 @@ namespace vq3 {
     friend class graph<VERTEX_VALUE, EDGE_VALUE>;
     
     std::list<std::weak_ptr<edge<VERTEX_VALUE, EDGE_VALUE> > > E;
-    
+    bool garbaging = true;
+
     vertex(const VERTEX_VALUE& v) : valued_graph_element<VERTEX_VALUE, VERTEX_VALUE, EDGE_VALUE>(v), E() {}
-      
-  public:
+
     
-    using edge_val_type = EDGE_VALUE;
-    using ref_edge_type = std::shared_ptr<edge<VERTEX_VALUE, EDGE_VALUE> >;
-
-    vertex()                         = delete;
-    vertex(const vertex&)            = delete;
-    vertex& operator=(const vertex&) = delete;
-
     template<typename EDGE_FUN>
-    void foreach_edge(const EDGE_FUN& fun) {
+    void foreach_edge_garbaging_on(const EDGE_FUN& fun) {
       auto it =  E.begin();
       while(it != E.end()) {
 	auto e = it->lock();
@@ -147,6 +141,28 @@ namespace vq3 {
 	    ++it;
 	}
       }
+    }
+    
+    template<typename EDGE_FUN>
+    void foreach_edge_garbaging_off(const EDGE_FUN& fun) {
+      for(auto& wp : E) 
+	if(auto e = wp.lock(); e && !(e->is_killed()))
+	  fun(e);
+    }
+      
+  public:
+    
+    using edge_val_type = EDGE_VALUE;
+    using ref_edge_type = std::shared_ptr<edge<VERTEX_VALUE, EDGE_VALUE> >;
+
+    vertex()                         = delete;
+    vertex(const vertex&)            = delete;
+    vertex& operator=(const vertex&) = delete;
+
+    template<typename EDGE_FUN>
+    void foreach_edge(const EDGE_FUN& fun) {
+      if(garbaging) foreach_edge_garbaging_on(fun);
+      else          foreach_edge_garbaging_off(fun);
     }
   };
 
@@ -236,6 +252,59 @@ namespace vq3 {
     
     edges    E;
 
+  private :
+
+    bool garbaging = true;
+    
+    template<typename VERTEX_FUN>
+    void foreach_vertex_garbaging_on(const VERTEX_FUN& fun) {
+      auto it =  V.begin();
+      while(it != V.end()) {
+	auto& v = *it;
+	if(v == nullptr || v->is_killed())
+	  it = V.erase(it);
+	else {
+	  fun(v);
+	  if(v->is_killed())
+	    it = V.erase(it);
+	  else
+	    ++it;
+	}
+      }
+    }
+    
+    template<typename VERTEX_FUN>
+    void foreach_vertex_garbaging_off(const VERTEX_FUN& fun) {
+      for(auto& v : V)
+	if(v && !(v->is_killed()))
+	  fun(v);
+    }
+
+    template<typename EDGE_FUN>
+    void foreach_edge_garbaging_on(const EDGE_FUN& fun) {
+      auto it =  E.begin();
+      while(it != E.end()) {
+	auto& e = *it;
+	if(e == nullptr || e->is_killed())
+	  it = E.erase(it);
+	else {
+	  fun(e);
+	  if(e->is_killed())
+	    it = E.erase(it);
+	  else
+	    ++it;
+	}
+      }
+    }
+
+    template<typename EDGE_FUN>
+    void foreach_edge_garbaging_off(const EDGE_FUN& fun) {
+      for(auto& e : E)
+	if(e && !(e->is_killed()))
+	  fun(e);
+    }
+    
+
   public:
 
     graph_()                         = default;
@@ -309,37 +378,60 @@ namespace vq3 {
     
     template<typename VERTEX_FUN>
     void foreach_vertex(const VERTEX_FUN& fun) {
-      auto it =  V.begin();
-      while(it != V.end()) {
-	auto& v = *it;
-	if(v == nullptr || v->is_killed())
-	  it = V.erase(it);
-	else {
-	  fun(v);
-	  if(v->is_killed())
-	    it = V.erase(it);
-	  else
-	    ++it;
-	}
-      }
+      if(garbaging) foreach_vertex_garbaging_on(fun);
+      else          foreach_vertex_garbaging_off(fun);
     }
 
     template<typename EDGE_FUN>
     void foreach_edge(const EDGE_FUN& fun) {
-      auto it =  E.begin();
-      while(it != E.end()) {
-	auto& e = *it;
-	if(e == nullptr || e->is_killed())
-	  it = E.erase(it);
-	else {
-	  fun(e);
-	  if(e->is_killed())
-	    it = E.erase(it);
-	  else
-	    ++it;
-	}
-      }
+      if(garbaging) foreach_edge_garbaging_on(fun);
+      else          foreach_edge_garbaging_off(fun);
     }
+
+    /**
+     * Memory garbaging is not thread safe. You have to lock it before
+     * splitting your graph computations into threads.
+     */
+    void garbaging_lock() {
+      garbaging = false;
+      foreach_vertex_garbaging_on([](const ref_vertex& ref_v) {ref_v->garbaging = false;});
+    }
+    
+    /**
+     * Memory garbaging is not thread safe. This unlocks the garbaging
+     * for single-thread graph computations. Indeed, this is usefull
+     * when garbaging has been locked previously before splitting the
+     * computation into threads. In this case, call this method when
+     * you're back to sequential processing.
+     */
+    void garbaging_unlock() {
+      garbaging = true;
+      foreach_vertex_garbaging_on([](const ref_vertex& ref_v) {ref_v->garbaging = true;});
+    }
+
+    /**
+     * This cleans up pending kills. It may be useless since garbaging
+     * is performed all along graph computations (e.g. if vertices and
+     * edges are regularly accessed for display in a sequential
+     * section). Nevertheless, if garbaging has been suspended for
+     * parallel computing (see garbaging_lock and garbaging_unlock),
+     * calling garbaging_force() may be usefull. The method
+     * garbaging_force() should be called outside parallel sections
+     * (i.e. it is not thread safe).
+     */
+    void garbaging_force() {
+      foreach_edge_garbaging_on([](const ref_edge& ref_e) {
+	  if(auto extr_pair = ref_e->extremities(); vq3::invalid_extremities(extr_pair)) 
+	    ref_e->kill();
+	});
+      
+      foreach_vertex_garbaging_on([](const ref_vertex& ref_v) {
+	  ref_v->foreach_edge_garbaging_on([](const ref_edge& ref_v) {});
+	});
+    }
+
+    
+    
   };
   
   template<typename VERTEX_VALUE, typename EDGE_VALUE>

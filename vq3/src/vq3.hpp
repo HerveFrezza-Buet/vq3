@@ -34,6 +34,7 @@
 #include <vq3GNGT.hpp>
 #include <vq3LBG.hpp>
 #include <vq3Online.hpp>
+#include <vq3ShortestPath.hpp>
 #include <vq3SOM.hpp>
 #include <vq3ShortestPath.hpp>
 #include <vq3Stats.hpp>
@@ -171,6 +172,50 @@ g.foreach_edge([&s2, &sum](graph::ref_edge ref_e) {
 sum = 0;
 ref_A->foreach_edge([&sum](graph::ref_edge ref_e) {sum += (*ref_e)();});
    @endcode
+
+   @subsection graphthread Graph, threads and garbage collector
+
+   Many operation on graphs done by vq3 can be parallelized by using
+   multi-threading (thanks to std::async mainly). Nevertheless, the
+   graph is designed to be highly dynamic, so having several threads
+   modifying the topology is to be avoided. 
+
+   The rule of thumb is to keep the graph "read only" during multi-thread
+   parallel sections.
+
+   While inspecting the graph thanks to foreach functions, one can
+   call the kill() method on vertices or edges. This stands for a kill
+   request, not an immediate kill. Once the request is made, the graph
+   behaves as if the killed edge or vertex do not exist, but the
+   memory is not necessarily freed. This can happen even when reading
+   the graph, for example in foreach_edge loops when bad vertices are
+   detected for some edge.
+
+   By default, the actual memory cleaning is done progressively, as
+   the foreach calls inspect the graph (even when the graph is only
+   read). This memory cleaning (i.e. garbaging) can be explicitly made by calling
+
+   @code
+g.garbaging_force()
+   @endcode
+
+   As the garbaging runs implicitly during graph exploration, a
+   multi-thread computation, even if it only reads the graph, may
+   alter the inner graph structure for elements which are waiting to
+   be actually killed. To prevent thread memory issue, one should
+   suspend the garbaging process during parallel computation.
+   
+   @code
+// sequential code section
+g.garbaging_lock();
+// Split the computation into threads here.
+...
+// Threads are done, we are back in the main thread.
+g.garbaging_unlock();
+g.garbaging_force(); // Not mandatory, further non locked graph explorations may end up doing the job. 
+   @endcode
+
+   Last, let us stress here that vq3 processes which allow for multi-threading (they have a nb_threads parameter) may lock and unlock garbaging if they actually involve more than one thread.
 
    @subsection topo Topology
 

@@ -233,11 +233,14 @@ namespace vq3 {
      * @param width, height The grid dimensions.
      * @param v_of A function such as v_of(w, h) is the vertex value at position (w,h).
      * @param e_of A function such as e_of(w, h, ww, hh) is the edge value for the edge linking (w,h) to (ww, hh).
+     * @param loop_w True means that left and right are connected.
+     * @param loop_h True means that top and bottom are connected.
      * @return a height-sized vector of width-sized vector of vertex references.
      */
     template<typename GRAPH, typename VERTEX_VALUE_OF, typename EDGE_VALUE_OF>
     auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
-		   const VERTEX_VALUE_OF& v_of, const EDGE_VALUE_OF& e_of) {
+		   const VERTEX_VALUE_OF& v_of, const EDGE_VALUE_OF& e_of,
+		   bool loop_w = false, bool loop_h = false) {
       std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
       std::vector<typename GRAPH::ref_vertex> line(width);
       auto lout = std::back_inserter(lines);
@@ -261,6 +264,15 @@ namespace vq3 {
       }
       for(w = 0; w < width_; ++w)
        	g.connect(lines[h][w], lines[h][w + 1], e_of(w, h, w + 1, h));
+
+      if(loop_w && width > 1) 
+	for(h = 0; h < height; ++h)
+	  g.connect(lines[h][0], lines[h][width_], e_of(0, h, width_, h));
+
+      if(loop_h && height > 1) 
+	for(w = 0; w < width; ++w)
+	  g.connect(lines[0][w], lines[height_][w], e_of(w, 0, w, height_));
+	  
       
       return lines;
     }
@@ -271,11 +283,14 @@ namespace vq3 {
      * @param g the graph.
      * @param width, height The grid dimensions.
      * @param v_of A function such as v_of(w, h) is the vertex value at position (w,h).
+     * @param loop_w True means that left and right are connected.
+     * @param loop_h True means that top and bottom are connected.
      * @return a height-sized vector of width-sized vector of vertex references.
      */
     template<typename GRAPH, typename VERTEX_VALUE_OF>
     auto make_grid(GRAPH& g, unsigned int width, unsigned int height,
-		   const VERTEX_VALUE_OF& v_of) {
+		   const VERTEX_VALUE_OF& v_of,
+		   bool loop_w = false, bool loop_h = false) {
       std::vector<std::vector<typename GRAPH::ref_vertex>> lines;
       std::vector<typename GRAPH::ref_vertex> line(width);
       auto lout = std::back_inserter(lines);
@@ -299,6 +314,14 @@ namespace vq3 {
       }
       for(w = 0; w < width_; ++w)
        	g.connect(lines[h][w], lines[h][w + 1]);
+
+      if(loop_w && width > 1) 
+	for(h = 0; h < height; ++h)
+	  g.connect(lines[h][0], lines[h][width_]);
+
+      if(loop_h && height > 1) 
+	for(w = 0; w < width; ++w)
+	  g.connect(lines[0][w], lines[height_][w]);
       
       return lines;
     }

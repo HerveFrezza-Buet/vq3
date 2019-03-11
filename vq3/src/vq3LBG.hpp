@@ -78,12 +78,12 @@ namespace vq3 {
       
       g.foreach_vertex([](const typename GRAPH::ref_vertex& ref_v){ref_v->kill();});
 
-      auto table = vq3::topology::table(g);
+      auto table = vq3::topology::table<int>(g); // key_type (int) is unused here.
       auto wta   = vq3::epoch::wta::processor(table);
       
       g += sample_of(*begin);
       unsigned int nb_nodes = 1;
-      table();
+      table.update();
 
       if(verbose)
 	std::cout << std::endl
@@ -112,7 +112,7 @@ namespace vq3 {
 	for(auto it = V.begin(); it != vend; ++it)
 	  g += nearly(prototype_of((*(*it))()));
 	
-	table();
+	table.update();
 
 	bool stop = false;
 	while(!stop) {

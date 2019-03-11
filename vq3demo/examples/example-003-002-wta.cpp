@@ -32,6 +32,7 @@ using epoch_data_2 = vq3::epoch::data::delta<epoch_data_1>;              // This
 using epoch_data_3 = vq3::epoch::data::bmu<epoch_data_2>;                // This enables the computation of distortion. This is not mandatory for finding the prototype positions.         
 using epoch_data   = epoch_data_3;
 
+using topology_key_type = int;
 
 // Distance
 //
@@ -163,8 +164,8 @@ int main(int argc, char* argv[]) {
   // This is an structure that stores vertex-related computation. It
   // can be shared by several processors, this is why it is allocated
   // first and then passed to each processor. 
-  auto topology = vq3::topology::table(g);
-  topology(); // We update the topology without considering edge-based neighborhood.
+  auto topology = vq3::topology::table<topology_key_type>(g);
+  topology.update(); // We update the topology without considering edge-based neighborhood.
   auto wta = vq3::epoch::wta::processor(topology);
 
   std::string prefix = "wta";

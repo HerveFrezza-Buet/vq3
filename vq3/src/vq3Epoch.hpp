@@ -450,9 +450,9 @@ namespace vq3 {
 	 */
 	template<typename ITERATOR, typename SAMPLE_OF, typename PROTOTYPE_OF_VERTEX_VALUE, typename DISTANCE>
 	bool process(unsigned int nb_threads,
-			const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
-			const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance,
-			const edge& value_for_new_edges) {
+		     const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
+		     const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance,
+		     const edge& value_for_new_edges) {
 	  auto nb_vertices = g.nb_vertices();
 	  if(nb_vertices < 2)
 	    return false;
@@ -471,6 +471,9 @@ namespace vq3 {
 	  std::vector<std::future<data> > futures;
 	  auto out = std::back_inserter(futures);
 
+	  if(nb_threads > 1)
+	    g.garbaging_lock();
+	  
 	  for(auto& begin_end : iters) 
 	    *(out++) = std::async(std::launch::async,
 				  [begin_end, this, &sample_of, &distance]() {
@@ -507,6 +510,9 @@ namespace vq3 {
 	    std::swap(n, newedges);
 
 	  }
+	  
+	  if(nb_threads > 1)
+	    g.garbaging_unlock();
 
 	  bool one_kill = false;
 
@@ -563,6 +569,9 @@ namespace vq3 {
 	  std::vector<std::future<std::vector<EPOCH_DATA> > > futures;
 	  auto out = std::back_inserter(futures);
 
+	  if(nb_threads > 1)
+	    table.g.garbaging_lock();
+
 	  for(auto& begin_end : iters) 
 	    *(out++) = std::async(std::launch::async,
 				  [begin_end, this, &sample_of, &distance]() {
@@ -591,6 +600,9 @@ namespace vq3 {
 	      for(auto b = b0; b != e0; ++b, ++bi)
 		(*b) += *bi;
 	    }
+	  
+	    if(nb_threads > 1)
+	      table.g.garbaging_unlock();
 	    
 	    unsigned int idx = 0;
 	    for(auto&  d : data0) {
@@ -601,8 +613,11 @@ namespace vq3 {
 	    
 	    return data0;
 	  }
-	  else
+	  else {
+	    if(nb_threads > 1)
+	      table.g.garbaging_unlock();
 	    return std::vector<EPOCH_DATA>();
+	  }
 	}
       };
     
@@ -637,21 +652,26 @@ namespace vq3 {
 	 * @return A vector, for each prototype index, of the epoch data.
 	 */
 	template<typename EPOCH_DATA, typename ITERATOR, typename SAMPLE_OF, typename PROTOTYPE_OF_VERTEX_VALUE, typename DISTANCE>
-	auto process(unsigned int nb_threads, const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance) {
+	auto process(unsigned int nb_threads,
+		     const typename topology_table_type::neighborhood_key_type& neighborhood_key,
+		     const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance) {
 	  auto iters = utils::split(samples_begin, samples_end, nb_threads);
 	  std::vector<std::future<std::vector<EPOCH_DATA> > > futures;
 	  auto out = std::back_inserter(futures);
 
+	  if(nb_threads > 1)
+	    table.g.garbaging_lock();
+
 	  for(auto& begin_end : iters) 
 	    *(out++) = std::async(std::launch::async,
-				  [begin_end, this, &sample_of, &distance, size = table.size()]() {
+				  [begin_end, this, &sample_of, &distance, size = table.size(), &neighborhood_key]() {
 				    std::vector<EPOCH_DATA> data(size);
 				    for(auto it = begin_end.first; it != begin_end.second; ++it) {
 				      double min_dist;
 				      const auto&  sample = sample_of(*it);
 				      auto        closest = utils::closest(table.g, sample, distance, min_dist);
 				      if(closest != nullptr) {
-					auto&  neighborhood = table[closest];
+					auto&  neighborhood = table.neighborhood(closest, neighborhood_key);
 					data[neighborhood.begin()->index].notify_closest(sample, min_dist);
 					for(auto& info : neighborhood) data[info.index].notify_wtm_update(sample, info.value);
 				      }
@@ -670,6 +690,9 @@ namespace vq3 {
 	      for(auto b = b0; b != e0; ++b, ++bi)
 		(*b) += *bi;
 	    }
+	  
+	    if(nb_threads > 1)
+	      table.g.garbaging_unlock();
 	    
 	    unsigned int idx = 0;
 	    for(auto&  d : data0) {
@@ -679,8 +702,11 @@ namespace vq3 {
 	    }
 	    return data0;
 	  }
-	  else
+	  else {
+	    if(nb_threads > 1)
+	      table.g.garbaging_unlock();
 	    return std::vector<EPOCH_DATA>();
+	  }
 	}
       };
     

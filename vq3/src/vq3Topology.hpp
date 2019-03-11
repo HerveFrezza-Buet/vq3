@@ -36,6 +36,10 @@
 #include <map>
 #include <iterator>
 #include <stdexcept>
+#include <functional>
+#include <iterator>
+#include <type_traits>
+#include <sstream>
 
 
 #include <vq3Graph.hpp>
@@ -55,11 +59,12 @@ namespace vq3 {
      *
      * The graph vertices must be tag-decorated. 
      */
-    template<typename GRAPH>
+    template<typename GRAPH, typename NEIGHBORHOOD_KEY>
     class Table {
     public:
-      using graph_type      = GRAPH;
-      using index_type      = typename std::vector<typename GRAPH::ref_vertex>::size_type;
+      using graph_type            = GRAPH;
+      using index_type            = typename std::vector<typename GRAPH::ref_vertex>::size_type;
+      using neighborhood_key_type = NEIGHBORHOOD_KEY;
       
       /**
        * This structure stores neihgborhood information.
@@ -76,21 +81,35 @@ namespace vq3 {
 	Info& operator=(Info&&)      = default;
       };
 
-      using neighborhood_table_type = std::map<typename graph_type::ref_vertex, std::list<Info> >;
+      struct EdgeDistanceInfo {
+	std::function<double (unsigned int)> voed;     //!< A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
+	unsigned int                         max_dist; //!< The maximal distance considered. 0 means "no limit".
+	double                               min_val;  //!< if voed(dist) < min_val, the node is not included in the neighborhood.
+
+	template<typename VALUE_OF_EDGE_DISTANCE>
+	EdgeDistanceInfo(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val)
+	  : voed(voed), max_dist(max_dist), min_val(min_val) {}
+
+	EdgeDistanceInfo()                                   = default;
+	EdgeDistanceInfo(const EdgeDistanceInfo&)            = default;
+	EdgeDistanceInfo& operator=(const EdgeDistanceInfo&) = default;
+      };
+      
+      using neighborhood_type      = std::list<Info>;
+      using neighborhoods_type     = std::map<NEIGHBORHOOD_KEY, neighborhood_type>;
+      using neighborhoods_map_type = std::map<typename GRAPH::ref_vertex, neighborhoods_type>;
+      using edge_distances_type    = std::map<neighborhood_key_type, EdgeDistanceInfo>;
+      
 
     private:
-
       
       std::vector<typename graph_type::ref_vertex> idx2vertex;
       std::map<typename graph_type::vertex_type*, index_type> vertex2idx;
-      neighborhood_table_type neighborhood_table;
-
-
-
-
+      neighborhoods_map_type neighborhood_tables;
+      
       
 
-      friend std::ostream& operator<<(std::ostream& os, Table<graph_type>& v) {
+      friend std::ostream& operator<<(std::ostream& os, Table<graph_type, neighborhood_key_type>& v) {
 	os << "Vertex map : " << std::endl;
 	unsigned int idx = 0;
 	for(auto& ref_v : v.idx2vertex)
@@ -119,68 +138,85 @@ namespace vq3 {
 
       /**
        * WARNING ! Clear the tags (false) before calling that function.
+       * @param vertex_index the origin vertex.
        * @param ref_v the origin vertex.
-       * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance considered. 0 means "no limit".
-       * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
-       * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
+       * @param begin, end Iterators such as it->first is a key, and it->second is an EdgeDistanceInfo. Do not provide duplicate keys.
+       * @return a map associating keys with the list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
-      template<typename VALUE_OF_EDGE_DISTANCE>
-      auto edge_based_neighborhood(index_type vertex_index, const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	std::list<Info> res;
+      template<typename EDGE_DISTANCE_INFO_IT>
+      auto edge_based_neighborhood(index_type vertex_index, const typename graph_type::ref_vertex& ref_v,
+				   EDGE_DISTANCE_INFO_IT begin, EDGE_DISTANCE_INFO_IT end) {
+	std::string s;
+	std::map<typename std::remove_const<decltype(begin->first)>::type, std::list<Info>> res;
 	std::deque<std::pair<unsigned int, typename graph_type::ref_vertex> > to_do;
 
-	auto res_out = std::back_inserter(res);
-	auto job_out = std::back_inserter(to_do);
-	*(res_out++) = {(double)(voed(0)), vertex_index};
-	(*ref_v)().vq3_tag = true;
-	ref_v->foreach_edge([&job_out, &ref_v](const typename graph_type::ref_edge ref_e) {
-	    auto extr = ref_e->extremities();
-	    if(invalid_extremities(extr)) {ref_e->kill(); return;}
-	    auto& other = other_extremity(extr, ref_v);
-	    (*other)().vq3_tag = true;
-	    *(job_out++) = {1, other};
-	  });
+	// begin end iterates on (key, (voed, maxdist, min_val)) pairs.
+	// ref[key] = [(val, ref_v), (val_ref_v) ...], the key-neighborhood that we compute.
+	// to_do contains ordered [(dist, ref_v), (dist, ref_v)] vertices to be processed.
+	
+	// Let us init info lists (one list for each key).
+	for(auto it =  begin; it != end; ++it)
+	  res[it->first] = std::list<Info>();
 
+	// Let us initialize the to_do list
+	auto job_out = std::back_inserter(to_do);
+	*(job_out++) = {0, ref_v};
+	(*ref_v)().vq3_tag = true; // We tag the vertices which are or have been in the to_do list.
+
+	// Let us flush the to do list.
 	while(!(to_do.empty())) {
-	  auto d_v = to_do.front();
+	  auto [edge_distance, ref_vertex] = to_do.front();
 	  to_do.pop_front();
-	  double val = voed(d_v.first);
-	  if(val > min_val) {
-	    *(res_out++) = {val, (*this)(d_v.second)};
-	    if(d_v.first != max_dist)
-	      d_v.second->foreach_edge([&job_out, &v = d_v.second, dist = d_v.first + 1](const typename graph_type::ref_edge ref_e) {
-		  auto extr = ref_e->extremities();
-		  if(invalid_extremities(extr)) {ref_e->kill(); return;}
-		  auto& other = other_extremity(extr, v);
-		  auto& tag = (*other)().vq3_tag;
-		  if(!tag) {
-		    tag = true;
-		    *(job_out++) = {dist, other};
-		  }
-		});
+
+	  bool push_neighbors = false;
+
+	  // We determine the distance-related weight value
+	  for(auto it =  begin; it != end; ++it) {
+	    auto& [key, edge_distance_info] = *it;
+	    if(edge_distance <= edge_distance_info.max_dist) 
+	      if(auto val = edge_distance_info.voed(edge_distance); val > edge_distance_info.min_val) {
+		push_neighbors = true;
+		res[key].push_back({val, (*this)(ref_vertex)});
+	      }
+	    
 	  }
+
+	  // We add in the to_do list the neighbors, if one of the
+	  // neighborhoods still requires exploring the neighbors
+	  // further.
+	  if(push_neighbors) 
+	    ref_vertex->foreach_edge([&job_out, &ref_vertex, dist = edge_distance + 1](const typename graph_type::ref_edge ref_e) {
+		auto extr = ref_e->extremities();
+		if(invalid_extremities(extr)) {ref_e->kill(); return;}
+		auto& other = other_extremity(extr, ref_vertex);
+		if(auto& tag = (*other)().vq3_tag; !tag) {
+		  tag = true;
+		  *(job_out++) = {dist, other};
+		}
+	      });
 	}
+	
 	return res;
       }
       
       /**
-       * This builds a std::map, keys are ref_vertex type, values are
-       * the neighborhood returned by the neighborhood method.
+       * This builds the neighborhoods.
        */
-      template<typename VALUE_OF_EDGE_DISTANCE>
-      void make_neighborhood_table(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	neighborhood_table =  utils::make_vertex_table(g,
-						       [this, &voed, max_dist, min_val](const typename graph_type::ref_vertex& ref_v) {
-							 utils::clear_vertex_tags(g, false); 
-							 return neighborhood(ref_v, voed, max_dist, min_val); 
-						       });
+      void make_neighborhood_tables() {
+	neighborhood_tables =  utils::make_vertex_table(g,
+							[this](const typename graph_type::ref_vertex& ref_v) {
+							  utils::clear_vertex_tags(g, false);
+							  return edge_based_neighborhood((*this)(ref_v), ref_v,
+											 edge_distances.begin(), edge_distances.end());
+							});
       }
     
       
     public:
       
       graph_type& g;
+      edge_distances_type edge_distances; //!< This contains different distances. It can be managed directly, or by the use of declare_distance.
+      
 
       Table(graph_type& g) : g(g) {}
       Table()                        = delete;
@@ -190,27 +226,41 @@ namespace vq3 {
       Table& operator=(Table&&)      = delete;
 
       /**
+       * This adds a (voed, max_dist, min_val) distance for computing neighborhoods in the edge_distances map.
+       * @param key The key for further reference to this distance.
+       * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
+       * @param max_dist The maximal distance considered.
+       * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
+       */
+      template<typename VALUE_OF_EDGE_DISTANCE>
+      void declare_distance(const neighborhood_key_type& key,
+			    const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
+	edge_distances[key] = EdgeDistanceInfo(voed, max_dist, min_val);
+      }
+			    
+			    
+
+      /**
        * @return the number of vertices in the table.
        */
       const index_type size() const {return idx2vertex.size();}
 
       /**
-       * Updates the vertices only (typically after the adding or removal of vertices in the graph).
+       * Updates the vertices only (and not the neighborhoods) (typically after the adding or removal of vertices in the graph).
        */
-      void operator()() {
+      void update() {
 	clear_vertices();
 	fill_vertices();
       }
       
       /**
-       * Updates the vertices and neighbours (typically after a topology change in terms of vertices and/or edges of the graph).
+       * Updates the vertices and neighborhoods (typically after the adding or removal of vertices in the graph).
        */
-      template<typename VALUE_OF_EDGE_DISTANCE>
-      void operator()(const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	  clear_vertices();
-	  fill_vertices();
-	  make_neighborhood_table(voed, max_dist, min_val);
+      void update_full() {
+	update();
+	make_neighborhood_tables();
       }
+      
 
     
       
@@ -218,26 +268,30 @@ namespace vq3 {
        * WARNING ! Clear the tags (false) before calling that function.
        * @param ref_v the origin vertex.
        * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance considered. 0 means "no limit".
+       * @param max_dist The maximal distance considered.
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
       template<typename VALUE_OF_EDGE_DISTANCE>
       auto neighborhood(const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	return edge_based_neighborhood((*this)(ref_v), ref_v, voed, max_dist, min_val);
+	EdgeDistanceInfo edi(voed, max_dist, min_val);
+	auto minimap = std::make_pair(0, edi);
+	return edge_based_neighborhood((*this)(ref_v), ref_v, &minimap, &minimap+1)[0];
       }
       
       /**
        * WARNING ! Clear the tags (false) before calling that function.
        * @param vertex_index the index of the origin vertex.
        * @param voed A function providing a value (double >= 0) according to the number of edges (unsigned int) separating a vertex in the neighborhood from the central vertex.
-       * @param max_dist The maximal distance considered. 0 means "no limit".
+       * @param max_dist The maximal distance considered. 
        * @param min_val if voed(dist) < min_val, the node is not included in the neighborhood.
        * @return The list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
       template<typename VALUE_OF_EDGE_DISTANCE>
       auto neighborhood(index_type vertex_index, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
-	return edge_based_neighborhood(vertex_index, (*this)(vertex_index),voed, max_dist, min_val);
+	EdgeDistanceInfo edi(voed, max_dist, min_val);
+	auto minimap = std::make_pair(0, edi);
+	return edge_based_neighborhood(vertex_index, (*this)(vertex_index), &minimap, &minimap+1)[0];
       }
 	  
 
@@ -260,27 +314,34 @@ namespace vq3 {
 	return it->second;
       }
 
+      
+
       /**
-       * @returns the neighborhood of vertex #idx. (*this)(voed, max_dist, min_val) should be called first in order to update the neigborhood of all the vertices.
+       * @returns the neighborhood named key of vertex #idx. The method update() should be called first in order to update the neigborhoods of all the vertices.
        */
-      auto& operator[](index_type idx) const {
+      auto& neighborhood(index_type idx, const neighborhood_key_type& key) const {
 	auto ref_v = idx2vertex[idx];
-	auto it = neighborhood_table.find(ref_v);
-	return it->second;
+	return neighborhood(ref_v, key);
       }
 
       /**
-       * @returns the neighborhood of vertex ref_v. (*this)(voed, max_dist, min_val) should be called first in order to update the neigborhood of all the vertices.
+       * @returns the neighborhood named key of vertex ref_v. The method update_full() should be called first in order to update the neigborhood of all the vertices.
        */
-      auto& operator[](const typename graph_type::ref_vertex& ref_v) const {
-	auto it = neighborhood_table.find(ref_v);
-	return it->second;
+      auto& neighborhood(const typename graph_type::ref_vertex& ref_v, const neighborhood_key_type& key) const {
+	auto it  = neighborhood_tables.find(ref_v);
+	if(it == neighborhood_tables.end()) {
+	  std::ostringstream msg;
+	  msg << "Neighborhood key " << key << " is not in the table.";
+	  throw std::invalid_argument(msg.str());
+	}
+	auto iit = it->second.find(key);
+	return iit->second;
       }
     };
 
-    template<typename GRAPH>
+    template<typename KEY, typename GRAPH>
     auto table(GRAPH& g) {
-      return Table<GRAPH>(g);
+      return Table<GRAPH, KEY>(g);
     }
     
   }

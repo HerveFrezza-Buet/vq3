@@ -1,166 +1,65 @@
-#include <vq3.hpp>
-#include <vq3demo.hpp>
-#include <opencv2/opencv.hpp>
 #include <vector>
 #include <iterator>
+#include <tuple>
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <string>
+
+#include <opencv2/opencv.hpp>
+
+#include <vq3.hpp>
+#include <vq3demo.hpp>
+
+// Histograms configuration.
+
+#define NB_BINS 20
+
+#define SOM_H_RADIUS 3.1
+#define SOM_MAX_DIST (unsigned int)(SOM_H_RADIUS)
+
+#define NARROW_SOM_COEF .02
 
 
-#define NT_NB_BINS       20
+// Vertex colors
 
+#define COLOR_BELOW    cv::Scalar(000, 000, 255) // Red, too crowdy nodes here.
+#define COLOR_ABOVE    cv::Scalar(255, 000, 000) // Blue, nodes are too sparse here.
+#define COLOR_INBOUNDS cv::Scalar(000, 136, 246) // Orange
+
+
+// GUI sliders
+
+#define INIT_SLIDER_N               5000
+#define INIT_SLIDER_T                150
+#define INIT_SLIDER_DENSITY           25
+#define INIT_SLIDER_MARGIN_ABOVE      35
+#define INIT_SLIDER_MARGIN_BELOW      20
+#define INIT_SLIDER_AVERAGE_RADIUS     8
+#define INIT_SLIDER_EVOLUTION_RATIO   30
+#define INIT_SLIDER_NB_WTA_1           5
+#define INIT_SLIDER_NB_WTA_2           2
+#define INIT_SLIDER_NB_WTA_3           0
+#define INIT_SLIDER_ALPHA             50
+#define INIT_SLIDER_SAMPLE_PER_VERTEX 10
+
+
+// Execution mode
 
 enum class Mode : char {Cont = 'c', Step = 's'};
 
-struct Param {
-  double alpha() {return .1;}
-  unsigned int min_updates() {return 3;}
-};
-
-// Graph definition
-//
-///////////////
-
-using sample    = vq3::demo2d::Point;
-using prototype = vq3::demo2d::Point;
-
-//                                                                          ## Node properties :
-using vlayer_0 = prototype;                                                 // prototypes are 2D points (this is the "user defined" value).
-using vlayer_1 = vq3::decorator::tagged<vlayer_0>;                          // we add a tag for topology computation.
-using vlayer_2 = vq3::decorator::online::mean_std<vlayer_1, double, Param>; // we add distortion statistics over time. 
-using vlayer_3 = vq3::demo::decorator::colored<vlayer_2>;                   // we add a color for nice drawings.
-using vertex   = vlayer_3;
-
-//                                                        ## Edge properties :
-using elayer_0 = vq3::decorator::tagged<void>;            // we add a tag for CHL computation.
-using edge     = elayer_0;
-
-using graph  = vq3::graph<vertex, edge>;
-
-
-// Epoch data for SOM-like pass
-//
-////////////////
-
-using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample, vertex, prototype>>;
-
-// Distance
-//
-////////////////
-
-
-// This is the distance used by closest-like algorithms. We need to
-// compare actual vertex values with points.
-double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
-
-
-// Network evolution rule
-//
-////////////////
-
-// There is a default evolution rule (see comments in the
-// main). Nevertheless, let us customize the evolution, for the sake
-// of illustration of what it is. Our evolution is similar to the
-// default one, but it adds colors to the vertices.
-
-struct Evolution {
-  double T;
-  double density;
-  double sigma_coef;
-  vq3::demo2d::opencv::colormap::jet colormap;
-  vq3::demo2d::opencv::histogram histo; // This collects information for display.
-  vq3::stats::MeanStd mean_std;
-  double radius = 0;
-  double NT = 0;
-	  
-  Evolution()
-    : histo({0, -1.3}, {2.4, -0.6}) {
-    histo.frame_margin = .1;
-  }
-  
-  Evolution(const Evolution&) = default;
-
-
-  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
-  void operator()(TABLE& table,
-		  const BMU_RESULT& bmu_epoch_result,
-		  const CLONE_PROTOTYPE& clone_prototype) {
-
-    std::vector<typename TABLE::graph_type::ref_vertex> above;
-    std::vector<typename TABLE::graph_type::ref_vertex> below;
-    auto out_above = std::back_inserter(above);
-    auto out_below = std::back_inserter(below);
-    
-    NT = density*T;
-
-    histo.range.reset(); // we do not display the range except if we are told to afterwards.
-    histo.NT  = NT;
-    auto hout = histo.output_iterator();
-    
-    mean_std.clear();
-    
-    for(auto& res : bmu_epoch_result)
-      if(res.vq3_bmu_accum.nb != 0)
-	mean_std  = res.vq3_bmu_accum.value;
-    double spatial_dmean = std::sqrt(mean_std.variance())*sigma_coef;
-    
-    colormap = {NT - spatial_dmean, NT + spatial_dmean};
-    
-    unsigned int idx = 0;
-    for(auto& res : bmu_epoch_result) {
-      auto& ref_v = table(idx++);
-      if(res.vq3_bmu_accum.nb == 0)
-	ref_v->kill(); // We kill a vertex which has never won the competition.
-      else {
-	*(hout++) = res.vq3_bmu_accum.value;
-	auto& vertex = (*ref_v)();
-	if(auto& omstd = vertex.vq3_online_mean_std; omstd) {
-	  auto [m, std] = omstd(); // We get the vertex distortion statistics.
-	  auto dm = sigma_coef*std;
-	  
-	  vertex.vq3_color = colormap(m);
-	  radius = dm + spatial_dmean;
-	  
-	  if(NT < m - radius) // There are not enough nodes (cold color).
-	    *(out_above++) = ref_v;
-	  else if(m + radius < NT)  // There are too many nodes (hot color).
-	    *(out_below++) = ref_v;
-	}
-	else 
-	  vertex.vq3_color = cv::Scalar(0,0,0);
-      }
-    }
-
-    if(above.size() > 0)
-      for(auto it = above.begin(); it != above.end(); ++it)
-	table.g += clone_prototype((*(*it))().vq3_value);
-    
-    if(below.size() > 0)
-      for(auto it = below.begin(); it != below.end(); ++it)
-	(*it)->kill();
-  }
-};
-
-inline Evolution make_evolution() {
-  return Evolution();
-}
-
 
 // GUI Callback data
-//
-////////////////
 
 struct callback_data {
   double high_density  =   1;
-  double low_density   = .25;
   double noise_density = .05;
 
   double i1, i2, i3, i4; // object densities.
   bool b1 = true;    // visibility of object 1
   bool b2 = true;    // visibility of object 2
   bool b3 = true;    // visibility of object 3
-  bool b4 = true;    // visibility of object 3
+  bool b4 = false;   // visibility of object 4
 
   vq3::demo2d::sample::density d1;
   vq3::demo2d::sample::density d2;
@@ -168,11 +67,10 @@ struct callback_data {
   vq3::demo2d::sample::density d4;
 
   const vq3::demo2d::opencv::Frame& frame;
-  graph& g;
-  graph::ref_vertex ref_v;
+  int& d_slider;
 
-  callback_data(const vq3::demo2d::opencv::Frame& frame, graph& g)
-    : frame(frame), g(g) {
+  callback_data(const vq3::demo2d::opencv::Frame& frame, int& d_slider)
+    : frame(frame), d_slider(d_slider) {
     update();
   }
 
@@ -184,7 +82,7 @@ struct callback_data {
   void update() {
     if(b1) i1 = high_density;   else i1 = 0;
     if(b2) i2 = high_density;   else i2 = 0;
-    if(b3) i3 = low_density;    else i3 = 0;
+    if(b3) i3 = .01*d_slider;   else i3 = 0;
     if(b4) i4 = noise_density;  else i4 = 0;
   }
 };
@@ -199,18 +97,171 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
     else if(data.d2->bbox().contains(click)) data.toggle2();
     else if(data.d3->bbox().contains(click)) data.toggle3();
     else                                     data.toggle4();
-    
-    data.update();
   }
+}
+
+
+// Graph definition
+
+using sample    = vq3::demo2d::Point;
+using prototype = vq3::demo2d::Point;
+
+//                                                        ## Node properties :
+using vlayer_0 = prototype;                               // prototypes are 2D points (this is the "user defined" value).
+using vlayer_1 = vq3::decorator::tagged<vlayer_0>;        // we add a tag for topology computation.
+using vlayer_2 = vq3::demo::decorator::colored<vlayer_1>; // we add a color for nice drawings.
+using vertex   = vlayer_2;
+
+//                                             ## Edge properties :
+using elayer_0 = vq3::decorator::tagged<void>; // we add a tag for CHL computation.
+using edge     = elayer_0;
+
+using graph  = vq3::graph<vertex, edge>;
+
+using neighbour_key_type = std::string;
+
+
+// Distance
+
+// This is the distance used by closest-like algorithms. We need to
+// compare actual vertex values with points.
+double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+
+
+// Network evolution rule.
+
+// A default one is provided by vq3. Let us set up an evolution rule
+// for the sake of illustration. It corresponds to the default one
+// with extra addings for display.
+
+
+struct Evolution {
+
+  // These attributes are set from sliders.
   
-  if(event == cv::EVENT_RBUTTONDOWN)
-    data.ref_v = vq3::utils::closest(data.g, data.frame(cv::Point(x,y)), dist);
+  double T;
+  double density;
+  double margin_above = .01*INIT_SLIDER_MARGIN_ABOVE;
+  double margin_below = .01*INIT_SLIDER_MARGIN_BELOW;
+  double topo_ratio   = .01*INIT_SLIDER_EVOLUTION_RATIO;
+  
+  
+  double NT           = 0;    // It is computed as density*T.
+  bool unfreezed      = true; // Tells wether evolution is actually allowed (the user can feeze it).
+
+  // Collect the (vertex_idx, bmu_error) whose BMU error is too high and too_low.
+  
+  std::vector<std::pair<std::size_t, double>> above;
+  std::vector<std::pair<std::size_t, double>> below;
+
+  // This shows the distribution of vertex errors.
+  
+  vq3::demo2d::opencv::histogram histo;
+
+	  	  
+  Evolution()
+    : histo({2.4, -0.8}, {4.4, -0.1}) {
+    histo.frame_margin = .1;
+    histo.title        = "Averaged distortions";
+  }
+
+  // GNG-T calls this method when it considers to perform a
+  // modification of the number of vertices.
+  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
+  bool operator()(TABLE&                 topology,
+		  const BMU_RESULT&      neighboring_bmu_epoch_result,
+		  const CLONE_PROTOTYPE& clone_prototype) {
+    double topology_changed = false;
+
+    above.clear();
+    auto above_out = std::back_inserter(above);
+
+    below.clear();
+    auto below_out = std::back_inserter(below);
+    
+    NT = density*T;
+
+    double above_bound = NT*(1+margin_above);
+    double below_bound = NT*(1-margin_below);
+
+    // We prepare the histogram
+    histo.NT           = NT;                         // display a red bar for the value NT
+    histo.value_bounds = {0, 2*NT};                  // value horizontal axis has the range [0, 2*NT]
+    histo.range        = {below_bound, above_bound}; // display a horizontal range corresponding to inbound values.
+    auto hout          = histo.output_iterator();    // provide an output iterator for feeding the histogram.
+
+    // Let us consider all the errors.
+    std::size_t vertex_idx = 0;
+    for(auto& res : neighboring_bmu_epoch_result) {
+      if(res.vq3_bmu_accum.nb != 0) { // We consider only the vertices which have been a bmu at least once.
+	double error  = res.vq3_bmu_accum.average();
+	auto& color = (*(topology(vertex_idx)))().vq3_color; // This is a reference to the vertex color.
+	*(hout++) = error;
+	if(error > above_bound) {
+	  *(above_out++) = {vertex_idx, error};
+	  color = COLOR_ABOVE;
+	}
+	else if(error < below_bound) {
+	  *(below_out++) = {vertex_idx, error};
+	  color = COLOR_BELOW;
+	}
+	else
+	  color = COLOR_INBOUNDS;
+      }
+      else {
+	// We remove from the graph the vertices that have never been selected as a BMU.
+	if(unfreezed) {
+	  topology(vertex_idx)->kill();
+	  topology_changed = true;
+	}
+      }
+      ++vertex_idx;
+    }
+
+    // We sort out of bounds vertices (small error first for below, big error first for above).
+    std::sort(above.begin(), above.end(),
+	      [](const std::pair<std::size_t, double>& p1, const std::pair<std::size_t, double>& p2) {
+		return p1.second > p2.second;});
+    std::sort(below.begin(), below.end(),
+	      [](const std::pair<std::size_t, double>& p1, const std::pair<std::size_t, double>& p2) {
+		return p1.second < p2.second;});
+
+    if(unfreezed) {
+
+      // We clone a topo_ratio fraction of the above vertices.
+      
+      auto above_end = above.begin();
+      if(above_end != above.end()) {// if not empty
+	std::advance(above_end, std::max((std::size_t)(above.size()*topo_ratio), (size_t)1));
+	for(auto it = above.begin(); it != above_end; ++it) {
+	  auto ref_v = topology.g += clone_prototype((*(topology(it->first)))().vq3_value);
+	  (*ref_v)().vq3_color = COLOR_INBOUNDS;
+	}
+      }
+
+      // we delete a topo_ration fraction of the below vertices.
+      auto below_end = below.begin();
+      if(below_end != below.end()) {// if not empty
+	std::advance(below_end, std::max((std::size_t)(below.size()*topo_ratio), (size_t)1));
+	for(auto it = below.begin(); it != below_end; ++it) 
+	  topology(it->first)->kill();
+      }
+      
+      topology_changed = topology_changed || (above.begin() != above_end) || (below.begin() != below_end);
+    }
+
+    // We tell GNG-T if any change in the vertices (add/remove) has occurred.
+    return topology_changed;
+  }
+};
+
+inline Evolution make_evolution() {
+  return Evolution();
 }
 
 
 // Main
-//
-////////////////
+
 
 int main(int argc, char* argv[]) {
   
@@ -222,30 +273,57 @@ int main(int argc, char* argv[]) {
   else
     std::cout << std::endl
 	      << "I use " << nb_threads << " thread(s)." << std::endl;
+
+
   
   std::random_device rd;  
   std::mt19937 random_device(rd());
 
   graph g;
-  int N_slider =  5000;
-  int T_slider =   150;
-  int S_slider =   150;
   
+  int slider_N                 = INIT_SLIDER_N;
+  int slider_T                 = INIT_SLIDER_T;
+  int slider_density           = INIT_SLIDER_DENSITY;
+  int slider_margin_above      = INIT_SLIDER_MARGIN_ABOVE;
+  int slider_margin_below      = INIT_SLIDER_MARGIN_BELOW;
+  int slider_average_radius    = INIT_SLIDER_AVERAGE_RADIUS;
+  int slider_evolution_ratio   = INIT_SLIDER_EVOLUTION_RATIO;
+  int slider_nb_wta_1          = INIT_SLIDER_NB_WTA_1;
+  int slider_nb_wta_2          = INIT_SLIDER_NB_WTA_2;
+  int slider_nb_wta_3          = INIT_SLIDER_NB_WTA_3;
+  int slider_alpha             = INIT_SLIDER_ALPHA;
+  int slider_sample_per_vertex = INIT_SLIDER_SAMPLE_PER_VERTEX;
+  
+  int old_slider_average_radius = slider_average_radius;
 
+  // Let us used an histogram for non-averaged error distribution.
+  vq3::demo2d::opencv::histogram histo({2.4, 0.2}, {4.4, 0.9});
+  histo.frame_margin = .1;
+  histo.title = "Raw distortions";
+  
   // Image settings
-  //
-  ///////////////////
-
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("algorithm", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("params", CV_WINDOW_AUTOSIZE);
   
-  cv::createTrackbar("nb/m^2",         "image", &N_slider, 50000, nullptr);
-  cv::createTrackbar("T",              "image", &T_slider,  1000, nullptr);
-  cv::createTrackbar("100*sigma_coef", "image", &S_slider,   300, nullptr);
-  auto image       = cv::Mat(576, 1024, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .2*image.size().width, true);
-  callback_data cb(frame, g);
-  cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&cb));
+  cv::createTrackbar("nb/m^2",                 "params", &slider_N,               50000, nullptr);
+  cv::createTrackbar("T",                      "params", &slider_T,                1000, nullptr);
+  cv::createTrackbar("above_margin*100",       "params", &slider_margin_above,      100, nullptr);
+  cv::createTrackbar("below_margin*100",       "params", &slider_margin_below,      100, nullptr);
+  cv::createTrackbar("right square density",   "params", &slider_density,           100, nullptr);
+  cv::createTrackbar("statial average radius", "params", &slider_average_radius,     10, nullptr);
+  cv::createTrackbar("growth/shrink ratio",    "params", &slider_evolution_ratio,   100, nullptr);
+  cv::createTrackbar("nb_wta_1",               "params", &slider_nb_wta_1,           20, nullptr);
+  cv::createTrackbar("nb_wta_2",               "params", &slider_nb_wta_2,           20, nullptr);
+  cv::createTrackbar("nb_wta_3",               "params", &slider_nb_wta_3,           20, nullptr);
+  cv::createTrackbar("alpha",                  "params", &slider_alpha,             200, nullptr);
+  cv::createTrackbar("online samples/vertex",  "params", &slider_sample_per_vertex, 100, nullptr);
+  
+  auto image       = cv::Mat(600, 1500, CV_8UC3, cv::Scalar(255,255,255));
+  auto params      = cv::Mat(1, 600, CV_8UC3, cv::Scalar(255,255,255));
+  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(220, 220, {512, 288});
+  callback_data cb(frame, slider_density);
+  cv::setMouseCallback("algorithm", on_mouse, reinterpret_cast<void*>(&cb));
   
   auto dd          = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
 									 [](const vq3::demo2d::Point& pt) {return                      true;},
@@ -264,14 +342,10 @@ int main(int argc, char* argv[]) {
 									   [](const vertex& v) {return           3;},  // radius
 									   [](const vertex& v) {return v.vq3_color;},  // color
 									   [](const vertex& v) {return          -1;}); // thickness
-
-
-
+  
   // Distribution settings
-  //
-  ///////////////////
 
-  // Thread shapes thickness
+  // wire shapes thickness
   double thickness = .1;
   double rect_dist = 1.5;
     
@@ -314,10 +388,7 @@ int main(int argc, char* argv[]) {
   
 
   // Some initializations
-  //
-  ///////////////////
-  
-
+ 
   std::cout << std::endl
 	    << std::endl
 	    << "##################" << std::endl
@@ -338,128 +409,136 @@ int main(int argc, char* argv[]) {
   // is iterated several times.
   std::vector<vq3::demo2d::Point> S;
 
-  auto topology = vq3::topology::table(g);
+  // This keeps up to date information about the graph topology.
+  auto topology = vq3::topology::table<neighbour_key_type>(g);
+  topology.declare_distance("wide som",   [](unsigned int edge_distance) {return std::max(0., 1 - edge_distance/double(SOM_H_RADIUS));},          SOM_MAX_DIST, 1e-3);
+  topology.declare_distance("narrow som", [](unsigned int edge_distance) {return edge_distance == 0 ? 1 : NARROW_SOM_COEF ;           },                     1,  0.0);
+  topology.declare_distance("avg",        [](unsigned int edge_distance) {return 1;                                                   }, slider_average_radius,  0.0);
 
   // This processes the topology evolution (number of vertices and edges)
-  auto gngt     = vq3::algo::gngt::processor<prototype, sample>(topology);
-
-  // This updates the prototypes (i.e. the vertex positions).
-  auto wtm      = vq3::epoch::wtm::processor(topology);
+  auto gngt = vq3::algo::gngt::processor<sample>(topology);
   
   // This is how the default evolution would have been obtained.
-  // auto evolution = vq3::algo::gngt::by_default::evolution(random_device);
-
+  //   auto evolution = vq3::algo::gngt::by_default::evolution();
+  // But we use here the one that we have handcrafted.
   auto evolution = make_evolution();
+
   
   // This is the loop
-  //
-  //////////////////
 
-  Mode mode = Mode::Cont;
+  Mode mode = Mode::Step;
   bool compute = true;
   int wait_ms;
 
-  while(keycode != 27) {
+  while(keycode != 27) {       // no ESC key pressed.
+    if(slider_average_radius != old_slider_average_radius) {
+      // we need to redeclare avg neighborhoods.
+      topology.declare_distance("avg", [](unsigned int edge_distance) {return 1;}, slider_average_radius, 0.0);
+      old_slider_average_radius = slider_average_radius;
+    }
+
+    
     compute = mode != Mode::Step;
     
-    if(keycode == 32) {
+    if(keycode == 32) {        // space key pressed.
       mode = Mode::Step;
       compute = true;
     }
-    else if(keycode == 99) {
+    else if(keycode == 99) {   // 'c' key pressed.
       mode = Mode::Cont;
       compute = true;
     }
+    else if(keycode == 102)    // 'f' key pressed.
+      evolution.unfreezed = !evolution.unfreezed;
+    
 
+    cb.update();
     wait_ms = 500;
     if(compute) {
       wait_ms = 1;
     
       // Get the samples
       
-      auto S_ = vq3::demo2d::sample::sample_set(random_device, density, N_slider);
+      auto S_ = vq3::demo2d::sample::sample_set(random_device, density, slider_N);
       S.clear();
       auto out = std::back_inserter(S);
       std::copy(S_.begin(), S_.end(), out);
 
       // Step
 
-      double e = T_slider/1000.0;
+      // T do not evolve proportionally to the slider.
+      double e = slider_T/1000.0;
       double expo_min = -5;
       double expo_max = -1;
+      evolution.T             = std::pow(10, expo_min*(1-e) + expo_max*e);
       
 
-      evolution.density    = N_slider;
-      evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
-      evolution.sigma_coef = S_slider*.01;
+      evolution.density       =     slider_N;
+      evolution.margin_above  = .01*slider_margin_above;
+      evolution.margin_below  = .01*slider_margin_below;
+      evolution.topo_ratio    = .01*slider_evolution_ratio;
+
+      gngt.alpha              = .001*slider_alpha;
+      gngt.samples_per_vertex = slider_sample_per_vertex;
+      gngt.nb_wta_1           = slider_nb_wta_1;
+      gngt.nb_wta_2           = slider_nb_wta_2;
+      gngt.nb_wta_3           = slider_nb_wta_3;
 
       // We compute the topology evolution of the graph...
       gngt.process(nb_threads,
-		   S.begin(), S.end(),
-		   [](const sample& s) {return s;},
-		   [](vertex& v) -> prototype& {return v.vq3_value;},
-		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},
-		   dist,
+		   S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
+		   [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
+		   [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
+		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
+		   dist,                      
+		   "wide som", "narrow som", "avg",                                                // Neighborhood keys.
 		   evolution);
-
-      // ... and update the nodes with a SOM-like pass. Here,
-      // classically (for GNG), only the immediate neighbours are
-      // updated.
-      topology([](unsigned int edge_distance) {return edge_distance == 0 ? 1.0 : 0.1;}, 1, 0);
-      wtm.process<epoch_wtm>(nb_threads,
-			     S.begin(), S.end(),
-			     [](const sample& s) {return s;},
-			     [](vertex& v) -> prototype& {return v.vq3_value;},
-			     dist);
-							    
 
       // Display
     
       image = cv::Scalar(255, 255, 255);
-
-      // Display selected node information.
-      if(cb.ref_v) {// If there is a selected vertex to display
-	if(cb.ref_v->is_killed()) // If the vertex has died...
-	  cb.ref_v = nullptr;     // ... we release the pointer to it.
-	else 
-	  cv::circle(image, frame((*(cb.ref_v))().vq3_value), 7, cv::Scalar(0,0,0), -1);
-      }
       
       // Display the points and the graph
       std::copy(S.begin(), S.end(), dd);
       g.foreach_edge(draw_edge); 
       g.foreach_vertex(draw_vertex);
-    
 
+      // Display the frozen status.
+      if(!evolution.unfreezed)
+	cv::putText(image, "frozen", {5, 30}, cv::FONT_HERSHEY_PLAIN, 2., cv::Scalar(0,0,0), 3);
+
+      // We display the 2 histograms.
       try {
-	evolution.histo.set_bins(NT_NB_BINS);
+
+	// This is the histogram of the errors used in the evolution algorithm.
+	evolution.histo.set_bins(NB_BINS);
 	evolution.histo.make();
 	evolution.histo.draw(image, frame);
-	
-	auto [mm, ss, aa] = evolution.histo.gaussian_fit();
-	evolution.histo.gaussian_var(image, frame, mm, ss, aa, 50, cv::Scalar(255,0,0), 1, false);
-	evolution.histo.interval(image, frame,
-				 evolution.NT - evolution.radius,
-				 evolution.NT + evolution.radius,
-				 6, cv::Scalar(0,0,0), 3);
 
-	if(cb.ref_v) {
-	  auto& vertex = (*(cb.ref_v))();
-	  if(vertex.vq3_online_mean_std) {
-	    auto [m, s] =  vertex.vq3_online_mean_std();
-	    evolution.histo.gaussian_var(image, frame, m, s, aa, 50, cv::Scalar(0,0,0),   5, false);
-	    evolution.histo.gaussian_var(image, frame, m, s, aa, 50, vertex.vq3_color,    3, false);
-	  }
-	}
+	// This is the istogram of actual vertex errors, with settings
+	// similar to the previous one.
+	histo.NT           = evolution.histo.NT;
+	histo.value_bounds = {0, 4*histo.NT.value()};
+	histo.range        = evolution.histo.range;
+	
+	auto hout = histo.output_iterator();
+	for(auto& data : gngt.bmu_results)
+	  if(data.vq3_bmu_accum.nb > 0)
+	    *(hout++) = data.vq3_bmu_accum.value;
+	histo.set_bins(NB_BINS);
+	histo.make();
+	histo.draw(image, frame);
       }
       catch(std::runtime_error& e) {}
     }
     
     
-    cv::imshow("image", image);
+    cv::imshow("algorithm", image );
+    cv::imshow("params",    params);
     keycode = cv::waitKey(wait_ms) & 0xFF;
   }
     
 
   return 0;
 }
+
