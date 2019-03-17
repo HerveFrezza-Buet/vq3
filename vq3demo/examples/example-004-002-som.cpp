@@ -91,8 +91,9 @@ int main(int argc, char* argv[]) {
   std::vector<vq3::demo2d::Point> data;
   data.reserve(nb_samples);
   auto out = std::back_inserter(data);
+
   for(unsigned int i = 0; i < nb_samples; ++i)
-    *(out++) = vq3::demo2d::sample::get_one_sample(random_device, density);
+    *(out++) = vq3::demo2d::sample::get_one_sample(random_device, density); 
 
   // Let us build up a grid-like graph, from a Competitive Hebbian Learning (CHL) process.
   //

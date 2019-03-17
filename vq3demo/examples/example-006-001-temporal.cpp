@@ -153,13 +153,16 @@ int main(int argc, char* argv[]) {
 
   vq3::temporal::dt_averager frame_delay(.05);
   
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, N_slider);
+  
   int keycode = 0;
   while(keycode != 27) {
     ++video_data; // get next frame.
     
     // Get the samples
     
-    auto S_ = vq3::demo2d::sample::sample_set(random_device, density, N_slider);
+    sampler = N_slider;
+    auto S_ = vq3::demo2d::sample::sample_set(random_device, sampler, density);
     S.clear();
     std::copy(S_.begin(), S_.end(), std::back_inserter(S));
 

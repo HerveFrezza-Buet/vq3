@@ -113,7 +113,10 @@ int main(int argc, char* argv[]) {
   double g_width      = 4;
   double g_height     = 2.2;
   auto vertex_distrib = vq3::demo2d::sample::rectangle(g_width, g_height, g_intensity);
-  for(auto& v : vq3::demo2d::sample::sample_set(random_device, vertex_distrib, NB_VERTICES_PER_M2)) g += v;
+  
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
+
+  for(auto& v : vq3::demo2d::sample::sample_set(random_device, sampler, vertex_distrib)) g += v;
 
   std::cout << std::endl
 	    << std::endl 
@@ -136,11 +139,13 @@ int main(int argc, char* argv[]) {
   //
   //////////////////
 
+  sampler = NB_SAMPLES_PER_M2;
+  
   while(keycode != 27) {
     
     // Get the samples
     
-    auto S_ = vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2);
+    auto S_ = vq3::demo2d::sample::sample_set(random_device, sampler, density);
     S.clear();
     auto out = std::back_inserter(S);
     std::copy(S_.begin(), S_.end(), out);

@@ -425,6 +425,8 @@ int main(int argc, char* argv[]) {
 
   
   // This is the loop
+  
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, slider_N);
 
   Mode mode = Mode::Step;
   bool compute = true;
@@ -459,7 +461,8 @@ int main(int argc, char* argv[]) {
     
       // Get the samples
       
-      auto S_ = vq3::demo2d::sample::sample_set(random_device, density, slider_N);
+      sampler = slider_N;
+      auto S_ = vq3::demo2d::sample::sample_set(random_device, sampler, density);
       S.clear();
       auto out = std::back_inserter(S);
       std::copy(S_.begin(), S_.end(), out);

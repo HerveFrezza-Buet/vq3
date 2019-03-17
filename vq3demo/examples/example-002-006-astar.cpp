@@ -140,16 +140,20 @@ int main(int argc, char* argv[]) {
   auto   density   = vq3::demo2d::sample::rectangle(side, side, intensity);
 
   graph g;
+  
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
 
   // We add vertices
-  for(auto& location : vq3::demo2d::sample::sample_set(random_device, density, NB_VERTICES_PER_M2)) g += location;
+  for(auto& location : vq3::demo2d::sample::sample_set(random_device, sampler, density)) g += location;
 
   // We add edges
-  for(auto& sample : vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2)) {
+  sampler = NB_SAMPLES_PER_M2;
+  for(auto& sample : vq3::demo2d::sample::sample_set(random_device, sampler, density)) {
     auto closest = vq3::utils::two_closest(g, sample, d2);
     if(g.get_edge(closest.first, closest.second) == nullptr) 
       g.connect(closest.first, closest.second);
   }
+
 
   // We handle edge efficiencies. Only NB_UNEFFICIENT_EDGES are unefficient.
   vq3::utils::clear_edge_efficiencies(g, true);

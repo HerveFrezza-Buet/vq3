@@ -89,10 +89,12 @@ int main(int argc, char* argv[]) {
   auto density = (vq3::demo2d::sample::disk(crown_radius, intensity) - vq3::demo2d::sample::disk(hole_radius, intensity)) + crown_center;
   
   // First, we add vertices
-  for(auto& prototype : vq3::demo2d::sample::sample_set(random_device, density, NB_VERTICES_PER_M2)) g += ScalarAt(prototype);
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
+  for(auto& prototype : vq3::demo2d::sample::sample_set(random_device, sampler, density)) g += ScalarAt(prototype);
 
   // Then, we sample points, and connect the two closest prototypes (if not connected yet).
-  for(auto& sample : vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2)) {
+  sampler = NB_SAMPLES_PER_M2;
+  for(auto& sample : vq3::demo2d::sample::sample_set(random_device, sampler, density)) {
     auto closest = vq3::utils::two_closest(g, sample, d2);
     if(g.get_edge(closest.first, closest.second) == nullptr) 
       g.connect(closest.first, closest.second);

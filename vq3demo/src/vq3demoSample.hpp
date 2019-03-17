@@ -244,20 +244,16 @@ namespace vq3 {
       using density = std::shared_ptr<const Density>;
 
       
-      template<typename RANDOM_ENGINE, typename BASIC_SAMPLER>
-      demo2d::Point get_one_sample(RANDOM_ENGINE& rd, const BASIC_SAMPLER& bs, const density& d) {
+      template<typename RANDOM_ENGINE>
+      demo2d::Point get_one_sample(RANDOM_ENGINE& rd, const density& d) {
 	auto bb = d->bbox();
+	auto uniform = std::uniform_real_distribution<double>(0,1);
 	demo2d::Point value;
-	bool notfound = true;
-	auto unform   = std::uniform_real_distribution<double>(0,1);
-	while(notfound) {
-	  auto [begin, end] = bs(bb);
-	  for(auto it = begin; notfound && it != end; ++it)
-	    if(auto p = *it; uniform(rd) < (*d)(p)) {
-	      value = p;
-	      notfound = false;
-	    }
-	}
+	while(true)
+	  if(auto p = bb.uniform(rd); uniform(rd) < (*d)(p)) { 
+	    value = p;
+	    break;
+	  }
 	return value;
       }
       

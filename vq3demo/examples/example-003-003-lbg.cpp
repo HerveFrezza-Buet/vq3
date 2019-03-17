@@ -122,8 +122,10 @@ int main(int argc, char* argv[]) {
   // We need to register the input samples in a vector since we want
   // to both use and display them.
   std::vector<vq3::demo2d::Point> S;
+
   
-  auto S_ = vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2);
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
+  auto S_      = vq3::demo2d::sample::sample_set(random_device, sampler, density);
   std::copy(S_.begin(), S_.end(), std::back_inserter(S));
 
   

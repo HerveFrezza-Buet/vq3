@@ -40,10 +40,13 @@ int main(int argc, char* argv[]) {
 	    << "##################" << std::endl
 	    << std::endl;
   
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, N_slider);
+  
   int keycode = 0;
   while(keycode != 27) {
     ++video_data; // get next frame.
-    auto S = vq3::demo2d::sample::sample_set(random_device, webcam_distribution, N_slider);
+    sampler = N_slider;
+    auto S  = vq3::demo2d::sample::sample_set(random_device, sampler, webcam_distribution);
     image = cv::Scalar(255, 255, 255);
     std::copy(S.begin(), S.end(), dd);
     cv::imshow("image", image);

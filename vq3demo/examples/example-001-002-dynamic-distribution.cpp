@@ -73,11 +73,12 @@ int main(int argc, char* argv[]) {
   std::cout << std::endl
 	    << "The window will close automatically after a while. Please wait." << std::endl
 	    << std::endl;
-    
+
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
   for(unsigned int frame = 0; frame < 500; ++frame) {
     image = cv::Scalar(255,255,255);
     
-    auto S = vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2);
+    auto S = vq3::demo2d::sample::sample_set(random_device, sampler, density);
     std::copy(S.begin(), S.end(), dd);
     
     cv::imshow("image", image);

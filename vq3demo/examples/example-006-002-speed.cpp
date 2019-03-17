@@ -202,6 +202,8 @@ int main(int argc, char* argv[]) {
   unsigned int step = 0;
   unsigned int mode = 0;
   
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, N_slider);
+  
   int keycode = 0;
   while(keycode != 27) {
 
@@ -224,7 +226,8 @@ int main(int argc, char* argv[]) {
     
     // Get the samples and plot them.
     
-    auto S_ = vq3::demo2d::sample::sample_set(random_device, density, N_slider);
+    sampler = N_slider;
+    auto S_ = vq3::demo2d::sample::sample_set(random_device, sampler, density);
     S.clear();
     std::copy(S_.begin(), S_.end(), std::back_inserter(S));
 

@@ -81,7 +81,9 @@ int main(int argc, char* argv[]) {
   double hole      =  .3;
   auto density     = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole, intensity);
 
-  auto  S_ = vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2); // This re-toss points at each begin...end iteration.
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
+  auto S_      = vq3::demo2d::sample::sample_set(random_device, sampler, density); // This re-toss points at each begin...end iteration.
+  
   std::vector<vq3::demo2d::Point> S; // Let us use a single sample of S_.
   auto out = std::back_inserter(S);
   std::copy(S_.begin(), S_.end(), out);
