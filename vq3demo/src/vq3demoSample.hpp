@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <iostream>
 #include <tuple>
+#include <cmath>
 
 namespace vq3 {
   namespace demo2d {
@@ -172,6 +173,7 @@ namespace vq3 {
       };
 
       namespace base_sampler {
+	
 	template<typename RANDOM_DEVICE>
 	class Random {
 	private:
@@ -224,10 +226,56 @@ namespace vq3 {
 	};
 
 	/**
-	 * This samples an bounding box by tossing random samples uniformly distributed in it.
+	 * This samples an bounding box by tossing random samples in a grid.
 	 */
 	template<typename RANDOM_DEVICE>
 	auto random(RANDOM_DEVICE& rd, double nb_samples_per_m2) {return Random<RANDOM_DEVICE>(rd,nb_samples_per_m2);}
+
+
+
+	
+	template<typename RANDOM_DEVICE>
+	class Grid {
+	private:
+	  RANDOM_DEVICE& rd;
+	  double nb_samples_per_m2;
+	  mutable std::vector<vq3::demo2d::Point> pts;
+	  
+	public:
+
+	  using iterator = typename std::vector<vq3::demo2d::Point>::iterator;
+	  
+	  Grid(RANDOM_DEVICE& rd, double nb_samples_per_m2)
+	    : rd(rd), nb_samples_per_m2(nb_samples_per_m2), pts() {}
+	  Grid()                         = delete;
+	  Grid(const Grid&)            = delete;
+	  Grid& operator=(const Grid&) = delete;
+
+
+	  void operator=(double nb_samples_per_m2) {this->nb_samples_per_m2 = nb_samples_per_m2;}
+	  auto operator()(const BBox& bbox) const {
+	    pts.clear();
+	    auto   out    = std::back_inserter(pts);
+	    double d      = 1.0/std::sqrt(nb_samples_per_m2);
+	    auto   pt_min = bbox.bottom_left();
+	    auto   pt_max = bbox.top_right();
+	    vq3::demo2d::Point pt = pt_min;
+	    unsigned int w, h;
+	    for(h = 0, pt.y = pt_min.y; pt.y < pt_max.y; ++h, pt.y = pt_min.y + d*h)
+	      for(w = 0, pt.x = pt_min.x; pt.x < pt_max.x; ++w, pt.x = pt_min.x + d*w)
+		*(out++) = pt;
+	    std::shuffle(pts.begin(), pts.end(), rd);
+	    return std::make_pair(pts.begin(), pts.end());
+	  }
+	};
+
+	/**
+	 * This samples an bounding box by tossing random samples uniformly distributed in it.
+	 */
+	template<typename RANDOM_DEVICE>
+	auto grid(RANDOM_DEVICE& rd, double nb_samples_per_m2) {return Grid<RANDOM_DEVICE>(rd,nb_samples_per_m2);}
+
+	
       }
       
 
@@ -275,7 +323,9 @@ namespace vq3 {
 	  typename BASE_SAMPLER::iterator iter;
 	  demo2d::Point value;
 	  
-	  iterator(const SampleSet<RANDOM_ENGINE, BASE_SAMPLER>* owner, const typename BASE_SAMPLER::iterator& iter) : owner(owner), iter(iter), value() {}
+	  iterator(const SampleSet<RANDOM_ENGINE, BASE_SAMPLER>* owner, const typename BASE_SAMPLER::iterator& iter) : owner(owner), iter(iter), value() {
+	    find_data();
+	  }
 
 	  void find_data() {
 	    auto uniform = std::uniform_real_distribution<double>(0,1);
