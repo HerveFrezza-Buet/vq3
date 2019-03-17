@@ -34,6 +34,7 @@
 #include <functional>
 #include <algorithm>
 #include <iostream>
+#include <tuple>
 
 namespace vq3 {
   namespace demo2d {
@@ -170,6 +171,66 @@ namespace vq3 {
 	}
       };
 
+      namespace base_sampler {
+	template<typename RANDOM_DEVICE>
+	class Random {
+	private:
+	  RANDOM_DEVICE& rd;
+	  double nb_samples_per_m2;
+	  
+	public:
+	  
+	  class iterator {
+	  private:
+
+	    friend class Random<RANDOM_DEVICE>;
+	    
+	    RANDOM_DEVICE* rd = nullptr;
+	    BBox bbox;
+	    unsigned int N;
+	    
+	    iterator(RANDOM_DEVICE& rd, const BBox& bbox, unsigned int N) : rd(&rd), bbox(bbox), N(N) {}
+	    
+	  public:
+	    
+	    using difference_type   = long;
+	    using value_type        = vq3::demo2d::Point;
+	    using pointer           = vq3::demo2d::Point*;
+	    using reference         = vq3::demo2d::Point&;
+	    using iterator_category = std::forward_iterator_tag;
+
+	    iterator()                           = default;
+	    iterator(const iterator&)            = default;
+	    iterator& operator=(const iterator&) = default;
+	  
+	    iterator&  operator++()      {++N; return *this;}
+	    iterator&  operator++(int)   {iterator res = *this; (*this)++; return res;}
+	    value_type operator*() const {return bbox.uniform(*rd);}
+	    bool       operator==(const iterator& other) const {return N == other.N;}
+	    bool       operator!=(const iterator& other) const {return N != other.N;}
+	  };
+
+	  Random(RANDOM_DEVICE& rd, double nb_samples_per_m2)
+	    : rd(rd), nb_samples_per_m2(nb_samples_per_m2) {}
+	  Random()                         = delete;
+	  Random(const Random&)            = delete;
+	  Random& operator=(const Random&) = delete;
+
+
+	  void operator=(double nb_samples_per_m2) {this->nb_samples_per_m2 = nb_samples_per_m2;}
+	  std::pair<iterator, iterator> operator()(const BBox& bbox) const {
+	    return {iterator(rd, bbox, 0), iterator(rd, bbox, (unsigned int)(nb_samples_per_m2*bbox.area()+.5))};
+	  }
+	};
+
+	/**
+	 * This samples an bounding box by tossing random samples uniformly distributed in it.
+	 */
+	template<typename RANDOM_DEVICE>
+	auto random(RANDOM_DEVICE& rd, double nb_samples_per_m2) {return Random<RANDOM_DEVICE>(rd,nb_samples_per_m2);}
+      }
+      
+
       class Density {
       public:
 	virtual BBox bbox() const = 0;
@@ -183,93 +244,95 @@ namespace vq3 {
       using density = std::shared_ptr<const Density>;
 
       
-      template<typename RANDOM_ENGINE>
-      demo2d::Point get_one_sample(RANDOM_ENGINE& rd, const density& d) {
+      template<typename RANDOM_ENGINE, typename BASIC_SAMPLER>
+      demo2d::Point get_one_sample(RANDOM_ENGINE& rd, const BASIC_SAMPLER& bs, const density& d) {
 	auto bb = d->bbox();
 	demo2d::Point value;
-	while(true) {
-	  auto p = bb.uniform(rd);
-	  if(std::uniform_real_distribution<double>(0,1)(rd) < (*d)(p)) { 
-	    value = p;
-	    break;
-	  }
+	bool notfound = true;
+	auto unform   = std::uniform_real_distribution<double>(0,1);
+	while(notfound) {
+	  auto [begin, end] = bs(bb);
+	  for(auto it = begin; notfound && it != end; ++it)
+	    if(auto p = *it; uniform(rd) < (*d)(p)) {
+	      value = p;
+	      notfound = false;
+	    }
 	}
 	return value;
       }
       
-      template<typename RANDOM_ENGINE>
+      template<typename RANDOM_ENGINE, typename BASE_SAMPLER>
       class SampleSet {
       private:
-	RANDOM_ENGINE& rd;
 	density d;
-	unsigned int N;
+	RANDOM_ENGINE& rd;
+
+	typename BASE_SAMPLER::iterator begin_, end_;
 	
       public:
 	
 	class iterator {
 	private :
-	  friend class SampleSet<RANDOM_ENGINE>;
-	  const SampleSet<RANDOM_ENGINE>* owner;
-	  unsigned int i;
+	  friend class SampleSet<RANDOM_ENGINE, BASE_SAMPLER>;
+	  
+	  const SampleSet<RANDOM_ENGINE, BASE_SAMPLER>* owner = nullptr;
+	  typename BASE_SAMPLER::iterator iter;
 	  demo2d::Point value;
+	  
+	  iterator(const SampleSet<RANDOM_ENGINE, BASE_SAMPLER>* owner, const typename BASE_SAMPLER::iterator& iter) : owner(owner), iter(iter), value() {}
 
 	  void find_data() {
-	    auto bb = owner->d->bbox();
-	    unsigned int N =  owner->N;
-	    for(;i < N; ++i) {
-	      auto p = bb.uniform(owner->rd);
-	      if(std::uniform_real_distribution<double>(0,1)(owner->rd) < (*(owner->d))(p)) { 
+	    auto uniform = std::uniform_real_distribution<double>(0,1);
+	    for(; iter != owner->end_; ++iter) 
+	      if(auto p = *iter; uniform(owner->rd) < (*(owner->d))(p)) {
 		value = p;
 		break;
 	      }
-	    }
-	  }
-	  
-	  iterator(const SampleSet<RANDOM_ENGINE>* owner, unsigned int i) : owner(owner), i(i), value() {
-	    find_data();
 	  }
 	  
 	public:
-
+	  
 	  using difference_type   = demo2d::Point;
 	  using value_type        = demo2d::Point;
 	  using pointer           = demo2d::Point*;
 	  using reference         = demo2d::Point&;
 	  using iterator_category = std::forward_iterator_tag;
 	  
-	  iterator() : owner(nullptr) {}
+	  iterator()                           = default;
 	  iterator(const iterator&)            = default;
 	  iterator& operator=(const iterator&) = default;
-
+	  
 	  bool operator==(const iterator& it) const {
-	    return owner == it.owner && i == it.i;
+	    return iter == it.iter;
 	  }
-
+	  
 	  bool operator!=(const iterator& it) const {
-	    return owner != it.owner || i != it.i;
+	    return iter != it.iter;
 	  }
 	  
 	  const demo2d::Point& operator*() const {
 	    return value;
 	  }
-
-	  iterator& operator++() {++i, find_data(); return *this;}
+	  
+	  iterator& operator++() {++iter, find_data(); return *this;}
 	  iterator operator++(int) {iterator res = *this; ++*this; return res;}
 	};
-
+	
 	SampleSet()                            = delete;
 	SampleSet(const SampleSet&)            = default;
 	SampleSet& operator=(const SampleSet&) = delete; // due to random engine reference.
-	SampleSet(RANDOM_ENGINE& rd, density d, unsigned int N) : rd(rd), d(d), N((unsigned int)(N*d->bbox().area())) {}
+	SampleSet(RANDOM_ENGINE& rd, BASE_SAMPLER& bs, density d) : d(d), rd(rd), begin_(), end_() {
+	  std::tie(begin_, end_) = bs(d->bbox());
+	}
 
-	iterator begin() const {return iterator(this, 0);}
-	iterator end() const {return iterator(this, N);}
+	iterator begin() const {return iterator(this, begin_);}
+	iterator end()   const {return iterator(this, end_);}
 	
       };
 
-      template<typename RANDOM_ENGINE>
-      SampleSet<RANDOM_ENGINE> sample_set(RANDOM_ENGINE& rd, density d, unsigned int N) {
-	return SampleSet<RANDOM_ENGINE>(rd, d, N);
+      template<typename RANDOM_ENGINE, typename BASE_SAMPLER>
+      SampleSet<RANDOM_ENGINE, BASE_SAMPLER> sample_set(RANDOM_ENGINE& rd, BASE_SAMPLER& bs, density d) {
+	return SampleSet<RANDOM_ENGINE, BASE_SAMPLER>(rd, bs, d);
       }
 
       class Rectangle1 : public Density {

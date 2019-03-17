@@ -67,14 +67,18 @@ int main(int argc, char* argv[]) {
 								   radius_of,
 								   [](const vq3::demo2d::Point& pt) {return cv::Scalar(200, 50, 50);},
 								   thickness_of);
-
-  auto S = vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2);
+  // sampler provide random samples in the main area. Here, they are obtained from an uniform toss.
+  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
+  auto S       = vq3::demo2d::sample::sample_set(random_device, sampler, density);
   std::copy(S.begin(), S.end(), dd);
 
   rect_theta =   5;
   lens_theta = -90;
   crown_pos  = {-.5,  0};
-  auto SS    = vq3::demo2d::sample::sample_set(random_device, density, NB_SAMPLES_PER_M2/2);
+
+  // Let us change the base samples density.
+  sampler    = NB_SAMPLES_PER_M2/2;
+  auto SS    = vq3::demo2d::sample::sample_set(random_device,  sampler, density);
   dd         = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
 								   do_we_draw,
 								   point_of,
