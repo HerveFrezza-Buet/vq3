@@ -276,6 +276,51 @@ namespace vq3 {
 	auto grid(RANDOM_DEVICE& rd, double nb_samples_per_m2) {return Grid<RANDOM_DEVICE>(rd,nb_samples_per_m2);}
 
 	
+	template<typename RANDOM_DEVICE>
+	class Triangles {
+	private:
+	  RANDOM_DEVICE& rd;
+	  double nb_samples_per_m2;
+	  mutable std::vector<vq3::demo2d::Point> pts;
+	  
+	public:
+
+	  using iterator = typename std::vector<vq3::demo2d::Point>::iterator;
+	  
+	  Triangles(RANDOM_DEVICE& rd, double nb_samples_per_m2)
+	    : rd(rd), nb_samples_per_m2(nb_samples_per_m2), pts() {}
+	  Triangles()                         = delete;
+	  Triangles(const Triangles&)            = delete;
+	  Triangles& operator=(const Triangles&) = delete;
+
+
+	  void operator=(double nb_samples_per_m2) {this->nb_samples_per_m2 = nb_samples_per_m2;}
+	  auto operator()(const BBox& bbox) const {
+	    pts.clear();
+	    auto   out    = std::back_inserter(pts);
+	    double d      = 1.0/std::sqrt(nb_samples_per_m2 * 0.8660254037844386); // 0.86... = sqrt(3)/2 = sin(pi/3)
+	    double dd     = d * 0.8660254037844386;
+	    auto   pt_min = bbox.bottom_left();
+	    auto   pt_max = bbox.top_right();
+	    vq3::demo2d::Point pt = pt_min;
+	    unsigned int w, h;
+	    int even = 0;
+	    double offset = 0;
+	    for(h = 0, pt.y = pt_min.y; pt.y < pt_max.y; ++h, pt.y = pt_min.y + dd*h, even = 1 - even, offset = d*even*.5)
+	      for(w = 0, pt.x = pt_min.x + offset; pt.x < pt_max.x; ++w, pt.x = pt_min.x + offset + d*w)
+		*(out++) = pt;
+	    std::shuffle(pts.begin(), pts.end(), rd);
+	    return std::make_pair(pts.begin(), pts.end());
+	  }
+	};
+
+	/**
+	 * This samples an bounding box by tossing random samples uniformly distributed in it.
+	 */
+	template<typename RANDOM_DEVICE>
+	auto triangles(RANDOM_DEVICE& rd, double nb_samples_per_m2) {return Triangles<RANDOM_DEVICE>(rd,nb_samples_per_m2);}
+	
+	
       }
       
 
