@@ -352,10 +352,18 @@ namespace vq3 {
 	auto it  = neighborhood_tables.find(ref_v);
 	if(it == neighborhood_tables.end()) {
 	  std::ostringstream msg;
-	  msg << "Neighborhood key " << key << " is not in the table.";
-	  throw std::invalid_argument(msg.str());
+	  msg << "Vertex ";
+	  if(ref_v) msg << ref_v;
+	  else      msg << "nullptr (error)";
+	  msg << " has no pre-computed neighborhoods.";
+	  throw std::runtime_error(msg.str());
 	}
 	auto iit = it->second.find(key);
+	if(iit == it->second.end())  {
+	  std::ostringstream msg;
+	  msg << "Vertex " << ref_v << " has no pre-computed neighborhoods with key \"" << key << "\".";
+	  throw std::invalid_argument(msg.str());
+	}
 	return iit->second;
       }
     };
