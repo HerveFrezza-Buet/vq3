@@ -109,11 +109,32 @@ namespace vq3 {
       
       
 
-      friend std::ostream& operator<<(std::ostream& os, Table<graph_type, neighborhood_key_type>& v) {
+      friend std::ostream& operator<<(std::ostream& os, Table<graph_type, neighborhood_key_type>& topology) {
+	
 	os << "Vertex map : " << std::endl;
 	unsigned int idx = 0;
-	for(auto& ref_v : v.idx2vertex)
+	for(auto& ref_v : topology.idx2vertex)
 	  os << "  " << std::setw(3) << idx++ << " : " << ref_v.get() << std::endl;
+	os << std::endl;
+
+	if(topology.neighborhood_tables.empty())
+	  os << "No neighborhood tables" << std::endl << std::endl;
+	else {
+	  os << std::setprecision(3) << std::fixed;
+	  for(auto& kv : topology.neighborhood_tables) {
+	    auto& [ref_v, neighborhoods] = kv;
+	    os << "Neighborhood for vertex #" << topology(ref_v) << std::endl;
+	    for(auto& kkvv : neighborhoods) {
+	      auto& [key, infos] = kkvv;
+	      os << "  " << key << " :";
+	      for(auto& info : infos)
+		os << " (" << info.index << ", " << info.value << ')';
+	      os << std::endl;
+	    }
+	      
+	    os << std::endl;
+	  }
+	}
 	return os;
       }
       
