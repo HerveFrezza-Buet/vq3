@@ -48,6 +48,7 @@ namespace vq3 {
       std::shared_ptr<void> to_src; //!< The ref edge leading to the source.
       double cost;                  //!< The cumulated cost.
       double hcost;                 //!< The cumulated cost plus the heuristics.
+      unsigned int qpos;            //!< The position in ht priority queue (temporary information).
       
       void raz() {
 	to_src = nullptr;
@@ -244,6 +245,116 @@ namespace vq3 {
 
   namespace path {
 
+    namespace priority_queue {
+      
+      template<typename REF_VERTEX, bool USE_HCOST>
+      inline unsigned int swap_if_1_is_higher(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2) {
+	auto it1  = q.begin() + pos1;
+	auto it2  = q.begin() + pos2;
+	auto& sp1 = (*(*it1))().vq3_shortest_path;
+	auto& sp2 = (*(*it2))().vq3_shortest_path;
+
+	if constexpr(USE_HCOST) {
+	    if(sp1.hcost < sp2.hcost)
+	      return 0;
+	  }
+	else {
+	    if(sp1.cost < sp2.cost)
+	      return 0;
+	}
+	
+	sp1.qpos = pos2;
+	sp2.qpos = pos1;
+	std::iter_swap(it1, it2);
+
+	return pos2;
+      }
+      
+      template<typename REF_VERTEX, bool USE_HCOST>
+      inline unsigned int swap_if_1_higher_than_min_1_2(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2, unsigned int pos3) {
+	auto it1  = q.begin() + pos1;
+	auto it2  = q.begin() + pos2;
+	auto it3  = q.begin() + pos3;
+	auto& sp1 = (*(*it1))().vq3_shortest_path;
+	auto& sp2 = (*(*it2))().vq3_shortest_path;
+	auto& sp3 = (*(*it3))().vq3_shortest_path;
+
+	if constexpr(USE_HCOST) {
+	    if((pos3 == 0 || sp2.hcost < sp3.hcost) && sp1.hcost > sp2.hcost) { // min(sp2, sp3) = sp2, sp1 > min : swap(sp1, sp2)
+	      sp1.qpos = pos2;
+	      sp2.qpos = pos1;
+	      std::iter_swap(it1, it2);
+	    return pos2;
+	  }
+	  if(sp3.hcost < sp2.hcost && sp1.hcost > sp3.hcost) { // min(sp2, sp3) = sp3, sp1 > min : swap(sp1, sp3)
+	    sp1.qpos = pos3;
+	    sp3.qpos = pos1;
+	    std::iter_swap(it1, it3);
+	    return pos3;
+	  }
+	  return 0;
+	  }
+	else {
+	  if((pos3 == 0 || sp2.cost < sp3.cost) && sp1.cost > sp2.cost) { // min(sp2, sp3) = sp2, sp1 > min : swap(sp1, sp2)
+	    sp1.qpos = pos2;
+	    sp2.qpos = pos1;
+	    std::iter_swap(it1, it2);
+	    return pos2;
+	  }
+	  if(sp3.cost < sp2.cost && sp1.cost > sp3.cost) { // min(sp2, sp3) = sp3, sp1 > min : swap(sp1, sp3)
+	    sp1.qpos = pos3;
+	    sp3.qpos = pos1;
+	    std::iter_swap(it1, it3);
+	    return pos3;
+	  }
+	  return 0;
+	}
+      }
+      
+      template<typename REF_VERTEX, bool USE_HCOST>
+      inline void percolate_up(std::vector<REF_VERTEX>& q, unsigned int pos) {
+	do
+	  if(pos == 1) return;
+	while((pos = swap_if_higher<REF_VERTEX, USE_HCOST>(q, pos, pos / 2)) != 0);
+      }
+      
+      template<typename REF_VERTEX, bool USE_HCOST>
+      inline void percolate_down(std::vector<REF_VERTEX>& q, unsigned int pos) {
+	unsigned int son_left  = 2 * pos;
+	unsigned int son_right;
+
+	do {
+	  if(son_left = 2 * pos; son_left >= q.size()) return;
+	  if(son_right = son_left + 1; son_right >= q.size()) son_right = 0;
+	}
+	while((pos = swap_if_1_higher_than_min_1_2(q, pos, son_left, son_right)) != 0);
+      }
+      
+      template<typename REF_VERTEX>
+      inline void make_empty(std::vector<REF_VERTEX>& q) {
+	q.clear();
+	q.push_back(nullptr);
+      }
+
+      template<typename REF_VERTEX, bool USE_HCOST>
+      inline void insert(std::vector<REF_VERTEX> q, const REF_VERTEX& ref_v) {
+	q.push_back(ref_v);
+	percolate_up<REF_VERTEX, USE_HCOST>(q, q.size() - 1);
+      }
+      
+      template<typename REF_VERTEX, bool USE_HCOST>
+      inline REF_VERTEX& pop(std::vector<REF_VERTEX> q) {
+	auto res = *(q.begin() + 1);
+	std::swap(q.begin() + 1, q.end() - 1);
+	q.pop_back();
+	percolate_down(q, 1);
+	return val;
+      }
+    }
+
+      
+    
+
     /**
      * This function fills the vq3_shortest_path values at each vertex
      * according to the shortest path linking each vertex to the
@@ -256,13 +367,13 @@ namespace vq3 {
      * @param edge_cost a function such as edge_cost(ref_edge) is the cost of the edge.
      */
     template<bool VERTEX_EFFICIENCY, bool EDGE_EFFICIENCY, typename GRAPH, typename EDGE_COST>
-    void dijkstra(GRAPH& g, typename GRAPH::ref_vertex& start, typename GRAPH::ref_vertex& dest, const EDGE_COST& edge_cost) {
+    void dijkstra(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest, const EDGE_COST& edge_cost) {
       // Init
       g.foreach_vertex([](typename GRAPH::ref_vertex ref_v){(*ref_v)().vq3_shortest_path.raz();});
 
       auto accum_comp = [](const typename GRAPH::ref_vertex& ref_v1,
 			   const typename GRAPH::ref_vertex& ref_v2) {return (*ref_v1)().vq3_shortest_path.cost < (*ref_v2)().vq3_shortest_path.cost;};
-      std::set<typename GRAPH::ref_vertex, decltype(accum_comp)> q(accum_comp);
+      std::multiset<typename GRAPH::ref_vertex, decltype(accum_comp)> q(accum_comp);
 
       if constexpr(VERTEX_EFFICIENCY) {
 	  if((*dest)().vq3_efficient) {
@@ -276,17 +387,32 @@ namespace vq3 {
 	(*dest)().vq3_shortest_path.set(0);
 	q.insert(dest);
       }
-      
+
+      unsigned int nb = 0; // HFB
+      std::set<typename GRAPH::ref_vertex> visited; // HFB
       while(!q.empty()) {
+	++nb; // HFB
+	// HFB
+	std::cout << "Q :" << std::endl;
+	for(auto& elem : q)
+	  std::cout << ' ' << (*elem)().vq3_value << (*elem)().vq3_shortest_path;
+	std::cout << std::endl;
+
+
+	
 	auto curr = *(q.begin());
 	auto& curr_path_info = (*curr)().vq3_shortest_path;
 	curr_path_info.ended();
 	if(curr == start) break;
 	
 	q.erase(q.begin());
-	curr->foreach_edge([curr, &edge_cost, &q, &curr_path_info](typename GRAPH::ref_edge ref_e) {
+
+	std::cout << "Pop " << (*curr)().vq3_value << " : " <<  curr_path_info << std::endl; // HFB
+	
+	curr->foreach_edge([curr, &edge_cost, &q, &curr_path_info, &visited /* HFB */](typename GRAPH::ref_edge ref_e) {
 	    auto extr_pair = ref_e->extremities();           
 	    if(vq3::invalid_extremities(extr_pair)) {
+	      std::cout << "Invalid found !" << std::endl; // HFB
 	      ref_e->kill();
 	      return;
 	    }
@@ -300,6 +426,9 @@ namespace vq3 {
 	    auto& other           = vq3::other_extremity(extr_pair, curr);
 	    auto& other_path_info = (*other)().vq3_shortest_path;
 
+	    visited.insert(other); // HFB
+	    std::cout << "Visiting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
+
 	    if constexpr(VERTEX_EFFICIENCY) {
 		if(!(*other)().vq3_efficient) {
 		  other_path_info.ended();
@@ -312,18 +441,28 @@ namespace vq3 {
 	      break;
 	    case status::unprocessed :
 	      other_path_info.set(cost + curr_path_info.cost, ref_e);
+	      std::cout << "Inserting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
 	      q.insert(other);
 	      break;
 	    case status::processing :
+	      std::cout << "Comparing " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
 	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
+		
+		std::cout << "Reranking " << (*other)().vq3_value << std::endl; // HFB
 		q.erase(other);
 		other_path_info.set(cost_candidate, ref_e);
+		std::cout << "Inserting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
 		q.insert(other);
 	      }
 	      break;
+
+	    default: // HFB
+	      std::cout << "Bad status !" << std::endl;
+	      
 	    }
 	  });
       }
+      std::cout << nb << ", " << visited.size() + 1 << " =?= " << g.nb_vertices() << std::endl; // HFB
     }
 
     /**
@@ -339,7 +478,7 @@ namespace vq3 {
      * @param to_start_estimation a function such as to_dest_estimation(ref_vertex) gives a pessimistic optimation of the cumulated cost from ref_vertex to start.
      */
     template<bool VERTEX_EFFICIENCY, bool EDGE_EFFICIENCY, typename GRAPH, typename EDGE_COST, typename TO_START>
-    void a_star(GRAPH& g, typename GRAPH::ref_vertex& start, typename GRAPH::ref_vertex& dest,
+    void a_star(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest,
 		const EDGE_COST& edge_cost,
 		const TO_START& to_start_estimation) {
       // Init

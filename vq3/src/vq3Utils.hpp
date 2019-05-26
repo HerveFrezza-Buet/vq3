@@ -51,7 +51,7 @@ namespace vq3 {
   }
   
   namespace utils {
-
+    
     template<typename INCREMENTABLE, typename NB_TYPE>
     struct accum {
       NB_TYPE nb;
