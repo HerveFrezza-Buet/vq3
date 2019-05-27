@@ -170,21 +170,21 @@ namespace vq3 {
       }
     };
 
-  /**
-   * Get an iterator on the past starting from a vertex.
-   */
-  template<typename REF_VERTEX>
-  auto begin(const REF_VERTEX& ref_v) {
-    return iterator(ref_v);
-  }
+    /**
+     * Get an iterator on the past starting from a vertex.
+     */
+    template<typename REF_VERTEX>
+    auto begin(const REF_VERTEX& ref_v) {
+      return iterator(ref_v);
+    }
 
-  /**
-   * Get a end interator. The graph is provided for type inference only.
-   */
-  template<typename GRAPH>
-  auto end(const GRAPH& g) {return iterator<typename GRAPH::ref_vertex>();}
+    /**
+     * Get a end interator. The graph is provided for type inference only.
+     */
+    template<typename GRAPH>
+    auto end(const GRAPH& g) {return iterator<typename GRAPH::ref_vertex>();}
   
-}
+  }
 
  
 
@@ -246,88 +246,129 @@ namespace vq3 {
   namespace path {
 
     namespace priority_queue {
-      
-      template<typename REF_VERTEX, bool USE_HCOST>
-      inline unsigned int swap_if_1_is_higher(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2) {
-	auto it1  = q.begin() + pos1;
-	auto it2  = q.begin() + pos2;
-	auto& sp1 = (*(*it1))().vq3_shortest_path;
-	auto& sp2 = (*(*it2))().vq3_shortest_path;
 
-	if constexpr(USE_HCOST) {
-	    if(sp1.hcost < sp2.hcost)
-	      return 0;
-	  }
-	else {
+      namespace internal {
+      
+	template<bool USE_HCOST, typename REF_VERTEX>
+	inline unsigned int swap_if_1_is_higher(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2) {
+	  auto it1  = q.begin() + pos1;
+	  auto it2  = q.begin() + pos2;
+	  auto& sp1 = (*(*it1))().vq3_shortest_path;
+	  auto& sp2 = (*(*it2))().vq3_shortest_path;
+
+	  if constexpr(USE_HCOST) {
+	      if(sp1.hcost < sp2.hcost)
+		return 0;
+	    }
+	  else {
 	    if(sp1.cost < sp2.cost)
 	      return 0;
-	}
+	  }
 	
-	sp1.qpos = pos2;
-	sp2.qpos = pos1;
-	std::iter_swap(it1, it2);
+	  sp1.qpos = pos2;
+	  sp2.qpos = pos1;
+	  std::iter_swap(it1, it2);
 
-	return pos2;
-      }
-      
-      template<typename REF_VERTEX, bool USE_HCOST>
-      inline unsigned int swap_if_1_higher_than_min_1_2(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2, unsigned int pos3) {
-	auto it1  = q.begin() + pos1;
-	auto it2  = q.begin() + pos2;
-	auto it3  = q.begin() + pos3;
-	auto& sp1 = (*(*it1))().vq3_shortest_path;
-	auto& sp2 = (*(*it2))().vq3_shortest_path;
-	auto& sp3 = (*(*it3))().vq3_shortest_path;
-
-	if constexpr(USE_HCOST) {
-	    if((pos3 == 0 || sp2.hcost < sp3.hcost) && sp1.hcost > sp2.hcost) { // min(sp2, sp3) = sp2, sp1 > min : swap(sp1, sp2)
-	      sp1.qpos = pos2;
-	      sp2.qpos = pos1;
-	      std::iter_swap(it1, it2);
-	    return pos2;
-	  }
-	  if(sp3.hcost < sp2.hcost && sp1.hcost > sp3.hcost) { // min(sp2, sp3) = sp3, sp1 > min : swap(sp1, sp3)
-	    sp1.qpos = pos3;
-	    sp3.qpos = pos1;
-	    std::iter_swap(it1, it3);
-	    return pos3;
-	  }
-	  return 0;
-	  }
-	else {
-	  if((pos3 == 0 || sp2.cost < sp3.cost) && sp1.cost > sp2.cost) { // min(sp2, sp3) = sp2, sp1 > min : swap(sp1, sp2)
-	    sp1.qpos = pos2;
-	    sp2.qpos = pos1;
-	    std::iter_swap(it1, it2);
-	    return pos2;
-	  }
-	  if(sp3.cost < sp2.cost && sp1.cost > sp3.cost) { // min(sp2, sp3) = sp3, sp1 > min : swap(sp1, sp3)
-	    sp1.qpos = pos3;
-	    sp3.qpos = pos1;
-	    std::iter_swap(it1, it3);
-	    return pos3;
-	  }
-	  return 0;
+	  return pos1;
 	}
-      }
       
-      template<typename REF_VERTEX, bool USE_HCOST>
-      inline void percolate_up(std::vector<REF_VERTEX>& q, unsigned int pos) {
-	do
-	  if(pos == 1) return;
-	while((pos = swap_if_higher<REF_VERTEX, USE_HCOST>(q, pos, pos / 2)) != 0);
-      }
-      
-      template<typename REF_VERTEX, bool USE_HCOST>
-      inline void percolate_down(std::vector<REF_VERTEX>& q, unsigned int pos) {
-	unsigned int son_left  = 2 * pos;
-	unsigned int son_right;
+	template<bool USE_HCOST, typename REF_VERTEX>
+	inline unsigned int swap_if_1_is_higher_than_min_2_3(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2, unsigned int pos3) {
+	  auto it1  = q.begin() + pos1;
+	  auto it2  = q.begin() + pos2;
+	  auto it3  = q.begin();
 
-	do {
-	  if(son_left = 2 * pos; son_left >= q.size()) return;
-	  if(son_right = son_left + 1; son_right >= q.size()) son_right = 0;
+	  Info* sp1_ptr = &((*(*it1))().vq3_shortest_path);
+	  Info* sp2_ptr = &((*(*it2))().vq3_shortest_path);
+	  Info* sp3_ptr = nullptr;
+
+	  if(pos3 != 0) {
+	    it3 += pos3;
+	    sp3_ptr = &((*(*it3))().vq3_shortest_path);
+	  }
+
+	  if constexpr(USE_HCOST) {
+	    if(pos3 == 0)                         // min(sp2, 0) = sp2
+	      if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
+		sp1_ptr->qpos = pos2;
+		sp2_ptr->qpos = pos1;
+		std::iter_swap(it1, it2);
+		return pos2;
+	      }
+	      else
+		return 0;                         //  else, no swap. done.
+
+	    if(sp2_ptr->hcost < sp3_ptr->hcost)   // min(sp2, sp3) = sp2
+	      if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
+		sp1_ptr->qpos = pos2;
+		sp2_ptr->qpos = pos1;
+		std::iter_swap(it1, it2);
+		return pos2;
+	      }
+	      else
+		return 0;                         //  else, no swap. done.
+
+	    // min(sp2, sp3) = sp3
+	    if(sp1_ptr->hcost > sp3_ptr->hcost) { //   if sp1 > min, we swap 1 and 3
+		sp1_ptr->qpos = pos3;
+		sp3_ptr->qpos = pos1;
+		std::iter_swap(it1, it3);
+		return pos3;
+	      }
+	      else
+		return 0;  
+	    }
+	  else {
+	    if(pos3 == 0)                         // min(sp2, 0) = sp2
+	      if(sp1_ptr->cost > sp2_ptr->cost) { //   if sp1 > min, we swap 1 and 2
+		sp1_ptr->qpos = pos2;
+		sp2_ptr->qpos = pos1;
+		std::iter_swap(it1, it2);
+		return pos2;
+	      }
+	      else
+		return 0;                         //  else, no swap. done.
+
+	    if(sp2_ptr->cost < sp3_ptr->cost)   // min(sp2, sp3) = sp2
+	      if(sp1_ptr->cost > sp2_ptr->cost) { //   if sp1 > min, we swap 1 and 2
+		sp1_ptr->qpos = pos2;
+		sp2_ptr->qpos = pos1;
+		std::iter_swap(it1, it2);
+		return pos2;
+	      }
+	      else
+		return 0;                         //  else, no swap. done.
+
+	    // min(sp2, sp3) = sp3
+	    if(sp1_ptr->cost > sp3_ptr->cost) { //   if sp1 > min, we swap 1 and 3
+		sp1_ptr->qpos = pos3;
+		sp3_ptr->qpos = pos1;
+		std::iter_swap(it1, it3);
+		return pos3;
+	      }
+	      else
+		return 0;  
+	  }
 	}
-	while((pos = swap_if_1_higher_than_min_1_2(q, pos, son_left, son_right)) != 0);
+      
+	template<bool USE_HCOST, typename REF_VERTEX>
+	inline void percolate_up(std::vector<REF_VERTEX>& q, unsigned int pos) {
+	  do
+	    if(pos == 1) return;
+	  while((pos = swap_if_1_is_higher<USE_HCOST, REF_VERTEX>(q, pos / 2, pos)) != 0);
+	}
+      
+	template<bool USE_HCOST, typename REF_VERTEX>
+	inline void percolate_down(std::vector<REF_VERTEX>& q, unsigned int pos) {
+	  unsigned int son_left  = 2 * pos;
+	  unsigned int son_right;
+
+	  do {
+	    if(son_left = 2 * pos; son_left >= q.size()) return;
+	    if(son_right = son_left + 1; son_right >= q.size()) son_right = 0;
+	  }
+	  while((pos = swap_if_1_is_higher_than_min_2_3<USE_HCOST>(q, pos, son_left, son_right)) != 0);
+	}
       }
       
       template<typename REF_VERTEX>
@@ -335,20 +376,33 @@ namespace vq3 {
 	q.clear();
 	q.push_back(nullptr);
       }
+      
+      template<typename REF_VERTEX>
+      inline bool is_empty(std::vector<REF_VERTEX>& q) {
+	return q.size() == 1;
+      }
 
-      template<typename REF_VERTEX, bool USE_HCOST>
-      inline void insert(std::vector<REF_VERTEX> q, const REF_VERTEX& ref_v) {
+      template<bool USE_HCOST, typename REF_VERTEX>
+      inline void push(std::vector<REF_VERTEX>& q, const REF_VERTEX& ref_v) {
 	q.push_back(ref_v);
-	percolate_up<REF_VERTEX, USE_HCOST>(q, q.size() - 1);
+	(*ref_v)().vq3_shortest_path.qpos = q.size() - 1;
+	internal::percolate_up<USE_HCOST, REF_VERTEX>(q, q.size() - 1);
       }
       
-      template<typename REF_VERTEX, bool USE_HCOST>
-      inline REF_VERTEX& pop(std::vector<REF_VERTEX> q) {
-	auto res = *(q.begin() + 1);
-	std::swap(q.begin() + 1, q.end() - 1);
+      template<bool USE_HCOST, typename REF_VERTEX>
+      inline REF_VERTEX pop(std::vector<REF_VERTEX>& q) {
+	auto top  = q.begin() + 1;
+	auto last = q.end()   - 1;
+	auto res  = *top;
+	*top = *last;
 	q.pop_back();
-	percolate_down(q, 1);
-	return val;
+	internal::percolate_down<USE_HCOST, REF_VERTEX>(q, 1);
+	return res;
+      }
+      
+      template<bool USE_HCOST, typename REF_VERTEX>
+      inline void notify_decrease(std::vector<REF_VERTEX>& q, unsigned int pos) {
+	internal::percolate_up<USE_HCOST, REF_VERTEX>(q, pos);
       }
     }
 
