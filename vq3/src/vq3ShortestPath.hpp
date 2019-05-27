@@ -422,48 +422,38 @@ namespace vq3 {
      */
     template<bool VERTEX_EFFICIENCY, bool EDGE_EFFICIENCY, typename GRAPH, typename EDGE_COST>
     void dijkstra(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest, const EDGE_COST& edge_cost) {
-      // Init
-      g.foreach_vertex([](typename GRAPH::ref_vertex ref_v){(*ref_v)().vq3_shortest_path.raz();});
 
-      auto accum_comp = [](const typename GRAPH::ref_vertex& ref_v1,
-			   const typename GRAPH::ref_vertex& ref_v2) {return (*ref_v1)().vq3_shortest_path.cost < (*ref_v2)().vq3_shortest_path.cost;};
-      std::multiset<typename GRAPH::ref_vertex, decltype(accum_comp)> q(accum_comp);
+      
+      // Init
+      priority_queue::make_empty(g.heap);
+      g.foreach_vertex([](typename GRAPH::ref_vertex ref_v){(*ref_v)().vq3_shortest_path.raz();});
 
       if constexpr(VERTEX_EFFICIENCY) {
 	  if((*dest)().vq3_efficient) {
 	    (*dest)().vq3_shortest_path.set(0);
-	    q.insert(dest);
+	    priority_queue::push<false>(g.heap, dest);
 	  }
 	  else
 	    return;
 	}
       else {
 	(*dest)().vq3_shortest_path.set(0);
-	q.insert(dest);
+	priority_queue::push<false>(g.heap, dest);
       }
 
       unsigned int nb = 0; // HFB
       std::set<typename GRAPH::ref_vertex> visited; // HFB
-      while(!q.empty()) {
+      while(!priority_queue::is_empty(g.heap)) {
 	++nb; // HFB
-	// HFB
-	std::cout << "Q :" << std::endl;
-	for(auto& elem : q)
-	  std::cout << ' ' << (*elem)().vq3_value << (*elem)().vq3_shortest_path;
-	std::cout << std::endl;
-
-
 	
-	auto curr = *(q.begin());
+	auto curr = priority_queue::pop<false>(g.heap);
 	auto& curr_path_info = (*curr)().vq3_shortest_path;
 	curr_path_info.ended();
 	if(curr == start) break;
-	
-	q.erase(q.begin());
 
 	std::cout << "Pop " << (*curr)().vq3_value << " : " <<  curr_path_info << std::endl; // HFB
 	
-	curr->foreach_edge([curr, &edge_cost, &q, &curr_path_info, &visited /* HFB */](typename GRAPH::ref_edge ref_e) {
+	curr->foreach_edge([curr, &g, &edge_cost, &curr_path_info, &visited /* HFB */](typename GRAPH::ref_edge ref_e) {
 	    auto extr_pair = ref_e->extremities();           
 	    if(vq3::invalid_extremities(extr_pair)) {
 	      std::cout << "Invalid found !" << std::endl; // HFB
@@ -496,17 +486,16 @@ namespace vq3 {
 	    case status::unprocessed :
 	      other_path_info.set(cost + curr_path_info.cost, ref_e);
 	      std::cout << "Inserting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
-	      q.insert(other);
+	      priority_queue::push<false>(g.heap, other);
 	      break;
 	    case status::processing :
 	      std::cout << "Comparing " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
 	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
 		
 		std::cout << "Reranking " << (*other)().vq3_value << std::endl; // HFB
-		q.erase(other);
 		other_path_info.set(cost_candidate, ref_e);
 		std::cout << "Inserting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
-		q.insert(other);
+		priority_queue::notify_decrease<false>(g.heap, other_path_info.qpos);
 	      }
 	      break;
 

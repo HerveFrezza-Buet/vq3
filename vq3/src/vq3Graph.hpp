@@ -307,6 +307,11 @@ namespace vq3 {
 
   public:
 
+    /**
+     * This is the support of minimal heaps for shortest path computation.
+     */
+    std::vector<ref_vertex> heap;
+
     graph_()                         = default;
     graph_(const graph_&)            = delete;
     graph_& operator=(const graph_&) = delete;
