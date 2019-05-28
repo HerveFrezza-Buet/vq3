@@ -445,22 +445,15 @@ namespace vq3 {
 	priority_queue::push<false>(g.heap, dest);
       }
 
-      unsigned int nb = 0; // HFB
-      std::set<typename GRAPH::ref_vertex> visited; // HFB
       while(!priority_queue::is_empty(g.heap)) {
-	++nb; // HFB
-	
 	auto curr = priority_queue::pop<false>(g.heap);
 	auto& curr_path_info = (*curr)().vq3_shortest_path;
 	curr_path_info.ended();
 	if(curr == start) break;
-
-	std::cout << "Pop " << (*curr)().vq3_value << " : " <<  curr_path_info << std::endl; // HFB
 	
-	curr->foreach_edge([curr, &g, &edge_cost, &curr_path_info, &visited /* HFB */](typename GRAPH::ref_edge ref_e) {
+	curr->foreach_edge([curr, &g, &edge_cost, &curr_path_info](typename GRAPH::ref_edge ref_e) {
 	    auto extr_pair = ref_e->extremities();           
 	    if(vq3::invalid_extremities(extr_pair)) {
-	      std::cout << "Invalid found !" << std::endl; // HFB
 	      ref_e->kill();
 	      return;
 	    }
@@ -474,9 +467,6 @@ namespace vq3 {
 	    auto& other           = vq3::other_extremity(extr_pair, curr);
 	    auto& other_path_info = (*other)().vq3_shortest_path;
 
-	    visited.insert(other); // HFB
-	    std::cout << "Visiting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
-
 	    if constexpr(VERTEX_EFFICIENCY) {
 		if(!(*other)().vq3_efficient) {
 		  other_path_info.ended();
@@ -489,27 +479,18 @@ namespace vq3 {
 	      break;
 	    case status::unprocessed :
 	      other_path_info.set(cost + curr_path_info.cost, ref_e);
-	      std::cout << "Inserting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
 	      priority_queue::push<false>(g.heap, other);
 	      break;
 	    case status::processing :
-	      std::cout << "Comparing " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
 	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
-		
-		std::cout << "Reranking " << (*other)().vq3_value << std::endl; // HFB
 		other_path_info.set(cost_candidate, ref_e);
-		std::cout << "Inserting " << (*other)().vq3_value << " : " <<  other_path_info << std::endl; // HFB
 		priority_queue::notify_decrease<false>(g.heap, other_path_info.qpos);
 	      }
 	      break;
-
-	    default: // HFB
-	      std::cout << "Bad status !" << std::endl;
 	      
 	    }
 	  });
       }
-      std::cout << nb << ", " << visited.size() + 1 << " =?= " << g.nb_vertices() << std::endl; // HFB
     }
 
     /**
