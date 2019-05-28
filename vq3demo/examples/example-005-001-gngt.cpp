@@ -428,7 +428,7 @@ int main(int argc, char* argv[]) {
   
   auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, slider_N);
 
-  Mode mode = Mode::Step;
+  Mode mode = Mode::Cont;
   bool compute = true;
   int wait_ms;
 

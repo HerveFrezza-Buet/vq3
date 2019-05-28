@@ -509,34 +509,35 @@ namespace vq3 {
     void a_star(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest,
 		const EDGE_COST& edge_cost,
 		const TO_START& to_start_estimation) {
+      if(start == nullptr) {
+	dijkstra<VERTEX_EFFICIENCY, EDGE_EFFICIENCY>(g, nullptr, dest, edge_cost);
+	return;
+      }
+      
       // Init
+      priority_queue::make_empty(g.heap);
       g.foreach_vertex([](typename GRAPH::ref_vertex ref_v){(*ref_v)().vq3_shortest_path.raz();});
-
-      auto accum_comp = [](const typename GRAPH::ref_vertex& ref_v1,
-			   const typename GRAPH::ref_vertex& ref_v2) {return (*ref_v1)().vq3_shortest_path.hcost < (*ref_v2)().vq3_shortest_path.hcost;};
-      std::set<typename GRAPH::ref_vertex, decltype(accum_comp)> q(accum_comp);
 
       if constexpr(VERTEX_EFFICIENCY) {
 	  if((*dest)().vq3_efficient) {
 	    (*dest)().vq3_shortest_path.set(0, to_start_estimation(dest));
-	    q.insert(dest);
+	    priority_queue::push<true>(g.heap, dest);
 	  }
 	  else
 	    return;
 	}
       else {
 	(*dest)().vq3_shortest_path.set(0, to_start_estimation(dest));
-	q.insert(dest);
+	priority_queue::push<true>(g.heap, dest);
       }
       
-      while(!q.empty()) {
-	auto curr = *(q.begin());
+      while(!priority_queue::is_empty(g.heap)) {
+	auto curr = priority_queue::pop<true>(g.heap);
 	auto& curr_path_info = (*curr)().vq3_shortest_path;
 	curr_path_info.ended();
 	if(curr == start) break;
 	
-	q.erase(q.begin());
-	curr->foreach_edge([curr, &edge_cost, &to_start_estimation, &q, &curr_path_info](typename GRAPH::ref_edge ref_e) {
+	curr->foreach_edge([curr, &edge_cost, &to_start_estimation, &g, &curr_path_info](typename GRAPH::ref_edge ref_e) {
 	    auto extr_pair = ref_e->extremities();           
 	    if(vq3::invalid_extremities(extr_pair)) {
 	      ref_e->kill();
@@ -564,13 +565,12 @@ namespace vq3 {
 	      break;
 	    case status::unprocessed :
 	      other_path_info.set(cost + curr_path_info.cost, to_start_estimation(other), ref_e);
-	      q.insert(other);
+	      priority_queue::push<true>(g.heap, other);
 	      break;
 	    case status::processing :
 	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
-		q.erase(other);
 		other_path_info.set_estimated(cost_candidate, ref_e);
-		q.insert(other);
+		priority_queue::notify_decrease<true>(g.heap, other_path_info.qpos);
 	      }
 	      break;
 	    }
