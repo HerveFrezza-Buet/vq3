@@ -17,9 +17,11 @@ int main(int argc, char* argv[]) {
   auto B = g += std::make_pair('B', vq3::demo2d::Point( .5, -.5));
   auto C = g += std::make_pair('C', vq3::demo2d::Point( .5,  .5));
 
-  g.connect(A, B);
-  g.connect(A, C);
-  g.connect(B, C);
+  auto length = [](auto a, auto b) {return vq3::demo2d::d((*a)().second, (*b)().second);};
+  
+  g.connect(A, B, length(A, B));
+  g.connect(A, C, length(A, C));
+  g.connect(B, C, length(B, C));
 
   
   auto image = cv::Mat(600, 600, CV_8UC3, cv::Scalar(255,255,255));
@@ -47,10 +49,20 @@ int main(int argc, char* argv[]) {
   								     [](const edge& e)   {return              cv::Scalar(0, 0, 0);},  // color
   								     [](const edge& e)   {return                                1;}); // thickness
   
+  auto print_edge = vq3::demo2d::opencv::edge_printer<graph::ref_edge>(image, frame,
+								       [](const vertex&, const vertex&, const edge&) {return   true;},  // always draw
+								       [](const edge& e)   {return                std::to_string(e);},  // text
+								       [](const vertex& v) {return                         v.second;},  // position
+								       [](const edge& e)   {return        cv::Scalar(255, 180, 100);},  // color
+								       [](const edge& e)   {return                                1;},  // thickness
+								       [](const edge& e)   {return          std::make_pair(10, -10);},  // text offset
+								       [](const edge& e)   {return                               .5;}); // font scale
+  
   
   // This is the drawing....
   g.foreach_edge(draw_edge);
   g.foreach_vertex(draw_vertex);
+  g.foreach_edge(print_edge);
   g.foreach_vertex(print_vertex);
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
