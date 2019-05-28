@@ -32,6 +32,7 @@
 #include <iostream>
 #include <type_traits>
 #include <optional>
+#include <string>
 
 namespace vq3 {
   namespace decorator {
@@ -170,11 +171,11 @@ namespace vq3 {
   namespace decorator {
     
     
-    /* ########## */
-    /* #        # */
+    /* ######## */
+    /* #      # */
     /* # None # */
-    /* #        # */
-    /* ########## */
+    /* #      # */
+    /* ######## */
     
     template<typename MOTHER, typename KIND> 
     struct None : public MOTHER {
@@ -394,8 +395,8 @@ namespace vq3 {
     template<typename MOTHER, typename KIND> 
     struct Efficiency : public MOTHER {
       using decorated_type = typename MOTHER::decorated_type;
-      bool vq3_efficient = false;
-      Efficiency(const decorated_type& val) : MOTHER(val), vq3_efficient(false) {}
+      bool vq3_efficient = true;
+      Efficiency(const decorated_type& val) : MOTHER(val), vq3_efficient(true) {}
       Efficiency& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
     
@@ -427,6 +428,51 @@ namespace vq3 {
     
     template<typename MOTHER>
     using efficiency = Efficiency<MOTHER, typename decoration<MOTHER>::value_type>;
+    
+    
+    /* ######## */
+    /* #      # */
+    /* # Text # */
+    /* #      # */
+    /* ######## */
+    
+    
+    template<typename MOTHER, typename KIND> 
+    struct Text : public MOTHER {
+      using decorated_type = typename MOTHER::decorated_type;
+      std::string vq3_text;
+      Text(const decorated_type& val) : MOTHER(val), vq3_text() {}
+      Text& operator=(const decorated_type& val) {this->vq3_value = val;}
+    };
+    
+    // When we decorate a non decorated value.
+    template<typename MOTHER> 
+    struct Text<MOTHER, not_decorated> {
+      using decorated_type = MOTHER;
+      MOTHER vq3_value;
+      std::string vq3_text;
+      Text(const decorated_type& val) : vq3_value(val), vq3_text() {}
+      Text& operator=(const decorated_type& val) {vq3_value = val;}
+    };
+    
+    // When we decorate a decorated type with no value.
+    template<typename MOTHER> 
+    struct Text<MOTHER, unvalued_decoration> : public MOTHER {
+      using decorated_type = MOTHER;
+      std::string vq3_text;
+      Text() : MOTHER(), vq3_text() {}
+    };
+    
+    // When we decorate void.
+    template<> 
+    struct Text<void, not_decorated> {
+      using decorated_type = void;
+      std::string vq3_text;
+      Text() : vq3_text() {}
+    };
+    
+    template<typename MOTHER>
+    using text = Text<MOTHER, typename decoration<MOTHER>::value_type>;
 
     
     /* ####### */

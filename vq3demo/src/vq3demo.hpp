@@ -52,6 +52,7 @@
    @example example-001-002-dynamic-distribution.cpp
    @example example-001-003-video-distribution.cpp
    @example example-001-004-base-samplers.cpp
+   @example example-002-000-graph-drawing.cpp
    @example example-002-001-graph-drawing.cpp
    @example example-002-002-topology.cpp
    @example example-002-003-connected.cpp

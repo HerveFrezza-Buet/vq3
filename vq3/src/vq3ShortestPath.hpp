@@ -288,7 +288,7 @@ namespace vq3 {
 	  }
 
 	  if constexpr(USE_HCOST) {
-	    if(pos3 == 0)                         // min(sp2, 0) = sp2
+	    if(pos3 == 0) {                       // min(sp2, 0) = sp2
 	      if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
 		sp1_ptr->qpos = pos2;
 		sp2_ptr->qpos = pos1;
@@ -296,9 +296,10 @@ namespace vq3 {
 		return pos2;
 	      }
 	      else
-		return 0;                         //  else, no swap. done.
+		return 0;                        //  else, no swap. done.
+	    }
 
-	    if(sp2_ptr->hcost < sp3_ptr->hcost)   // min(sp2, sp3) = sp2
+	    if(sp2_ptr->hcost < sp3_ptr->hcost) {   // min(sp2, sp3) = sp2
 	      if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
 		sp1_ptr->qpos = pos2;
 		sp2_ptr->qpos = pos1;
@@ -307,6 +308,7 @@ namespace vq3 {
 	      }
 	      else
 		return 0;                         //  else, no swap. done.
+	    }
 
 	    // min(sp2, sp3) = sp3
 	    if(sp1_ptr->hcost > sp3_ptr->hcost) { //   if sp1 > min, we swap 1 and 3
@@ -319,7 +321,7 @@ namespace vq3 {
 		return 0;  
 	    }
 	  else {
-	    if(pos3 == 0)                         // min(sp2, 0) = sp2
+	    if(pos3 == 0) {                       // min(sp2, 0) = sp2
 	      if(sp1_ptr->cost > sp2_ptr->cost) { //   if sp1 > min, we swap 1 and 2
 		sp1_ptr->qpos = pos2;
 		sp2_ptr->qpos = pos1;
@@ -327,9 +329,10 @@ namespace vq3 {
 		return pos2;
 	      }
 	      else
-		return 0;                         //  else, no swap. done.
+		return 0;                        //  else, no swap. done.
+	    }
 
-	    if(sp2_ptr->cost < sp3_ptr->cost)   // min(sp2, sp3) = sp2
+	    if(sp2_ptr->cost < sp3_ptr->cost) {   // min(sp2, sp3) = sp2
 	      if(sp1_ptr->cost > sp2_ptr->cost) { //   if sp1 > min, we swap 1 and 2
 		sp1_ptr->qpos = pos2;
 		sp2_ptr->qpos = pos1;
@@ -338,6 +341,7 @@ namespace vq3 {
 	      }
 	      else
 		return 0;                         //  else, no swap. done.
+	    }
 
 	    // min(sp2, sp3) = sp3
 	    if(sp1_ptr->cost > sp3_ptr->cost) { //   if sp1 > min, we swap 1 and 3

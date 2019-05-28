@@ -535,6 +535,76 @@ namespace vq3 {
 
 
 
+
+      template<typename REF_VERTEX>
+      class VertexPrinter {
+
+      private:
+	
+	using vertex_value_type = typename REF_VERTEX::element_type::value_type;
+	
+	mutable cv::Mat image; // a share pointer.
+	Frame frame;
+	std::function<bool (const vertex_value_type&)>                do_draw;
+	std::function<std::string (const vertex_value_type&)>         text_of;
+	std::function<demo2d::Point (const vertex_value_type&)>       point_of;
+	std::function<cv::Scalar (const vertex_value_type&)>          color_of;
+	std::function<int (const vertex_value_type&)>                 thickness_of;
+	std::function<std::pair<int, int> (const vertex_value_type&)> offset_of;
+	std::function<double (const vertex_value_type&)>              scale_of;
+	
+	
+      public:
+	
+	template<typename DO_DRAW, typename TEXT_OF, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF, typename OFFSET_OF, typename SCALE_OF>
+	VertexPrinter(cv::Mat& image,
+		      Frame frame,
+		      const DO_DRAW&       do_draw,
+		      const TEXT_OF&       text_of,
+		      const POINT_OF&      point_of,
+		      const COLOR_OF&      color_of,
+		      const THICKNESS_OF&  thickness_of,
+		      const OFFSET_OF&     offset_of,
+		      const SCALE_OF&      scale_of)
+	  : image(image),
+	    frame(frame),
+	    do_draw(do_draw),
+	    text_of(text_of),
+	    point_of(point_of),
+	    color_of(color_of),
+	    thickness_of(thickness_of),
+	    offset_of(offset_of),
+	    scale_of(scale_of) {}
+
+	VertexPrinter()                               = delete;
+	VertexPrinter(const VertexPrinter&)            = default;
+	VertexPrinter& operator=(const VertexPrinter&) = default;
+
+	void operator()(REF_VERTEX v) const {
+	  auto& o = (*v)();
+	  if(do_draw(o)) {
+	    auto pos    = frame(point_of(o));
+	    auto offset = offset_of(o);
+	    pos.x += offset.first;
+	    pos.y += offset.second;
+	    cv::putText(image, text_of(o), pos, CV_FONT_HERSHEY_DUPLEX, scale_of(o), color_of(o), thickness_of(o));
+	  }
+	}
+      };
+
+      template<typename REF_VERTEX, typename DO_DRAW, typename TEXT_OF, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF, typename OFFSET_OF, typename SCALE_OF>
+      auto vertex_printer(cv::Mat& image,
+			  Frame frame,
+			  const DO_DRAW&      do_draw,
+			  const TEXT_OF&      text_of,
+			  const POINT_OF&     point_of,
+			  const COLOR_OF&     color_of,
+			  const THICKNESS_OF& thickness_of,
+			  const OFFSET_OF&    offset_of,
+			  const SCALE_OF&     scale_of) {
+	return VertexPrinter<REF_VERTEX>(image, frame, do_draw, text_of, point_of, color_of, thickness_of, offset_of, scale_of);
+      }
+
       template<typename REF_EDGE, typename EDGE_VALUE>
       class EdgeDrawer {
 
@@ -948,8 +1018,8 @@ namespace vq3 {
 	 * This draws a gaussian function, using nb_points points.
 	 */
 	void gaussian_stddev(cv::Mat& image, const Frame& frame,
-			   double mean, double std_dev, double amplitude, unsigned nb_points,
-			   const cv::Scalar& color, int thickness, bool clip) {
+			     double mean, double std_dev, double amplitude, unsigned nb_points,
+			     const cv::Scalar& color, int thickness, bool clip) {
 	  gaussian_var(image,frame, mean, std_dev*std_dev, amplitude, nb_points, color, thickness, clip);
 	}
 	
@@ -957,8 +1027,8 @@ namespace vq3 {
 	 * This draws a gaussian function, using nb_points points.
 	 */
 	void gaussian_var(cv::Mat& image, const Frame& frame,
-			double mean, double var, double amplitude, unsigned nb_points,
-			const cv::Scalar& color, int thickness, bool clip) {
+			  double mean, double var, double amplitude, unsigned nb_points,
+			  const cv::Scalar& color, int thickness, bool clip) {
 	  std::vector<demo2d::Point> points;
 	  auto out = std::back_inserter(points);
 	  double coef  = (value_max - value_min)/nb_points;
