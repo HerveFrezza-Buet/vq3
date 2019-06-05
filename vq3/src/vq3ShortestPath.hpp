@@ -251,6 +251,12 @@ namespace vq3 {
       
 	template<bool USE_HCOST, typename REF_VERTEX>
 	inline unsigned int swap_if_1_is_higher(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2) {
+
+	  // if(pos1 == 0 || pos1 >= q.size() || pos2  >= q.size()) {
+	  //   std::cout << "Error : swap_if_1_is_higher(q(" << q.size() << "), " << pos1 << ", " << pos2 << ')' << std::endl;
+	  //   ::exit(0);
+	  // }
+	  
 	  auto it1  = q.begin() + pos1;
 	  auto it2  = q.begin() + pos2;
 	  auto& sp1 = (*(*it1))().vq3_shortest_path;
@@ -274,6 +280,11 @@ namespace vq3 {
       
 	template<bool USE_HCOST, typename REF_VERTEX>
 	inline unsigned int swap_if_1_is_higher_than_min_2_3(std::vector<REF_VERTEX>& q, unsigned int pos1, unsigned int pos2, unsigned int pos3) {
+	  // if(pos1 >= q.size() || pos2  >= q.size() || pos3  >= q.size()) {
+	  //   std::cout << "Error : swap_if_1_is_higher_than_min_2_3(q(" << q.size() << "), " << pos1 << ", " << pos2 << ", " << pos3 <<')' << std::endl;
+	  //   ::exit(0);
+	  // }
+	  
 	  auto it1  = q.begin() + pos1;
 	  auto it2  = q.begin() + pos2;
 	  auto it3  = q.begin();
@@ -388,6 +399,7 @@ namespace vq3 {
 
       template<bool USE_HCOST, typename REF_VERTEX>
       inline void push(std::vector<REF_VERTEX>& q, const REF_VERTEX& ref_v) {
+	// std::cout << "Push(q(" << q.size() << "))" << std::endl;
 	q.push_back(ref_v);
 	(*ref_v)().vq3_shortest_path.qpos = q.size() - 1;
 	internal::percolate_up<USE_HCOST, REF_VERTEX>(q, q.size() - 1);
@@ -395,10 +407,12 @@ namespace vq3 {
       
       template<bool USE_HCOST, typename REF_VERTEX>
       inline REF_VERTEX pop(std::vector<REF_VERTEX>& q) {
+	// std::cout << "Pop(q(" << q.size() << "))" << std::endl;
 	auto top  = q.begin() + 1;
 	auto last = q.end()   - 1;
 	auto res  = *top;
 	*top = *last;
+	(*(*top))().vq3_shortest_path.qpos = 1;
 	q.pop_back();
 	internal::percolate_down<USE_HCOST, REF_VERTEX>(q, 1);
 	return res;
@@ -406,6 +420,7 @@ namespace vq3 {
       
       template<bool USE_HCOST, typename REF_VERTEX>
       inline void notify_decrease(std::vector<REF_VERTEX>& q, unsigned int pos) {
+	// std::cout << "Decrease(q(" << q.size() << "), " << pos << ")" << std::endl;
 	internal::percolate_up<USE_HCOST, REF_VERTEX>(q, pos);
       }
     }
@@ -453,7 +468,7 @@ namespace vq3 {
 	
 	curr->foreach_edge([curr, &g, &edge_cost, &curr_path_info](typename GRAPH::ref_edge ref_e) {
 	    auto extr_pair = ref_e->extremities();           
-	    if(vq3::invalid_extremities(extr_pair)) {
+	    if(vq3::invalid_extremities(extr_pair)) {	    
 	      ref_e->kill();
 	      return;
 	    }
@@ -508,7 +523,8 @@ namespace vq3 {
     template<bool VERTEX_EFFICIENCY, bool EDGE_EFFICIENCY, typename GRAPH, typename EDGE_COST, typename TO_START>
     void a_star(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest,
 		const EDGE_COST& edge_cost,
-		const TO_START& to_start_estimation) {
+		const TO_START& to_start_estimation) {      
+
       if(start == nullptr) {
 	dijkstra<VERTEX_EFFICIENCY, EDGE_EFFICIENCY>(g, nullptr, dest, edge_cost);
 	return;

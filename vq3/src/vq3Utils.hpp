@@ -160,8 +160,7 @@ namespace vq3 {
       typename GRAPH::ref_vertex res = nullptr;
       double dist = std::numeric_limits<double>::max();
       g.foreach_vertex([&dist, &res, &sample, &distance](const typename GRAPH::ref_vertex& ref_v) {
-	  double d = distance((*ref_v)(), sample);
-	  if(d < dist) {
+	  if(double d = distance((*ref_v)(), sample); d < dist) {
 	    dist = d;
 	    res  = ref_v;
 	  }

@@ -13,7 +13,7 @@ namespace vq3 {
 	  auto& w = (*(table(info.index)))().vq3_value;
 	  w += (alpha*info.value)*(xi-w);
 	}
-
+	
 	return ref_v;
       }
     }
