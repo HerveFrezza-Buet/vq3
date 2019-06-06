@@ -30,6 +30,7 @@
 #include <vq3Component.hpp>
 #include <vq3Decorator.hpp>
 #include <vq3Epoch.hpp>
+#include <vq3GIT.hpp>
 #include <vq3Graph.hpp>
 #include <vq3GNGT.hpp>
 #include <vq3LBG.hpp>
