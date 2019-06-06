@@ -72,4 +72,5 @@
    @example example-006-002-speed.cpp
    @example example-006-003-speed.cpp
    @example example-007-001-git-path.cpp
+   @example example-007-002-git-tsp-som1D.cpp
 */
