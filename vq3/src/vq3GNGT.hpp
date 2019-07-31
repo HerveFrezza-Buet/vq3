@@ -73,10 +73,11 @@ namespace vq3 {
 
 	  // GNG-T calls this method when it considers to perform a
 	  // modification of the number of vertices.
-	  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
-	  bool operator()(TABLE&                 topology,
-			  const BMU_RESULT&      neighboring_bmu_epoch_result,
-			  const CLONE_PROTOTYPE& clone_prototype) {
+	  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE, typename FCT_ERROR_OF_ACCUM>
+	  bool operator()(TABLE&                    topology,
+			  const BMU_RESULT&         neighboring_bmu_epoch_result,
+			  const CLONE_PROTOTYPE&    clone_prototype,
+			  const FCT_ERROR_OF_ACCUM& error_of_accum) {
 	    double topology_changed = false;
 
 	    above.clear();
@@ -94,7 +95,7 @@ namespace vq3 {
 	    std::size_t vertex_idx = 0;
 	    for(auto& res : neighboring_bmu_epoch_result) {
 	      if(res.vq3_bmu_accum.nb != 0) { // We consider only the vertices which have been a bmu at least once.
-		double error  = res.vq3_bmu_accum.average();
+		double error  = error_of_accum(res.vq3_bmu_accum);
 		if(error > above_bound)      *(above_out++) = {vertex_idx, error};
 		else if(error < below_bound) *(below_out++) = {vertex_idx, error};
 	      }
@@ -203,18 +204,21 @@ namespace vq3 {
 	 * @param narrow_som_key The neighborhood key for computing batch WTA.
 	 * @param avg_key The neighborhood key for computing the average.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
+	 * @param use_average Tells wether we make a spatial average of the distortions.
 	 */
-	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename DISTANCE>
+	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename BMU_DISTANCE, typename STATS_DISTANCE>
 	void process(unsigned int nb_threads,
 		     const ITER& begin, const ITER& end,
 		     const SAMPLE_OF& sample_of,
 		     const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
 		     const CLONE_PROTOTYPE& clone_prototype,
-		     const DISTANCE& distance,
+		     const BMU_DISTANCE& bmu_distance,
+		     const STATS_DISTANCE& stats_distance,
 		     const typename topology_table_type::neighborhood_key_type& wide_som_key,
 		     const typename topology_table_type::neighborhood_key_type& narrow_som_key,
 		     const typename topology_table_type::neighborhood_key_type& avg_key,
-		     EVOLUTION& evolution) {
+		     EVOLUTION& evolution,
+		     bool use_average) {
  	  if(begin == end) {
 	    // No samples. We kill all nodes and keep the two topological tables updated.
 	    table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
@@ -229,7 +233,7 @@ namespace vq3 {
 	    // topological tables updated, and do one wta pass.
 	    table.g += sample_of(*begin);
 	    table.update_full();
-	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
 	    return;
 	  }
 	  
@@ -242,7 +246,7 @@ namespace vq3 {
 	  while(nb_remaining_samples != 0) {
 	    auto to_do = std::min(std::distance(sample_it, end), nb_remaining_samples);
 	    auto sample_end = sample_it + to_do;
-	    while(sample_it != sample_end) vq3::online::wtm::learn(table, wide_som_key, distance, sample_of(*(sample_it++)), alpha);
+	    while(sample_it != sample_end) vq3::online::wtm::learn(table, wide_som_key, bmu_distance, sample_of(*(sample_it++)), alpha);
 	    nb_remaining_samples -= to_do;
 	    if(sample_it == end) sample_it = begin;
 	  }
@@ -253,57 +257,45 @@ namespace vq3 {
 	  // others. We have to make things right to that target can
 	  // be measurered. To do so, we perform batch wtm.
 	  for(unsigned int i = 0; i < nb_wta_1; ++i)
-	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
 	  
-	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, 
-							[&distance](auto& a, auto& b){return std::sqrt(distance(a,b));});
+	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, stats_distance);
 	  std::vector<epoch_bmu> avg_bmu_results(bmu_results.size());
 
-	  
-	  typename topology_table_type::index_type idx = 0;
-	  for(auto& data : avg_bmu_results) {
-	    data.vq3_bmu_accum.clear();
-	    auto& neighborhood = table.neighborhood(idx++, avg_key);
-	    for(auto& info : neighborhood) 
-	      if(auto& acc = bmu_results[info.index].vq3_bmu_accum; acc.nb > 0)
-		data.vq3_bmu_accum += acc.value;
+	  if(use_average) {
+	    typename topology_table_type::index_type idx = 0;
+	    for(auto& data : avg_bmu_results) {
+	      data.vq3_bmu_accum.clear();
+	      auto& neighborhood = table.neighborhood(idx++, avg_key);
+	      for(auto& info : neighborhood) 
+		if(auto& acc = bmu_results[info.index].vq3_bmu_accum; acc.nb > 0)
+		  data.vq3_bmu_accum += acc.value;
+	    }
 	  }
-
-	  // DEBUG INFO
-	  // std::cout << std::endl;
-	  // std::cout << "Y1 = [";
-	  // for(auto& data : bmu_results)
-	  //   std::cout << ',' << data.vq3_bmu_accum.value;
-	  // std::cout << ']' << std::endl;
-	  // std::cout << "Y2 = [";
-	  // for(auto& data : avg_bmu_results)
-	  //   std::cout << ',' << data.vq3_bmu_accum.average();
-	  // std::cout << ']' << std::endl;
-	  // std::cout << "N = [";
-	  // for(auto& data : bmu_results)
-	  //   std::cout << ',' << data.vq3_bmu_accum.nb;
-	  // std::cout << ']' << std::endl;
-	  // std::cout << std::endl;
-	  
-
-	  
+ 
 	  // We call the user evolution method
-	  if(evolution(table, avg_bmu_results, clone_prototype))
-	    table.update_full();
+	  if(use_average) {
+	    if(evolution(table, avg_bmu_results, clone_prototype, [](auto& accum){return accum.average();}))
+	      table.update_full();
+	  }
+	  else {
+	    if(evolution(table, bmu_results, clone_prototype, [](auto& accum){return accum.value;}))
+	      table.update_full();
+	  }
 
 	  
 	  // We adjust the vertices position with a single batch update (newly created nodes).
 	  for(unsigned int i = 0; i < nb_wta_2; ++i)
-	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
 
 	  
 	  // We update the edges thanks to Competitive Hebbian learning.
-	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance, edge())) 
+	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance, edge())) 
 	    table.update_full();
 
 	  //  We update more once the edges are created.
 	  for(unsigned int i = 0; i < nb_wta_3; ++i)
-	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
 	  
 	}
 	

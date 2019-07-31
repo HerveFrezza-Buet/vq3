@@ -31,12 +31,12 @@
 // GUI sliders
 
 #define INIT_SLIDER_N               5000
-#define INIT_SLIDER_T                150
+#define INIT_SLIDER_T                500
 #define INIT_SLIDER_DENSITY           25
-#define INIT_SLIDER_MARGIN_ABOVE      35
+#define INIT_SLIDER_MARGIN_ABOVE      20
 #define INIT_SLIDER_MARGIN_BELOW      20
-#define INIT_SLIDER_AVERAGE_RADIUS     8
-#define INIT_SLIDER_EVOLUTION_RATIO   30
+#define INIT_SLIDER_AVERAGE_RADIUS     5
+#define INIT_SLIDER_EVOLUTION_RATIO   15
 #define INIT_SLIDER_NB_WTA_1           5
 #define INIT_SLIDER_NB_WTA_2           2
 #define INIT_SLIDER_NB_WTA_3           0
@@ -167,10 +167,11 @@ struct Evolution {
 
   // GNG-T calls this method when it considers to perform a
   // modification of the number of vertices.
-  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE>
-  bool operator()(TABLE&                 topology,
-		  const BMU_RESULT&      neighboring_bmu_epoch_result,
-		  const CLONE_PROTOTYPE& clone_prototype) {
+  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE, typename FCT_ERROR_OF_ACCUM>
+  bool operator()(TABLE&                    topology,
+		  const BMU_RESULT&         neighboring_bmu_epoch_result,
+		  const CLONE_PROTOTYPE&    clone_prototype,
+		  const FCT_ERROR_OF_ACCUM& error_of_accum) {
     double topology_changed = false;
 
     above.clear();
@@ -194,7 +195,7 @@ struct Evolution {
     std::size_t vertex_idx = 0;
     for(auto& res : neighboring_bmu_epoch_result) {
       if(res.vq3_bmu_accum.nb != 0) { // We consider only the vertices which have been a bmu at least once.
-	double error  = res.vq3_bmu_accum.average();
+	double error  = error_of_accum(res.vq3_bmu_accum);
 	auto& color = (*(topology(vertex_idx)))().vq3_color; // This is a reference to the vertex color.
 	*(hout++) = error;
 	if(error > above_bound) {
@@ -489,13 +490,15 @@ int main(int argc, char* argv[]) {
 
       // We compute the topology evolution of the graph...
       gngt.process(nb_threads,
-		   S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
-		   [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
-		   [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
-		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
-		   dist,                      
-		   "wide som", "narrow som", "avg",                                                // Neighborhood keys.
-		   evolution);
+		   S.begin(), S.end(),                                                   // The sample set. Shuffle if the dataser is not sampled randomly.
+		   [](const sample& s) {return s;},                                      // get sample from *iter (identity here).
+		   [](vertex& v) -> prototype& {return v.vq3_value;},                    // get a prototype reference from the vertex value.
+		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},  // get a point close to a prototype.
+		   dist,                                                                 // The squared distance, faster, used for bmu-related stuff.
+		   [](const auto& a, const auto& b) {return std::sqrt(dist(a,b));},      // The distance, slower, but more stable for distortion stats.
+		   "wide som", "narrow som", "avg",                                      // Neighborhood keys.
+		   evolution,
+		   true);                                                                // We do spatial averaging.
 
       // Display
     
