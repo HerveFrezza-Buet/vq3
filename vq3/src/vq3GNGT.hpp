@@ -30,6 +30,7 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <cmath>
 
 #include <vq3Graph.hpp>
 #include <vq3Epoch.hpp>
@@ -253,9 +254,9 @@ namespace vq3 {
 	  // be measurered. To do so, we perform batch wtm.
 	  for(unsigned int i = 0; i < nb_wta_1; ++i)
 	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, distance);
-
 	  
-	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, distance);
+	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, 
+							[&distance](auto& a, auto& b){return std::sqrt(distance(a,b));});
 	  std::vector<epoch_bmu> avg_bmu_results(bmu_results.size());
 
 	  
