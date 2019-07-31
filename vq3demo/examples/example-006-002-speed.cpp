@@ -7,9 +7,9 @@
 #define D_ANGLE (360./ANGLE_PERIOD)
 #define SPEED_TO_METER .5
 
-#define EVOLUTION_MARGIN_ABOVE        .35
-#define EVOLUTION_MARGIN_BELOW        .20
-#define EVOLUTION_TOPOLOGICAL_RATIO   .30
+#define EVOLUTION_MARGIN_ABOVE        .20
+#define EVOLUTION_MARGIN_BELOW        .30
+#define EVOLUTION_TOPOLOGICAL_RATIO   .15
 
 #define GNGT_ALPHA                    .05
 #define GNGT_NB_SAMPLES_PER_PROTOTYPE  10
@@ -21,11 +21,11 @@
 #define SOM_H_RADIUS                  5.1
 #define SOM_MAX_DIST                  (unsigned int)(SOM_H_RADIUS)
 #define NARROW_SOM_COEF               .02
-#define AVERAGE_RADIUS                8
+#define AVERAGE_RADIUS                5
 
 #define FIXED_FRAME_DELAY             .03
 
-#define N_SLIDER_INIT  600
+#define N_SLIDER_INIT  300
 #define T_SLIDER_INIT  500
 #define Z_SLIDER_INIT 2000
 
@@ -235,21 +235,23 @@ int main(int argc, char* argv[]) {
 
 
     double e = T_slider/1000.0;
-    double expo_min = -5;
-    double expo_max = -1;
+    double expo_min = -2;
+    double expo_max =  0;
     
     evolution.density    = N_slider;
     evolution.T          = std::pow(10, expo_min*(1-e) + expo_max*e);
 
     // We compute the topology evolution of the graph...
     gngt.process(nb_threads,
-		 S.begin(), S.end(),                                                             // The sample set. Shuffle if the dataser is not sampled randomly.
-		 [](const sample& s) {return s;},                                                // get sample from *iter (identity here).
-		 [](vertex& v) -> prototype& {return v.vq3_value;},                              // get a prototype reference from the vertex value.
-		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},            // get a point close to a prototype.
-		 dist,                      
-		 "wide som", "narrow som", "avg",                                                // Neighborhood keys.
-		 evolution);
+		 S.begin(), S.end(),                                                    // The sample set. Shuffle if the dataser is not sampled randomly.
+		 [](const sample& s) {return s;},                                       // get sample from *iter (identity here).
+		 [](vertex& v) -> prototype& {return v.vq3_value;},                     // get a prototype reference from the vertex value.
+		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},   // get a point close to a prototype.
+		 dist, // The squared distance, faster, used for bmu-related stuff.
+		 [](const auto& a, const auto& b) {return std::sqrt(dist(a, b));},      // The distance, slower, but more stable for distortion stats.
+		 "wide som", "narrow som", "avg",                                       // Neighborhood keys.
+		 evolution,
+		 true);
     
     // Temporal update
     g.foreach_vertex([](graph::ref_vertex ref_v) {
