@@ -330,7 +330,9 @@ for(sample : current_epoch) {
   // with that vertex.
   auto [min_dist, ref_min_v] = closest(sample);
   min_data = epoch_data_associated_with(ref_min_v);
-  min_data.notify_closest(sample, min_dist);
+  vertex_content = (*ref_vv)();
+  prototype      = prototype_of(vertex_content);
+  min_data.notify_closest(prototype, sample, min_dist);
 
   // In the winner-take-all case, the data associated with
   // the current vertex is the only one to be updated. We notify
@@ -524,7 +526,7 @@ for(epoch_data& data : epoch_result) {
 
   @endcode
 
-  @section algo Amgorithms
+  @section algo Algorithms
 
   The algorithms provided by vq3 are based on the "processor"
   paradigm. They are illustrated in the documentation of the vq3demo

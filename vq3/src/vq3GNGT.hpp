@@ -160,7 +160,7 @@ namespace vq3 {
 	using sample_type    = SAMPLE;
       
 	
-	using epoch_bmu = vq3::epoch::data::bmu<vq3::epoch::data::none<sample_type, vertex, prototype_type> >;
+	using epoch_bmu = vq3::epoch::data::bmu<vq3::epoch::data::none<sample_type, vertex, prototype_type>, vq3::epoch::data::bmu_sqrt_dist_accum<prototype_type, sample_type>>;
 	using epoch_wta = vq3::epoch::data::wta<vq3::epoch::data::none<sample_type, vertex, prototype_type> >;
 	using epoch_wtm = vq3::epoch::data::wtm<vq3::epoch::data::none<sample_type, vertex, prototype_type> >;
 	       
@@ -199,21 +199,20 @@ namespace vq3 {
 	 * @param sample_of The samples are obtained from sample_of(*it).
 	 * @param ref_prototype_of_vertex Returns a reference to the prototype from the vertex value.
 	 * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
-	 * @param distance Compares the vertex value to a sample.
+	 * @param bmu_distance Compares the vertex value to a sample.
 	 * @param wide_som_key The neighborhood key for computing online SOM-like computation before evolution.
 	 * @param narrow_som_key The neighborhood key for computing batch WTA.
 	 * @param avg_key The neighborhood key for computing the average.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 * @param use_average Tells wether we make a spatial average of the distortions.
 	 */
-	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename BMU_DISTANCE, typename STATS_DISTANCE>
+	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename BMU_DISTANCE>
 	void process(unsigned int nb_threads,
 		     const ITER& begin, const ITER& end,
 		     const SAMPLE_OF& sample_of,
 		     const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
 		     const CLONE_PROTOTYPE& clone_prototype,
 		     const BMU_DISTANCE& bmu_distance,
-		     const STATS_DISTANCE& stats_distance,
 		     const typename topology_table_type::neighborhood_key_type& wide_som_key,
 		     const typename topology_table_type::neighborhood_key_type& narrow_som_key,
 		     const typename topology_table_type::neighborhood_key_type& avg_key,
@@ -259,7 +258,7 @@ namespace vq3 {
 	  for(unsigned int i = 0; i < nb_wta_1; ++i)
 	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
 	  
-	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, stats_distance);
+	  bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
 	  std::vector<epoch_bmu> avg_bmu_results(bmu_results.size());
 
 	  if(use_average) {

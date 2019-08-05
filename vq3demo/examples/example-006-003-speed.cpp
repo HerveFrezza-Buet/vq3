@@ -237,8 +237,7 @@ int main(int argc, char* argv[]) {
 		 [](const sample& s) {return s;},                                       // get sample from *iter (identity here).
 		 [](vertex& v) -> prototype& {return v.vq3_value;},                     // get a prototype reference from the vertex value.
 		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},   // get a point close to a prototype.
-		 dist, // The squared distance, faster, used for bmu-related stuff.
-		 [](const auto& a, const auto& b) {return std::sqrt(dist(a, b));},      // The distance, slower, but more stable for distortion stats.
+		 dist,                                                                  // The squared distance, faster, used for bmu-related stuff.
 		 "wide som", "narrow som", "avg",                                       // Neighborhood keys.
 		 evolution,
 		 true);

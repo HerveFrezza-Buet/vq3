@@ -35,6 +35,7 @@
 #include <map>
 #include <utility>
 #include <iterator>
+#include <cmath>
 
 #include <vq3Topology.hpp>
 #include <vq3Utils.hpp>
@@ -57,10 +58,11 @@ namespace vq3 {
 
       /**
        * This notifies that the prototype handled by the vertex is the closest.
+       * @param prototype The prototype value.
        * @param sample The current sample that is submitted.
        * @param closest_distance The distance from the vertex prototype and the sample (which is the cmallest among all vertices in the graph).
        */
-      void notify_closest(const sample_type& sample, double closest_distance);
+      void notify_closest(const prototype_type& prototype, const sample_type& sample, double closest_distance);
 
       /**
        * This notifies that the prototype should be updated.
@@ -123,7 +125,7 @@ namespace vq3 {
 	
 	none() = default;
 
-	void  notify_closest    (const sample_type&, double) {}
+	void  notify_closest    (const prototype_type&, const sample_type&, double) {}
 	//!< nop. 
 	
 	void  notify_wtm_update (const sample_type&, double) {}
@@ -155,8 +157,8 @@ namespace vq3 {
 	
 	wta() = default;
 	
-	void notify_closest(const sample_type& sample, double dist) {
-	  this->MOTHER::notify_closest(sample, dist);
+	void notify_closest(const prototype_type& prototype, const sample_type& sample, double dist) {
+	  this->MOTHER::notify_closest(prototype, sample, dist);
 	}
 	//!< nop. 
 	
@@ -205,8 +207,8 @@ namespace vq3 {
 	
 	wtm() = default;
 	
-	void notify_closest(const sample_type& sample, double dist) {
-	  this->MOTHER::notify_closest(sample, dist);
+	void notify_closest(const prototype_type& prototype, const sample_type& sample, double dist) {
+	  this->MOTHER::notify_closest(prototype, sample, dist);
 	}
 	//!< nop. 
 	
@@ -242,11 +244,36 @@ namespace vq3 {
 	}
       };
 
+      /**
+       * The default bmu accumulation, i.e. the accumulation of distances from samples to their prototype.
+       */
+      template<typename prototype_type, typename sample_type>
+      struct bmu_dist_accum {
+	double operator()(const prototype_type&, const sample_type&, double d) {return d;}
+      };
+
+      /**
+       * The square-rooted bmu accumulation, i.e. the accumulation of sqrt(distance)-es from samples to their prototype.
+       */
+      template<typename prototype_type, typename sample_type>
+      struct bmu_sqrt_dist_accum {
+	double operator()(const prototype_type&, const sample_type&, double d) {return std::sqrt(d);}
+      };
+
+      /**
+       * Accumulated the number of samples that belongs to the prototype Voronoï region.
+       */
+      template<typename prototype_type, typename sample_type>
+      struct bmu_count_accum {
+	double operator()(const prototype_type&, const sample_type&, double d) {return 1.0;}
+      };
+
       
       /**
        * This collects the computation related to the bmu (best matching unit).
+       * @param FCT_ACCUM is a functor, such as accum += FCT_ACCUM()(prototype, sample, dist).
        */ 
-      template<typename MOTHER>
+      template<typename MOTHER, typename FCT_ACCUM>
       struct bmu : MOTHER {
 	using sample_type = typename MOTHER::sample_type;
 	using vertex_value_type = typename MOTHER::vertex_value_type;
@@ -256,11 +283,11 @@ namespace vq3 {
 
 	bmu() = default;
 
-	void notify_closest(const sample_type& sample, double dist) {
-	  this->MOTHER::notify_closest(sample, dist);
-	  vq3_bmu_accum += dist;
+	void notify_closest(const prototype_type& prototype, const sample_type& sample, double dist) {
+	  this->MOTHER::notify_closest(prototype, sample, dist);
+	  vq3_bmu_accum += FCT_ACCUM()(prototype, sample, dist);
 	}
-	//!< acum += distance;
+	//!< acum += fct_accum(prototype, sample, distance);
 	
 	void notify_wtm_update(const sample_type& sample, double coef) {
 	  this->MOTHER::notify_wtm_update(sample, coef);
@@ -282,7 +309,7 @@ namespace vq3 {
 	}
 	//!< nop.
 
-	bmu<MOTHER>& operator+=(const bmu<MOTHER>& arg) {
+	bmu<MOTHER, FCT_ACCUM>& operator+=(const bmu<MOTHER, FCT_ACCUM>& arg) {
 	  this->MOTHER::operator+=(arg);
 	  vq3_bmu_accum += arg.vq3_bmu_accum;
 	  return *this;
@@ -306,8 +333,8 @@ namespace vq3 {
 	
 	delta() = default;
 	
-	void notify_closest(const sample_type& sample, double dist) {
-	  this->MOTHER::notify_closest(sample, dist);
+	void notify_closest(const prototype_type& prototype, const sample_type& sample, double dist) {
+	  this->MOTHER::notify_closest(prototype, sample, dist);
 	}
 	//!< nop. 
 	
@@ -358,8 +385,8 @@ namespace vq3 {
 
 	  bmu_mean_std() = default;
 
-	  void notify_closest(const sample_type& sample, double dist) {
-	    this->MOTHER::notify_closest(sample, dist);
+	  void notify_closest(const prototype_type& prototype, const sample_type& sample, double dist) {
+	    this->MOTHER::notify_closest(prototype, sample, dist);
 	    vq3_bmu_accum += dist;
 	  }
 	  //!< acum += distance;
@@ -574,7 +601,7 @@ namespace vq3 {
 
 	  for(auto& begin_end : iters) 
 	    *(out++) = std::async(std::launch::async,
-				  [begin_end, this, &sample_of, &distance]() {
+				  [begin_end, this, &sample_of, &distance, &prototype_of]() {
 				    std::vector<EPOCH_DATA> data(table.size());
 				    for(auto it = begin_end.first; it != begin_end.second; ++it) {
 				      double min_dist;
@@ -582,7 +609,7 @@ namespace vq3 {
 				      auto        closest = utils::closest(table.g, sample, distance, min_dist);
 				      if(closest != nullptr) {
 					auto&             d = data[table(closest)];
-					d.notify_closest(sample, min_dist);
+					d.notify_closest(prototype_of((*closest)()), sample, min_dist);
 					d.notify_wta_update(sample);
 				      }
 				    }
@@ -664,7 +691,7 @@ namespace vq3 {
 
 	  for(auto& begin_end : iters) 
 	    *(out++) = std::async(std::launch::async,
-				  [begin_end, this, &sample_of, &distance, size = table.size(), &neighborhood_key]() {
+				  [begin_end, this, &sample_of, &distance, size = table.size(), &neighborhood_key, &prototype_of]() {
 				    std::vector<EPOCH_DATA> data(size);
 				    for(auto it = begin_end.first; it != begin_end.second; ++it) {
 				      double min_dist;
@@ -672,7 +699,7 @@ namespace vq3 {
 				      auto        closest = utils::closest(table.g, sample, distance, min_dist);
 				      if(closest != nullptr) {
 					auto&  neighborhood = table.neighborhood(closest, neighborhood_key);
-					data[neighborhood.begin()->index].notify_closest(sample, min_dist);
+					data[neighborhood.begin()->index].notify_closest(prototype_of((*closest)()), sample, min_dist);
 					for(auto& info : neighborhood) data[info.index].notify_wtm_update(sample, info.value);
 				      }
 				    }

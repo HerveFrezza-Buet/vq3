@@ -41,7 +41,9 @@ double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(
 
 using epoch_data_0 = vq3::epoch::data::none<sample, vertex, prototype>; // This is the root of the stack.
 using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;               // This gathers computation for batch winner-take-most.
-using epoch_data_2 = vq3::epoch::data::bmu<epoch_data_1>;               // This gathers computation for the BMU.
+using epoch_data_2 = vq3::epoch::data::bmu<epoch_data_1,
+					   vq3::epoch::data::bmu_sqrt_dist_accum<prototype,
+										 sample>>;  // This gathers computation for the BMU (sum of d1(sample, proto))
 using epoch_data   = epoch_data_2;
 
 int main(int argc, char* argv[]) {
