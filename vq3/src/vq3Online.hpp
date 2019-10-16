@@ -5,27 +5,39 @@
 namespace vq3 {
   namespace online {
     namespace wtm {
+      /**
+       * Applies WTM learning rule. If no vertex is closest to the prototype (it may append if the distance returns +infty), this function does nothing.
+       * @return The closest vertex (or nullptr is it doesn't exist).
+       */
       template<typename TABLE, typename SAMPLE, typename DISTANCE>
       auto learn(TABLE& table, const typename TABLE::neighborhood_key_type& topology_key, const DISTANCE& dist, const SAMPLE& xi, double alpha) {
-	auto ref_v = vq3::utils::closest(table.g, xi , [&dist](const typename TABLE::graph_type::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
-	auto& n = table.neighborhood(ref_v, topology_key);
-	for(auto& info : n) {
-	  auto& w = (*(table(info.index)))().vq3_value;
-	  w += (alpha*info.value)*(xi-w);
+	auto closest = vq3::utils::closest(table.g, xi , [&dist](const typename TABLE::graph_type::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
+	if(closest) {
+	  auto& n = table.neighborhood(closest, topology_key);
+	  for(auto& info : n) {
+	    auto& w = (*(table(info.index)))().vq3_value;
+	    w += (alpha*info.value)*(xi-w);
+	  }
 	}
 	
-	return ref_v;
+	return closest;
       }
     }
     
+    /**
+     * Applies WTM learning rule. If no vertex is closest to the prototype (it may append if the distance returns +infty), this function does nothing.
+     * @return The closest vertex (or nullptr is it doesn't exist).
+     */
     namespace wta {
       template<typename GRAPH, typename SAMPLE, typename DISTANCE>
       auto learn(GRAPH& g, const DISTANCE& dist, const SAMPLE& xi, double alpha) {
-	auto ref_v = vq3::utils::closest(g, xi , [&dist ](const typename GRAPH::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
-	auto& w = (*(ref_v))().vq3_value;
-	w += alpha*(xi-w);
+	auto closest = vq3::utils::closest(g, xi , [&dist ](const typename GRAPH::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
+	if(closest) {
+	  auto& w = (*(closest))().vq3_value;
+	  w += alpha*(xi-w);
+	}
 	
-	return ref_v;
+	return closest;
       }
     }
   }

@@ -374,7 +374,7 @@ for(ref_vv : vertices) {
 using sample       = ...;                                            // sample is the type of our samples.
 using epoch_data_0 = vq3::epoch::data::none<sample, vertex, sample>; // This is the root of the stack, the sample type vertex value type and prototype type 
                                                                      // have to be provided. Usually, sample and prototypes have the same type.
-using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0>;            // We collect the sum of the distances for each best-matching vertex.
+using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0, some_fct>;  // We collect the sum (it depends on some_fct indeed) of the distances for each best-matching vertex.
 using epoch_data   = epoch_data_1;
 ...
 some_processor p;

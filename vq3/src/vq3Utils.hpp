@@ -153,7 +153,7 @@ namespace vq3 {
      * @param sample We want the vertex closest to this sample.
      * @param distance computes the distance as distance(vertex_value, sample).
      * @param closest_distance_value returns by reference the closest distance value.
-     * @return The closest vertex reference.
+     * @return The closest vertex reference. It can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
     template<typename GRAPH, typename SAMPLE, typename DISTANCE>
     typename GRAPH::ref_vertex closest(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance, double& closest_distance_value) {
@@ -164,6 +164,7 @@ namespace vq3 {
 	    dist = d;
 	    res  = ref_v;
 	  }
+
 	});
       closest_distance_value = dist;
       return res;
@@ -174,7 +175,7 @@ namespace vq3 {
      * @param g the graph.
      * @param sample We want the vertex closest to this sample.
      * @param distance computes the distance as distance(vertex_value, sample).
-     * @return The closest vertex reference.
+     * @return The closest vertex reference. It can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
     template<typename GRAPH, typename SAMPLE, typename DISTANCE>
     typename GRAPH::ref_vertex closest(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance) {
@@ -188,7 +189,7 @@ namespace vq3 {
      * @param sample We want the vertex closest to this sample.
      * @param distance computes the distance as distance(vertex_value, sample).
      * @param closest_distance_values returns by reference the two closest distance values.
-     * @return The closest vertices references as a pair.
+     * @return The closest vertices references as a pair. They can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
     template<typename GRAPH, typename SAMPLE, typename DISTANCE>
     typename std::pair<typename GRAPH::ref_vertex, typename GRAPH::ref_vertex> two_closest(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance, std::pair<double, double>& closest_distance_values) {
@@ -218,7 +219,7 @@ namespace vq3 {
      * @param g the graph.
      * @param sample We want the vertex closest to this sample.
      * @param distance computes the distance as distance(vertex_value, sample).
-     * @return The closest vertices references as a pair.
+     * @return The closest vertices references as a pair. They can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
     template<typename GRAPH, typename SAMPLE, typename DISTANCE>
     typename std::pair<typename GRAPH::ref_vertex, typename GRAPH::ref_vertex> two_closest(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance) {

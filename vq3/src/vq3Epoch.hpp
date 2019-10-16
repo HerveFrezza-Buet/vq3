@@ -287,7 +287,7 @@ namespace vq3 {
 	  this->MOTHER::notify_closest(prototype, sample, dist);
 	  vq3_bmu_accum += FCT_ACCUM()(prototype, sample, dist);
 	}
-	//!< acum += fct_accum(prototype, sample, distance);
+	//!< FCT_ACCUM f; acum += f(prototype, sample, dist);
 	
 	void notify_wtm_update(const sample_type& sample, double coef) {
 	  this->MOTHER::notify_wtm_update(sample, coef);
@@ -507,11 +507,13 @@ namespace vq3 {
 				    data res;
 				    for(auto it = begin_end.first; it != begin_end.second; ++it) {
 				      auto two = utils::two_closest(g, sample_of(*it), distance);
-				      auto ref_e = g.get_edge(two.first, two.second);
-				      if(ref_e == nullptr)
-					res.newedges.emplace(two);
-				      else
-					res.survivors.emplace(ref_e);
+				      if(two.first && two.second) {
+					auto ref_e = g.get_edge(two.first, two.second);
+					if(ref_e == nullptr)
+					  res.newedges.emplace(two);
+					else
+					  res.survivors.emplace(ref_e);
+				      }
 				    }
 				    return res;
 				  });
@@ -607,7 +609,7 @@ namespace vq3 {
 				      double min_dist;
 				      const auto&  sample = sample_of(*it);
 				      auto        closest = utils::closest(table.g, sample, distance, min_dist);
-				      if(closest != nullptr) {
+				      if(closest) {
 					auto&             d = data[table(closest)];
 					d.notify_closest(prototype_of((*closest)()), sample, min_dist);
 					d.notify_wta_update(sample);
@@ -697,7 +699,7 @@ namespace vq3 {
 				      double min_dist;
 				      const auto&  sample = sample_of(*it);
 				      auto        closest = utils::closest(table.g, sample, distance, min_dist);
-				      if(closest != nullptr) {
+				      if(closest) {
 					auto&  neighborhood = table.neighborhood(closest, neighborhood_key);
 					data[neighborhood.begin()->index].notify_closest(prototype_of((*closest)()), sample, min_dist);
 					for(auto& info : neighborhood) data[info.index].notify_wtm_update(sample, info.value);
