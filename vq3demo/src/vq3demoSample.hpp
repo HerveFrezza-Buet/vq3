@@ -131,6 +131,12 @@ namespace vq3 {
 	  return {min+p, max+p};
 	}
 
+	BBox operator-(const Point& p) const {
+	  if(empty)
+	    return BBox();
+	  return {min-p, max-p};
+	}
+
 	BBox operator*(const Point& p) const {
 	  if(empty)
 	    return BBox();
@@ -541,17 +547,17 @@ namespace vq3 {
 	return density(new Custom(bb, f));
       }
 
-      class Translate : public Density {
+      class PTranslate : public Density {
       private:
 
 	density op;
 	const demo2d::Point& t;
 	
-	Translate(const Translate&)            = delete;
-	Translate& operator=(const Translate&) = delete;
-	Translate()                            = delete;
+	PTranslate(const PTranslate&)            = delete;
+	PTranslate& operator=(const PTranslate&) = delete;
+	PTranslate()                            = delete;
 
-	Translate(density op, const demo2d::Point& translation) : op(op), t(translation) {}
+	PTranslate(density op, const demo2d::Point& translation) : op(op), t(translation) {}
 
 	friend density operator+(density op, const demo2d::Point& translation);
 	
@@ -561,9 +567,36 @@ namespace vq3 {
 	  return (*op)(p - t);
 	}
       };
-
+      
       inline density operator+(density op, const demo2d::Point& translation) {
-	return density(new Translate(op, translation));
+	return density(new PTranslate(op, translation));
+      }
+      
+      class MTranslate : public Density {
+      private:
+
+	density op;
+	const demo2d::Point& t;
+	
+	MTranslate(const MTranslate&)            = delete;
+	MTranslate& operator=(const MTranslate&) = delete;
+	MTranslate()                            = delete;
+
+	MTranslate(density op, const demo2d::Point& translation) : op(op), t(translation) {}
+
+	friend density operator+(density op, const demo2d::Point& translation);
+	friend density operator-(density op, const demo2d::Point& translation);
+	
+      public:
+	virtual BBox bbox() const override {return op->bbox() - t;}
+	virtual double operator()(const Point& p) const override {
+	  return (*op)(p + t);
+	}
+      };
+
+
+      inline density operator-(density op, const demo2d::Point& translation) {
+	return density(new MTranslate(op, translation));
       }
 
       class Scale : public Density {
