@@ -286,7 +286,7 @@ int main(int argc, char* argv[]) {
     // SOM computation (online) is the usual one, except that the
     // distance must be initialized before computing the closest
     // prototype search inside the learning function. Indeed, closest
-    // is much faster if we compute the shortes path for all the
+    // is much faster if we compute the shortest path for all the
     // nodes.
     
     auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);      
