@@ -4,6 +4,7 @@
 #include <utility>
 #include <functional>
 #include <iostream>
+#include <limits>
 
 #include <vq3Utils.hpp>
 #include <vq3ShortestPath.hpp>
@@ -39,7 +40,7 @@ namespace vq3 {
       value_type interpolate(const value_type& a, const value_type& b, double lambda) const;
 
       /**
-       * This computes the shortest path from a to b. Int is fake here, it should be graph_type::ref_vertex. It a is nullptr, all distances to b are computed at each vertex.
+       * This computes the shortest path from a to b. Int is fake here, it should be graph_type::ref_vertex. If a is nullptr, all distances to b are computed at each vertex.
        */ 
       void shortest_path(int a,  int b) const;
     };
@@ -89,7 +90,7 @@ namespace vq3 {
       }
 
       /**
-       * This is entended to be used in non executed code. Typically:
+       * This is intended to be used in non executed code. Typically:
        * @code{.cpp} using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, interpolate, shortest_path)); @endcode
        */
       template<typename VALUE,
@@ -130,7 +131,7 @@ namespace vq3 {
 	mutable double                                       dist_to_closest;
 
 	void update_closest() const {
-	  if(closest == nullptr)
+	  if(!closest)
 	    closest = vq3::utils::closest(traits.g, value,
 					  [this](const typename traits_type::graph_type::vertex_value_type& a, const typename traits_type::value_type& b) {
 					    return traits.d(a, b); 
@@ -149,7 +150,7 @@ namespace vq3 {
 	  return value;
 	}
 
-	typename traits_type::graph_type::ref_vertex closest_vertex() const {
+	auto closest_vertex() const {
 	  update_closest();
 	  return closest;
 	}
@@ -160,7 +161,7 @@ namespace vq3 {
 	};
 	
 	Value& operator=(const typename traits_type::value_type& v) {
-	  closest = nullptr;
+	  closest.reset();
 	  value = v;
 	  return *this;
 	}
@@ -201,6 +202,9 @@ namespace vq3 {
 	auto& [w, xi] = diff; 
 	
 	auto l_graph  = (*(w.closest))().vq3_shortest_path.cost;
+	if(l_graph == std::numeric_limits<double>::max())
+	  return w.value;
+	
 	auto l1       = w.dist_to_closest;
 	auto l2       = xi.dist_to_closest;
 	double l      = l1 + l_graph + l2;

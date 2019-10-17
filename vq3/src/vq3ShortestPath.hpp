@@ -29,6 +29,7 @@
 #include <set>
 #include <iterator>
 #include <optional>
+#include <limits>
 
 namespace vq3 {
   namespace path {
