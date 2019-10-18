@@ -10,8 +10,8 @@ namespace vq3 {
        * @return The closest vertex (or nullptr is it doesn't exist).
        */
       template<typename TABLE, typename SAMPLE, typename DISTANCE>
-      auto learn(TABLE& table, const typename TABLE::neighborhood_key_type& topology_key, const DISTANCE& dist, const SAMPLE& xi, double alpha) {
-	auto closest = vq3::utils::closest(table.g, xi , [&dist](const typename TABLE::graph_type::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
+      auto learn(TABLE& table, const typename TABLE::neighborhood_key_type& topology_key, const DISTANCE& distance, const SAMPLE& xi, double alpha) {
+	auto closest = vq3::utils::closest(table.g, xi, distance);
 	if(closest) {
 	  auto& n = table.neighborhood(closest, topology_key);
 	  for(auto& info : n) {
@@ -30,8 +30,8 @@ namespace vq3 {
      */
     namespace wta {
       template<typename GRAPH, typename SAMPLE, typename DISTANCE>
-      auto learn(GRAPH& g, const DISTANCE& dist, const SAMPLE& xi, double alpha) {
-	auto closest = vq3::utils::closest(g, xi , [&dist ](const typename GRAPH::vertex_type::value_type& v, const SAMPLE& p) {return dist(v.vq3_value, p);});
+      auto learn(GRAPH& g, const DISTANCE& distance, const SAMPLE& xi, double alpha) {
+	auto closest = vq3::utils::closest(g, xi, distance);
 	if(closest) {
 	  auto& w = (*(closest))().vq3_value;
 	  w += alpha*(xi-w);

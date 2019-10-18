@@ -100,20 +100,19 @@ int main(int argc, char* argv[]) {
   aux::graph g_aux; // this is the graph
   
   // We sill build it up from a density with a fancy shape.
-  double intensity   =  1;
-  double thickness   = .2;
-  double radius      = .5;
-  double hole_radius = radius - thickness;
-  auto crown = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole_radius, intensity);
+  double intensity     =  1;
+  double thickness     = .2;
+  double radius        = .5;
+  double hole_radius   = radius - thickness;
+  double break_width   = .1;
+  double break_height  = 3*thickness;
+  auto crown        = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole_radius, intensity);
+  auto middle_break = vq3::demo2d::sample::rectangle(break_width, break_height, intensity);
 
   vq3::demo2d::Point up   = {0., hole_radius + .5*thickness};
   
   // All
-  auto density = (crown + up) || (crown - up);
-
-  // This tosses a random value in the distribution.
-  
-  auto random_sample = [bbox = density->bbox(), &random_device]() {return vq3::demo2d::uniform(random_device, bbox.bottom_left(), bbox.top_right());};
+  auto density = ((crown + up) || (crown - up)) - middle_break;
   
   // Setting vertices of the support graph
   {
@@ -140,6 +139,23 @@ int main(int argc, char* argv[]) {
                 aux::edge());                                     // New edge initialization value.
     
   }
+  
+  /////
+  //
+  // Setting up the k_means
+  //
+  /////
+  
+  kmeans::graph g_kmeans;
+  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::interpolate, aux::shortest_path);
+
+  for(unsigned int i = 0; i < K; ++i)
+    g_kmeans += vq3::topology::gi::value(traits, vq3::demo2d::sample::get_one_sample(random_device, density));
+  
+  // We will need a distance for selecting the closest prototype. It
+  // is easily available from the traits instance.
+  auto kmeans_d2 = vq3::topology::gi::distance<kmeans::vertex>(traits);
+  
 
   /////
   //
@@ -177,18 +193,41 @@ int main(int argc, char* argv[]) {
   //
   /////
 
+
+  std::cout << std::endl
+	    << std::endl
+	    << "ESC           - quit." << std::endl
+	    << "return key    - restart." << std::endl
+	    << "any other key - one step." << std::endl
+	    << std::endl;
+
   int keycode = 0;
-  while(keycode != 27) {
+  while(keycode != 27 /* ESC */) {
+
+    
+
+
+
+
+
+
+
+
+
     
     image = cv::Scalar(255, 255, 255);
     
     g_aux.foreach_edge(draw_edge_aux);
     g_aux.foreach_vertex(draw_vertex_aux);
-    // g_kmeans.foreach_vertex(draw_vertex_kmeans);
+    g_kmeans.foreach_vertex(draw_vertex_kmeans);
 
     
     cv::imshow("image", image);
-    keycode = cv::waitKey(1) & 0xFF;
+    keycode = cv::waitKey(0) & 0xFF;
+    if(keycode == 10 /* return */)
+      g_kmeans.foreach_vertex([&random_device, &density](kmeans::graph::ref_vertex ref_v){
+	  (*ref_v)() = vq3::demo2d::sample::get_one_sample(random_device, density); // GIT values can be initialized from a regular value.
+	}); 
   }
 
   

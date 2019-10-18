@@ -251,7 +251,7 @@ namespace vq3 {
 	Distance()                           = delete;
 	 
 
-	void clear() {compute_paths = true;}
+	void vq3_closest_init() const {compute_paths = true;}
 	
 	double operator()(const VERTEX_VALUE& prototype, const Value<GI_TRAITS>& xi) const {
 	  if(compute_paths) {

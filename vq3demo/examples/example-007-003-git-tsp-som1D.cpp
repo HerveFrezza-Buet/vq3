@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
   // All
   auto density = shape1 || shape2 || shape3 || shape4 || shape5;
 
-  // This tosses a random value in the distribution.
+  // This tosses a random value in the distribution bounding box.
   
   auto random_sample = [bbox = density->bbox(), &random_device]() {return vq3::demo2d::uniform(random_device, bbox.bottom_left(), bbox.top_right());};
   
@@ -289,8 +289,7 @@ int main(int argc, char* argv[]) {
     // is much faster if we compute the shortest path for all the
     // nodes.
     
-    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);      
-    som_d2.clear(); // This is where the distance is initialized.
+    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
     vq3::online::wtm::learn(topology, 0, som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
 
     
