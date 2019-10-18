@@ -42,7 +42,15 @@ namespace vq3 {
       /**
        * @param alpha the averaging coefficient dt_ += alpha*(dt - dt_).
        */
-      dt_averager(double alpha) : dt(), time_point(), alpha(alpha) {}
+      dt_averager(double alpha) : dt(0), time_point(), alpha(alpha) {
+	dt.reset();
+	/* 
+	   I initialize the attribute with dt(0), and then reset it. I
+	   should have rather initialize with dt() only... I do this
+	   since the default initialization triggers a "may be used
+	   uninitialized" warning.
+	*/
+      }
       
       dt_averager()                              = default;
       dt_averager(const dt_averager&)            = default;
@@ -52,15 +60,15 @@ namespace vq3 {
        * Signals a time tick.
        */
       void tick() {
-	auto now      = std::chrono::high_resolution_clock::now();
-	if(time_point) {
-	  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(now - time_point.value()).count();
-	  if(dt)
-	    dt = dt.value() + alpha*(1e-6*duration - dt.value());
-	  else
-	    dt = 1e-6*duration;
-	}
-	time_point = now;
+      	auto now      = std::chrono::high_resolution_clock::now();
+      	if(time_point) {
+      	  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(now - time_point.value()).count();
+      	  if(dt)
+      	    dt = *dt + alpha*(1e-6*duration - *dt);
+      	  else
+      	    dt = 1e-6*duration;
+      	}
+      	time_point = now;
       }
 
       void clear() {
