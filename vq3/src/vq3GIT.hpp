@@ -150,6 +150,14 @@ namespace vq3 {
 	  return value;
 	}
 
+	/**
+	 * The value is not linked to a vertex in the auxiliary graph
+	 * anymore. The link will be made the next time it is
+	 * required. This is usefull when the auxiliary graph has
+	 * changed.
+	 */
+	auto reset() {closest = nullptr;}
+
 	auto closest_vertex() const {
 	  update_closest();
 	  return closest;
