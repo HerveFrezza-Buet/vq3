@@ -92,7 +92,7 @@ void rebuild_support_graph(aux::graph& g_aux,
 
 // Simulation parameters.
 
-#define SLIDER_INIT                500
+#define SLIDER_INIT               1000
 #define NB_SAMPLES_PER_M2_SUPPORT 1000
 #define NB_SOM_VERTICES            100 
 #define ALPHA                       .1
@@ -196,7 +196,8 @@ int main(int argc, char* argv[]) {
   
   // We will need a distance for selecting the closest prototype. It
   // is easily available from the traits instance.
-  auto som_d2 = vq3::topology::gi::distance<som::vertex>(traits);
+  auto som_d2 = vq3::topology::gi::distance<som::vertex>(traits,
+							 [](const som::vertex& vertex) -> const som::prototype& {return vertex.vq3_value;});
   
 
   /////
@@ -271,7 +272,9 @@ int main(int argc, char* argv[]) {
     }
 
     auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
-    vq3::online::wtm::learn(topology, 0, som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+    vq3::online::wtm::learn(topology, 0,
+			    [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
+			    som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
 
     
     

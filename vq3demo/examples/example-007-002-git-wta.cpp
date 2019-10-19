@@ -154,7 +154,8 @@ int main(int argc, char* argv[]) {
   
   // We will need a distance for selecting the closest prototype. It
   // is easily available from the traits instance.
-  auto kmeans_d2 = vq3::topology::gi::distance<kmeans::vertex>(traits);
+  auto kmeans_d2 = vq3::topology::gi::distance<kmeans::vertex>(traits,
+							       [](const kmeans::vertex& vertex) -> const kmeans::vertex& {return vertex;});
   
 
   /////
@@ -206,6 +207,11 @@ int main(int argc, char* argv[]) {
 
     
 
+    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
+    vq3::online::wta::learn(g_kmeans,
+			    [](kmeans::vertex& vertex_value) -> kmeans::vertex& {return vertex_value;},
+			    kmeans_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+    
 
 
 
