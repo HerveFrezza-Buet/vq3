@@ -18,8 +18,9 @@
 
 */
 
+// This contains the definition for the auxiliary graph.
 
-namespace aux { // This contains the definition for the auxiliary graph.
+namespace aux { 
   
   using sample    = vq3::demo2d::Point;
   using prototype = vq3::demo2d::Point;
@@ -71,7 +72,10 @@ namespace aux { // This contains the definition for the auxiliary graph.
   using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, interpolate, shortest_path));
 }
 
-namespace kmeans {// This namespace defines the k-means graph
+
+// This namespace defines the k-means graph
+
+namespace kmeans {
   using sample    = vq3::topology::gi::Value<aux::traits>;          // The samples' topology is dependent on the support graph.
   using prototype = sample;                                         // prototypes and samples are the same here.
   
@@ -80,9 +84,21 @@ namespace kmeans {// This namespace defines the k-means graph
   using graph     = vq3::graph<vertex, void>;
 }
 
+// Let measure the distortion thanks to epochs computation.
+
+using epoch_data_0 = vq3::epoch::data::none<kmeans::sample, kmeans::vertex, kmeans::prototype>; // This is the root of the stack.
+using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0,
+					   vq3::epoch::data::bmu_sqrt_dist_accum<kmeans::prototype,kmeans::sample>>;
+using epoch_data   = epoch_data_1;
+
+
 #define NB_SAMPLES_PER_M2_SUPPORT  1000
-#define K                            20 
+#define K                            5
 #define ALPHA                       .05
+#define CHUNK_SIZE                  100
+
+// Execution mode
+enum class Mode : char {Cont = 'c', Step = 's'};
 
 int main(int argc, char* argv[]) {
   
@@ -156,7 +172,21 @@ int main(int argc, char* argv[]) {
   // is easily available from the traits instance.
   auto kmeans_d2 = vq3::topology::gi::distance<kmeans::vertex>(traits,
 							       [](const kmeans::vertex& vertex) -> const kmeans::vertex& {return vertex;});
-  
+
+  ////
+  //
+  // Set up the distortion computation
+  //
+  ////
+
+  auto topology   = vq3::topology::table<int>(g_kmeans);
+  topology.update(); // We do not need a full update since we have no edges. Moreover, a full update wouls have required a "tag" decoration of the vertices.
+  auto distortion = vq3::epoch::wta::processor(topology); 
+
+  // This is the dataset used to measure the distortion. We use the quxiliary graph vertices positions.
+  std::vector<kmeans::sample> S;
+  auto out = std::back_inserter(S);
+  g_aux.foreach_vertex([&out, &traits](const auto& ref_v){*(out++) = vq3::topology::gi::value(traits, (*ref_v)().vq3_value);});
 
   /////
   //
@@ -194,32 +224,64 @@ int main(int argc, char* argv[]) {
   //
   /////
 
-
   std::cout << std::endl
 	    << std::endl
 	    << "ESC           - quit." << std::endl
 	    << "return key    - restart." << std::endl
-	    << "any other key - one step." << std::endl
+	    << "space         - one step." << std::endl
+	    << "c             - running mode." << std::endl
 	    << std::endl;
 
+  Mode mode = Mode::Cont;
+  bool compute = true;
+  int wait_ms;
   int keycode = 0;
   while(keycode != 27 /* ESC */) {
 
     
-
-    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
-    vq3::online::wta::learn(g_kmeans,
-			    [](kmeans::vertex& vertex_value) -> kmeans::vertex& {return vertex_value;},
-			    kmeans_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+    compute = mode != Mode::Step;
     
+    if(keycode == 32 || keycode == 10) { // space or return key pressed.
+      mode = Mode::Step;
+      compute = true;
+    }
+    else if(keycode == 99) {   // 'c' key pressed.
+      mode = Mode::Cont;
+      compute = true;
+    }
+    
+    wait_ms = 500;
+    if(compute) {
+      wait_ms = 1;
 
+      if(keycode == 10) // return key was pressed, we reset the prototypes
+	g_kmeans.foreach_vertex([&random_device, &density](kmeans::graph::ref_vertex ref_v){
+	    (*ref_v)() = vq3::demo2d::sample::get_one_sample(random_device, density); // GIT values can be initialized from a regular value.
+	  });
+      else // We compute the usual k-mean update.
+	for(unsigned int i = 0; i < CHUNK_SIZE; ++i) {
+	  auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
+	  vq3::online::wta::learn(g_kmeans,
+				  [](kmeans::vertex& vertex_value) -> kmeans::vertex& {return vertex_value;},
+				  kmeans_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+	}
 
-
-
-
-
-
-
+      // Let us measure the distortion. Indeed, we collect for each
+      // k-mean vertex the average distance with the closest
+      // sample. Then, we average this for all vertices.
+      
+      auto epoch_results = distortion.process<epoch_data>(1, // A single thread is mandatory here since GIT is not thread safe.
+							  S.begin(), S.end(),
+							  [](const kmeans::sample& s) -> const kmeans::sample& {return s;},           // Retrieves the sample from *it
+							  [](kmeans::vertex& vertex_value) -> kmeans::vertex& {return vertex_value;}, // Retrieves the prototype from the vertex value.
+							  kmeans_d2);
+      double average = 0;
+      for(auto& data : epoch_results)
+	average += data.vq3_bmu_accum.average();
+      average /= epoch_results.size();
+      std::cout << "average per vertex distirtion : " << std::endl;
+      
+    }
     
     image = cv::Scalar(255, 255, 255);
     
@@ -229,11 +291,7 @@ int main(int argc, char* argv[]) {
 
     
     cv::imshow("image", image);
-    keycode = cv::waitKey(0) & 0xFF;
-    if(keycode == 10 /* return */)
-      g_kmeans.foreach_vertex([&random_device, &density](kmeans::graph::ref_vertex ref_v){
-	  (*ref_v)() = vq3::demo2d::sample::get_one_sample(random_device, density); // GIT values can be initialized from a regular value.
-	}); 
+    keycode = cv::waitKey(wait_ms) & 0xFF;
   }
 
   
