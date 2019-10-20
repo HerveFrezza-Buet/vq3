@@ -245,7 +245,12 @@ namespace vq3 {
 	  while(nb_remaining_samples != 0) {
 	    auto to_do = std::min(std::distance(sample_it, end), nb_remaining_samples);
 	    auto sample_end = sample_it + to_do;
-	    while(sample_it != sample_end) vq3::online::wtm::learn(table, wide_som_key, bmu_distance, sample_of(*(sample_it++)), alpha);
+	    while(sample_it != sample_end) vq3::online::wtm::learn(table,
+								   wide_som_key,
+								   ref_prototype_of_vertex,
+								   bmu_distance,
+								   sample_of(*(sample_it++)),
+								   alpha);
 	    nb_remaining_samples -= to_do;
 	    if(sample_it == end) sample_it = begin;
 	  }
