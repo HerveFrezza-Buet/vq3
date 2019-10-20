@@ -150,12 +150,19 @@ int main(int argc, char* argv[]) {
     if(wtm_mode)
       for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
 	bmu = vq3::online::wtm::learn(topology, 0, // 0 is our neighbourhood key.
-				      d2, *(sample_it++), ALPHA);
+				      [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;},
+				      d2,
+				      *(sample_it++),
+				      ALPHA);
 	if(sample_it == S.end()) sample_it=S.begin();
       }
     else
       for(unsigned int i=0; i < NB_SAMPLES_PER_FRAME; ++i) {
-	bmu = vq3::online::wta::learn(g, d2, *(sample_it++), ALPHA);
+	bmu = vq3::online::wta::learn(g, 
+				      [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;},
+				      d2,
+				      *(sample_it++),
+				      ALPHA);
 	if(sample_it == S.end()) sample_it=S.begin();
       }
 

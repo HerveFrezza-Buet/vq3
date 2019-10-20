@@ -145,13 +145,28 @@ namespace vq3 {
 	  else
 	    *(out++) = ref_e;});
     }
- 
+
+    /**
+     * SFINAE stuff for internal use.
+     */
+    template<typename PROCESS, typename = void>
+    struct execute_vq3_closest_init_if_available {
+      void operator()(const PROCESS& d) const {} 
+    };
+
+    /**
+     * SFINAE stuff for internal use.
+     */
+    template<typename PROCESS> 
+    struct execute_vq3_closest_init_if_available<PROCESS, decltype(std::declval<PROCESS>().vq3_closest_init())> {
+      void operator()(const PROCESS& d) const {d.vq3_closest_init();}
+    };
 
     /**
      * Finds the closest vertex.
      * @param g the graph.
      * @param sample We want the vertex closest to this sample.
-     * @param distance computes the distance as distance(vertex_value, sample).
+     * @param distance computes the distance as distance(vertex_value, sample). If distance.vq3_closest_init() exists, it is called before considering the vertices.
      * @param closest_distance_value returns by reference the closest distance value.
      * @return The closest vertex reference. It can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
@@ -159,6 +174,7 @@ namespace vq3 {
     typename GRAPH::ref_vertex closest(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance, double& closest_distance_value) {
       typename GRAPH::ref_vertex res = nullptr;
       double dist = std::numeric_limits<double>::max();
+      execute_vq3_closest_init_if_available<DISTANCE>()(distance);
       g.foreach_vertex([&dist, &res, &sample, &distance](const typename GRAPH::ref_vertex& ref_v) {
 	  if(double d = distance((*ref_v)(), sample); d < dist) {
 	    dist = d;
@@ -174,7 +190,7 @@ namespace vq3 {
      * Finds the closest vertex.
      * @param g the graph.
      * @param sample We want the vertex closest to this sample.
-     * @param distance computes the distance as distance(vertex_value, sample).
+     * @param distance computes the distance as distance(vertex_value, sample). If distance.vq3_closest_init() exists, it is called before considering the vertices.
      * @return The closest vertex reference. It can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
     template<typename GRAPH, typename SAMPLE, typename DISTANCE>
@@ -188,7 +204,7 @@ namespace vq3 {
      * @param g the graph.
      * @param sample We want the vertex closest to this sample.
      * @param distance computes the distance as distance(vertex_value, sample).
-     * @param closest_distance_values returns by reference the two closest distance values.
+     * @param closest_distance_values returns by reference the two closest distance values. If distance.vq3_closest_init() exists, it is called before considering the vertices.
      * @return The closest vertices references as a pair. They can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
     template<typename GRAPH, typename SAMPLE, typename DISTANCE>
@@ -196,6 +212,7 @@ namespace vq3 {
       std::pair<typename GRAPH::ref_vertex, typename GRAPH::ref_vertex> res = {nullptr, nullptr};
       double dist1 = std::numeric_limits<double>::max();
       double dist2 = std::numeric_limits<double>::max();
+      execute_vq3_closest_init_if_available<DISTANCE>()(distance);
       g.foreach_vertex([&dist1, &dist2, &res, &sample, &distance](const typename GRAPH::ref_vertex& ref_v) {
 	  double d = distance((*ref_v)(), sample);
 	  if(d < dist1) {
@@ -218,7 +235,7 @@ namespace vq3 {
      * Finds the two closest vertices.
      * @param g the graph.
      * @param sample We want the vertex closest to this sample.
-     * @param distance computes the distance as distance(vertex_value, sample).
+     * @param distance computes the distance as distance(vertex_value, sample). If distance.vq3_closest_init() exists, it is called before considering the vertices.
      * @return The closest vertices references as a pair. They can be nullptr if the graph is empty or if all distances to the sample are +infty.
      */
     template<typename GRAPH, typename SAMPLE, typename DISTANCE>

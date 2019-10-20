@@ -85,9 +85,14 @@ namespace som { // This namespace defines the SOM graph
 }
 
 
+void rebuild_support_graph(aux::graph& g_aux,
+			   std::mt19937& random_device,
+			   vq3::demo2d::sample::density& density,
+			   unsigned int nb_threads);
+
 // Simulation parameters.
 
-#define SLIDER_INIT                500
+#define SLIDER_INIT               1000
 #define NB_SAMPLES_PER_M2_SUPPORT 1000
 #define NB_SOM_VERTICES            100 
 #define ALPHA                       .1
@@ -110,8 +115,6 @@ int main(int argc, char* argv[]) {
   aux::graph g_aux; // this is the graph
 
   // We sill build it up from a density with a fancy shape.
-
-  
 
   // wire shapes thickness
   double thickness = .1;
@@ -148,42 +151,21 @@ int main(int argc, char* argv[]) {
   vq3::demo2d::Point min5 = {-fig_pos, up_bar - thickness*.5};
   vq3::demo2d::Point max5 = { fig_pos, up_bar + thickness*.5};
   auto shape5             = vq3::demo2d::sample::rectangle(min5, max5, i5);
+
+  // Bridge
+
+  
+  double i6             =  1;
+  double w6             =  .4;
+  double h6             =  thickness;
+  auto shape6           = vq3::demo2d::sample::rectangle(w6, h6, i6);
+  
   
   // All
-  auto density = shape1 || shape2 || shape3 || shape4 || shape5;
+  auto density = shape1 || shape2 || shape3 || shape4 || shape5 || shape6;
 
-  // This tosses a random value in the distribution.
-  
-  auto random_sample = [bbox = density->bbox(), &random_device]() {return vq3::demo2d::uniform(random_device, bbox.bottom_left(), bbox.top_right());};
-  
-  // Setting vertices of the support graph
-  {
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
-    auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
-    for(auto pt : S)       g_aux += pt;
-
-  }
-  
-  // Setting edges of the support graph with CHL.
-  {
-    std::vector<vq3::demo2d::Point> S;
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, 5*NB_SAMPLES_PER_M2_SUPPORT);
-    auto S_                = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
-    auto out               = std::back_inserter(S);
-    std::copy(S_.begin(), S_.end(), out);
-    
-    auto chl = vq3::epoch::chl::processor(g_aux);
-    chl.process(nb_threads,
-                S.begin(), S.end(),
-                [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                [](const aux::vertex& v) {return v.vq3_value;},   // Gets the prototype from the vertex value.
-                aux::d2,                                          // d2(prototype, sample).
-                aux::edge());                                     // New edge initialization value.
-    
-  }
-
-
-  
+  // See the code below.
+  rebuild_support_graph(g_aux, random_device, density, nb_threads);  
 
   /////
   //
@@ -195,6 +177,10 @@ int main(int argc, char* argv[]) {
 
   auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::interpolate, aux::shortest_path);
 
+  // This tosses a random value in the distribution bounding box.
+  
+  auto random_sample = [bbox = density->bbox(), &random_device]() {return vq3::demo2d::uniform(random_device, bbox.bottom_left(), bbox.top_right());};
+  
   // We build up a ring of random graph-induced values.
   auto prev  = g_som += vq3::topology::gi::value(traits, random_sample());
   auto curr  = prev;
@@ -210,7 +196,8 @@ int main(int argc, char* argv[]) {
   
   // We will need a distance for selecting the closest prototype. It
   // is easily available from the traits instance.
-  auto som_d2 = vq3::topology::gi::distance<som::vertex>(traits);
+  auto som_d2 = vq3::topology::gi::distance<som::vertex>(traits,
+							 [](const som::vertex& vertex) -> const som::prototype& {return vertex.vq3_value;});
   
 
   /////
@@ -266,6 +253,7 @@ int main(int argc, char* argv[]) {
             << "##################" << std::endl
             << std::endl
             << "Press ESC to quit." << std::endl
+            << "Press space to toggle the bridge." << std::endl
             << std::endl
             << "##################" << std::endl
             << std::endl;
@@ -283,15 +271,10 @@ int main(int argc, char* argv[]) {
       old_slider = slider;
     }
 
-    // SOM computation (online) is the usual one, except that the
-    // distance must be initialized before computing the closest
-    // prototype search inside the learning function. Indeed, closest
-    // is much faster if we compute the shortest path for all the
-    // nodes.
-    
-    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);      
-    som_d2.clear(); // This is where the distance is initialized.
-    vq3::online::wtm::learn(topology, 0, som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
+    vq3::online::wtm::learn(topology, 0,
+			    [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
+			    som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
 
     
     
@@ -306,9 +289,50 @@ int main(int argc, char* argv[]) {
     
     cv::imshow("image", image);
     keycode = cv::waitKey(1) & 0xFF;
+    if(keycode == 32) {
+      i6 = 1 - i6;
+      rebuild_support_graph(g_aux, random_device, density, nb_threads);
+      // The auxiliary graph has changed. We need to reset all the GIT
+      // values that we handle. Indeed, they are the g_som vertices.
+      g_som.foreach_vertex([](auto& ref_v){(*ref_v)().vq3_value.reset();});
+    }
   }
 
   
   return 0;
 }
 
+
+void rebuild_support_graph(aux::graph& g_aux,
+			   std::mt19937& random_device,
+			   vq3::demo2d::sample::density& density,
+			   unsigned int nb_threads) {
+  
+  g_aux.foreach_vertex([](auto ref_v){ref_v->kill();});
+  
+  // Setting vertices of the support graph
+  {
+    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
+    auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    for(auto pt : S)       g_aux += pt;
+
+  }
+  
+  // Setting edges of the support graph with CHL.
+  {
+    std::vector<vq3::demo2d::Point> S;
+    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, 5*NB_SAMPLES_PER_M2_SUPPORT);
+    auto S_                = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    auto out               = std::back_inserter(S);
+    std::copy(S_.begin(), S_.end(), out);
+    
+    auto chl = vq3::epoch::chl::processor(g_aux);
+    chl.process(nb_threads,
+                S.begin(), S.end(),
+                [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
+                [](const aux::vertex& v) {return v.vq3_value;},   // Gets the prototype from the vertex value.
+                aux::d2,                                          // d2(prototype, sample).
+                aux::edge());                                     // New edge initialization value.
+    
+  }
+}

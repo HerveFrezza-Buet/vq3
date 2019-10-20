@@ -150,6 +150,14 @@ namespace vq3 {
 	  return value;
 	}
 
+	/**
+	 * The value is not linked to a vertex in the auxiliary graph
+	 * anymore. The link will be made the next time it is
+	 * required. This is usefull when the auxiliary graph has
+	 * changed.
+	 */
+	auto reset() {closest = nullptr;}
+
 	auto closest_vertex() const {
 	  update_closest();
 	  return closest;
@@ -237,38 +245,43 @@ namespace vq3 {
 	return w.traits.interpolate((*(xi.closest))().vq3_value, xi.value, lambda);
       }
 
-      template<typename VERTEX_VALUE, typename GI_TRAITS>
+      template<typename VERTEX_VALUE,
+	       typename GI_TRAITS>
       class Distance {
 
 	mutable bool compute_paths = true;
 	GI_TRAITS& traits;
+	std::function<const Value<GI_TRAITS>& (const VERTEX_VALUE&)> prototype_of;
 
       public:
 
-	Distance(GI_TRAITS& traits) : compute_paths(true), traits(traits) {}
+	template<typename PROTOTYPE_OF_VERTEX_VALUE>
+	Distance(GI_TRAITS& traits, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of)
+	  : compute_paths(true), traits(traits), prototype_of(prototype_of) {}
 	Distance(const Distance&)            = default;
 	Distance& operator=(const Distance&) = delete;
 	Distance()                           = delete;
 	 
 
-	void clear() {compute_paths = true;}
+	void vq3_closest_init() const {compute_paths = true;}
 	
-	double operator()(const VERTEX_VALUE& prototype, const Value<GI_TRAITS>& xi) const {
+	double operator()(const VERTEX_VALUE& vertex_value, const Value<GI_TRAITS>& xi) const {
 	  if(compute_paths) {
 	    compute_paths = false;
 	    traits.shortest_path(nullptr, xi.closest_vertex());
 	  }
 
-	  return prototype.vq3_value.distance_to_closest_vertex()
+	  auto& proto = prototype_of(vertex_value);
+	  return proto.distance_to_closest_vertex()
 	    +    xi.distance_to_closest_vertex()
-	    +    (*(prototype.vq3_value.closest_vertex()))().vq3_shortest_path.cost;
+	    +    (*(proto.closest_vertex()))().vq3_shortest_path.cost;
 	}
       };
 
       
-      template<typename VERTEX_VALUE, typename GI_TRAITS>
-      Distance<VERTEX_VALUE, GI_TRAITS> distance(GI_TRAITS& traits) {
-	return Distance<VERTEX_VALUE, GI_TRAITS>(traits);
+      template<typename VERTEX_VALUE, typename GI_TRAITS, typename PROTOTYPE_OF_VERTEX_VALUE>
+      Distance<VERTEX_VALUE, GI_TRAITS> distance(GI_TRAITS& traits, const PROTOTYPE_OF_VERTEX_VALUE& prototype_of) {
+	return Distance<VERTEX_VALUE, GI_TRAITS>(traits, prototype_of);
       }
     }
   }
