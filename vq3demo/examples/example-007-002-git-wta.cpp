@@ -28,7 +28,8 @@ namespace aux {
   //                                                         ## Node properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
   using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
-  using vertex   = vlayer_1;
+  using vlayer_2 = vq3::demo::decorator::colored<vlayer_1>;  // We add a color to the vertices.
+  using vertex   = vlayer_2;
   
   //                                                        ## Node properties :
   using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
@@ -76,12 +77,14 @@ namespace aux {
 // This namespace defines the k-means graph
 
 namespace kmeans {
-  using sample    = vq3::topology::gi::Value<aux::traits>;          // The samples' topology is dependent on the support graph.
-  using prototype = sample;                                         // prototypes and samples are the same here.
+  using sample    = vq3::topology::gi::Value<aux::traits>;   // The samples' topology is dependent on the support graph.
+  using prototype = sample;                                  // prototypes and samples are the same here.
   
-  //                                                                ## Node properties :
-  using vertex    = prototype;                                      // here, the vertex handles nothing more than a prototype.
-  using graph     = vq3::graph<vertex, void>;
+  //                                                         ## Node properties :
+  using vlayer_0 = prototype;                                // prototypes are 2D points sensitive to the auxiliary graph topology.
+  using vlayer_1 = vq3::demo::decorator::colored<vlayer_0>;  // We add a color to the vertices.
+  using vertex   = vlayer_1;
+  using graph    = vq3::graph<vertex, void>;
 }
 
 // Let measure the distortion thanks to epochs computation.
@@ -93,8 +96,8 @@ using epoch_data   = epoch_data_1;
 
 
 #define NB_SAMPLES_PER_M2_SUPPORT  1000
-#define K                            5
-#define ALPHA                       .05
+#define K                            10
+#define ALPHA                       .10
 #define CHUNK_SIZE                  100
 
 // Execution mode
@@ -134,8 +137,11 @@ int main(int argc, char* argv[]) {
   {
     auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
     auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
-    for(auto pt : S)       g_aux += pt;
-
+    for(auto pt : S) {
+      auto ref_v = g_aux += pt;
+      (*ref_v)().vq3_color = cv::Scalar(180, 180, 180);
+    }
+      
   }
   
   // Setting edges of the support graph with CHL.
@@ -165,13 +171,18 @@ int main(int argc, char* argv[]) {
   kmeans::graph g_kmeans;
   auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::interpolate, aux::shortest_path);
 
-  for(unsigned int i = 0; i < K; ++i)
-    g_kmeans += vq3::topology::gi::value(traits, vq3::demo2d::sample::get_one_sample(random_device, density));
+  {
+    auto colormap = vq3::demo2d::opencv::colormap::random(random_device, .1, 50);
+    for(unsigned int i = 0; i < K; ++i) {
+      auto ref_v = g_kmeans += vq3::topology::gi::value(traits, vq3::demo2d::sample::get_one_sample(random_device, density));
+      (*ref_v)().vq3_color = colormap(i);
+    }
+  }
   
   // We will need a distance for selecting the closest prototype. It
   // is easily available from the traits instance.
   auto kmeans_d2 = vq3::topology::gi::distance<kmeans::vertex>(traits,
-							       [](const kmeans::vertex& vertex) -> const kmeans::vertex& {return vertex;});
+							       [](const kmeans::vertex& vertex) -> const kmeans::prototype& {return vertex.vq3_value;});
 
   ////
   //
@@ -199,24 +210,31 @@ int main(int argc, char* argv[]) {
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().width, true);
 
   auto draw_vertex_aux = vq3::demo2d::opencv::vertex_drawer<aux::graph::ref_vertex>(image, frame,
-  										    [](const aux::vertex& v) {return                      true;},  // always draw
-  										    [](const aux::vertex& v) {return               v.vq3_value;},  // position
-  										    [](const aux::vertex& v) {return                         3;},  // radius
-  										    [](const aux::vertex& v) {return cv::Scalar(255, 180, 180);},  // color	
-  										    [](const aux::vertex& v) {return                        -1;}); // thickness
+  										    [](const aux::vertex& v) {return        true;},  // always draw
+  										    [](const aux::vertex& v) {return v.vq3_value;},  // position
+  										    [](const aux::vertex& v) {return           3;},  // radius
+  										    [](const aux::vertex& v) {return v.vq3_color;},  // color	
+  										    [](const aux::vertex& v) {return          -1;}); // thickness
 
   auto draw_edge_aux = vq3::demo2d::opencv::edge_drawer<aux::graph::ref_edge>(image, frame,
   									      [](const aux::vertex& v1, const aux::vertex& v2, const aux::edge& e) {return true;}, // always draw
   									      [](const aux::vertex& v)  {return                                     v.vq3_value;}, // position
-  									      [](const aux::edge&   e)  {return                       cv::Scalar(255, 210, 210);}, // color
+  									      [](const aux::edge&   e)  {return                       cv::Scalar(210, 210, 210);}, // color
   									      [](const aux::edge&   e)  {return                                              1;}); // thickness
 
-  auto draw_vertex_kmeans = vq3::demo2d::opencv::vertex_drawer<kmeans::graph::ref_vertex>(image, frame,
-											  [](const kmeans::vertex& v) {return                      true;},  // always draw
-											  [](const kmeans::vertex& v) {return                       v();},  // position
-											  [](const kmeans::vertex& v) {return                         5;},  // radius
-											  [](const kmeans::vertex& v) {return cv::Scalar(  0,   0, 180);},  // color
-											  [](const kmeans::vertex& v) {return                        -1;}); // thickness
+  auto draw_vertex_kmeans_bg = vq3::demo2d::opencv::vertex_drawer<kmeans::graph::ref_vertex>(image, frame,
+  											     [](const kmeans::vertex& v) {return          true;},  // always draw
+  											     [](const kmeans::vertex& v) {return v.vq3_value();},  // position
+  											     [](const kmeans::vertex& v) {return             5;},  // radius
+  											     [](const kmeans::vertex& v) {return   v.vq3_color;},  // color
+  											     [](const kmeans::vertex& v) {return            -1;}); // thickness
+  
+  auto draw_vertex_kmeans_fg = vq3::demo2d::opencv::vertex_drawer<kmeans::graph::ref_vertex>(image, frame,
+  											     [](const kmeans::vertex& v) {return                true;},  // always draw
+  											     [](const kmeans::vertex& v) {return       v.vq3_value();},  // position
+  											     [](const kmeans::vertex& v) {return                   5;},  // radius
+  											     [](const kmeans::vertex& v) {return cv::Scalar(0, 0, 0);},  // color
+  											     [](const kmeans::vertex& v) {return                   2;}); // thickness
   
   /////
   //
@@ -232,7 +250,7 @@ int main(int argc, char* argv[]) {
 	    << "c             - running mode." << std::endl
 	    << std::endl;
 
-  Mode mode = Mode::Cont;
+  Mode mode = Mode::Step;
   bool compute = true;
   int wait_ms;
   int keycode = 0;
@@ -254,30 +272,40 @@ int main(int argc, char* argv[]) {
     if(compute) {
       wait_ms = 1;
 
-      if(keycode == 10) // return key was pressed, we reset the prototypes
-	g_kmeans.foreach_vertex([&random_device, &density](kmeans::graph::ref_vertex ref_v){
-	    (*ref_v)() = vq3::demo2d::sample::get_one_sample(random_device, density); // GIT values can be initialized from a regular value.
+      if(keycode == 10) { // return key was pressed, we reset the prototypes
+	auto colormap = vq3::demo2d::opencv::colormap::random(random_device, .1, 50);
+	unsigned int i=0;
+	g_kmeans.foreach_vertex([&random_device, &density, &colormap, &i](kmeans::graph::ref_vertex ref_v){
+	    (*ref_v)().vq3_value = vq3::demo2d::sample::get_one_sample(random_device, density); // GIT values can be initialized from a regular value.
+	    (*ref_v)().vq3_color = colormap(i++);
 	  });
+      }
       else // We compute the usual k-mean update.
 	for(unsigned int i = 0; i < CHUNK_SIZE; ++i) {
 	  auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
 	  vq3::online::wta::learn(g_kmeans,
-				  [](kmeans::vertex& vertex_value) -> kmeans::vertex& {return vertex_value;},
-				  kmeans_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+	  			  [](kmeans::vertex& vertex_value) -> kmeans::prototype& {return vertex_value.vq3_value;},
+	  			  kmeans_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
 	}
+
+      // Let us colorize the auxiliary graph according to the color of the closest vertex in the kmeans graph.
+      g_aux.foreach_vertex([&g_kmeans, &kmeans_d2, &traits](auto& ref_v) {
+	  auto closest = vq3::utils::closest(g_kmeans, vq3::topology::gi::value(traits, (*ref_v)().vq3_value), kmeans_d2);
+	  (*ref_v)().vq3_color = (*closest)().vq3_color;
+	});
 
       // Let us measure the distortion. Indeed, we collect for each
       // k-mean vertex the average distance with the closest
       // sample. Then, we average this for all vertices.
       
       auto epoch_results = distortion.process<epoch_data>(1, // A single thread is mandatory here since GIT is not thread safe.
-							  S.begin(), S.end(),
-							  [](const kmeans::sample& s) -> const kmeans::sample& {return s;},           // Retrieves the sample from *it
-							  [](kmeans::vertex& vertex_value) -> kmeans::vertex& {return vertex_value;}, // Retrieves the prototype from the vertex value.
-							  kmeans_d2);
+      							  S.begin(), S.end(),
+      							  [](const kmeans::sample& s) -> const kmeans::sample& {return s;},                        // Retrieves the sample from *it
+      							  [](kmeans::vertex& vertex_value) -> kmeans::prototype& {return vertex_value.vq3_value;}, // Retrieves the prototype from the vertex value.
+      							  kmeans_d2);
       double average = 0;
       for(auto& data : epoch_results)
-	average += data.vq3_bmu_accum.average();
+      	average += data.vq3_bmu_accum.average();
       average /= epoch_results.size();
       std::cout << "average per vertex distirtion : " << average << std::endl;
       
@@ -287,7 +315,8 @@ int main(int argc, char* argv[]) {
     
     g_aux.foreach_edge(draw_edge_aux);
     g_aux.foreach_vertex(draw_vertex_aux);
-    g_kmeans.foreach_vertex(draw_vertex_kmeans);
+    g_kmeans.foreach_vertex(draw_vertex_kmeans_bg);
+    g_kmeans.foreach_vertex(draw_vertex_kmeans_fg);
 
     
     cv::imshow("image", image);

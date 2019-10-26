@@ -210,7 +210,10 @@ namespace vq3 {
 	class random {
 	private:
 	  RANDOM_DEVICE& rd;
+	  double min_dist;
+	  unsigned int nb_retry;
 	  std::map<unsigned int, cv::Scalar> colors;
+	  
 
 	  cv::Scalar random_color() {
 	    std::array<unsigned int, 3> idx = { 0,  1, 2};
@@ -241,8 +244,48 @@ namespace vq3 {
 			      (int)(255*rgb[2]+.5));
 	  }
 
+	  double distance(const cv::Scalar& c1, const cv::Scalar& c2) {
+	    double diff = c1[0] - c2[0];
+	    double d2   = diff*diff;
+	    diff        = c1[1] - c2[1];
+	    d2         += diff*diff;
+	    diff        = c1[2] - c2[2];
+	    d2         += diff*diff;
+	    return std::sqrt(d2);
+	  }
+	  
+	  cv::Scalar random_distinct_color() {
+	    if(colors.size() == 0 || nb_retry < 1)
+	      return random_color();
+	    
+	    auto color = cv::Scalar(0, 0, 0);
+	    double d = 0;
+	    for(unsigned int t = 0; t < nb_retry && d < min_dist; ++t) {
+	      color = random_color();
+	      d = 10; // big enough
+	      for(auto& id_color : colors)
+		if(auto dd = distance(color, id_color.second); dd < d) {
+		  d = dd;
+		  if(d < min_dist)
+		    break;
+		}
+	    }
+
+	    return color;
+	  }
+
 	public:
-	  random(RANDOM_DEVICE& rd) : rd(rd) {}
+	  /**
+	     This color map chooses random colors. Each color is
+	     supposed do be very different from the others. To do so,
+	     when a new random color is needed, we try at most
+	     nb_retry times a random color, until the distance with
+	     this color and an existing one is grather that
+	     min_dist. The distance is the 3D euclidian distance, with
+	     RGB values in [0,1]^3.
+	   */
+	  random(RANDOM_DEVICE& rd, double min_dist=.01, unsigned int nb_retry=10)
+	    : rd(rd), min_dist(min_dist*255.0), nb_retry(nb_retry), colors() {}
 	  
 	  random()                         = delete;
 	  random(const random&)            = default;
@@ -254,7 +297,7 @@ namespace vq3 {
 	    auto it = colors.find(lbl);
 	    if(it != colors.end())
 	      return it->second;
-	    auto new_color = random_color();
+	    auto new_color = random_distinct_color();
 	    colors[lbl] = new_color;
 	    return new_color;
 	  }
