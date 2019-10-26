@@ -125,13 +125,21 @@ int main(int argc, char* argv[]) {
   double hole_radius   = radius - thickness;
   double break_width   = .1;
   double break_height  = 3*thickness;
+  double bar_width     = .75*thickness;
+  double bar_height    = .5;
+  double bbar_width    = .9*bar_height;
+  
   auto crown        = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole_radius, intensity);
   auto middle_break = vq3::demo2d::sample::rectangle(break_width, break_height, intensity);
+  auto bar          = vq3::demo2d::sample::rectangle(bar_width, bar_height, intensity);
+  auto bbar         = vq3::demo2d::sample::rectangle(bbar_width, bar_width, intensity);
 
-  vq3::demo2d::Point up   = {0., hole_radius + .5*thickness};
+  vq3::demo2d::Point up      = {0., hole_radius + .5*thickness};
+  vq3::demo2d::Point barpos  = {bar_width, bar_height*.5};
+  vq3::demo2d::Point bbarpos = {0, bar_height*.9};
   
   // All
-  auto density = ((crown + up) || (crown - up)) - middle_break;
+  auto density = (((crown + up) || (crown - up)) - middle_break) || (bar + barpos) || (bar - barpos)|| (bbar + bbarpos) || (bbar - bbarpos);
   
   // Setting vertices of the support graph
   {
