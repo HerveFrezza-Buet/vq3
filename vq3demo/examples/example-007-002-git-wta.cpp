@@ -97,8 +97,8 @@ using epoch_data   = epoch_data_1;
 
 #define NB_SAMPLES_PER_M2_SUPPORT  1000
 #define K                            10
-#define ALPHA                       .10
 #define CHUNK_SIZE                  100
+#define ALPHA_SLIDER_INIT           100
 
 // Execution mode
 enum class Mode : char {Cont = 'c', Step = 's'};
@@ -212,8 +212,10 @@ int main(int argc, char* argv[]) {
   // Setting up the display
   //
   /////
-  
+
+  int slider_alpha = ALPHA_SLIDER_INIT;
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::createTrackbar("1000 * alpha", "image", &slider_alpha, 500, nullptr);
   auto image = cv::Mat(600, 350, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().width, true);
 
@@ -293,7 +295,8 @@ int main(int argc, char* argv[]) {
 	  auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
 	  vq3::online::wta::learn(g_kmeans,
 	  			  [](kmeans::vertex& vertex_value) -> kmeans::prototype& {return vertex_value.vq3_value;},
-	  			  kmeans_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+	  			  kmeans_d2, vq3::topology::gi::value(traits, sample_point),
+				  slider_alpha*.001); // Our sample is a GIT value.
 	}
 
       // Let us colorize the auxiliary graph according to the color of the closest vertex in the kmeans graph.
