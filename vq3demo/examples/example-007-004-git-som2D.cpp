@@ -6,20 +6,21 @@
 #include <vq3.hpp>
 #include <vq3demo.hpp>
 
+/*
 
-/* 
-   1D SOMs are known to approximate the travelling salesman problem
-   (TSP). The effect is much more relavant when the AD som is fed with
-   values whose topology reflects the "visitable" places of the input
-   space. The visitable places are covered by a graph, which gives
-   this space its topology. This graph is the auxiliary graph for GIT
-   values. The whole SOM computes in that topological space. 
+  This examples show that processors cannot really be exploited with
+  GIT values. Indeed, each distance computation involves a A*
+  computation on the support graph. On that graph, vertices are tagged
+  during A*, so many A* instances cannot run in parallel since they
+  cannot benefit from a dedicated tagging process (tags are shared).
+
+  This example shows how to perform with such constraints.
+
 */
 
+// This contains the definition for the auxiliary graph.
 
-
-
-namespace aux { // This contains the definition for the auxiliary graph.
+namespace aux { 
   
   using sample    = vq3::demo2d::Point;
   using prototype = vq3::demo2d::Point;
@@ -27,7 +28,8 @@ namespace aux { // This contains the definition for the auxiliary graph.
   //                                                         ## Node properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
   using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
-  using vertex   = vlayer_1;
+  using vlayer_2 = vq3::demo::decorator::colored<vlayer_1>;  // We add a color to the vertices.
+  using vertex   = vlayer_2;
   
   //                                                        ## Node properties :
   using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
@@ -71,7 +73,11 @@ namespace aux { // This contains the definition for the auxiliary graph.
   using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, interpolate, shortest_path));
 }
 
-namespace som { // This namespace defines the SOM graph
+
+
+// This namespace defines the SOM graph
+
+namespace som { 
   using sample    = vq3::topology::gi::Value<aux::traits>;          // The samples' topology is dependent on the support graph.
   using prototype = sample;                                         // prototypes and samples are the same here.
   
@@ -84,18 +90,13 @@ namespace som { // This namespace defines the SOM graph
   using topology_key_type = int;
 }
 
+#define SLIDER_INIT                1000
+#define NB_SAMPLES_PER_M2_SUPPORT 20000
+#define GRID_WIDTH                   50
+#define GRID_HEIGHT                   5
+#define ALPHA                        .1
+#define CHUNK_SIZE                   20
 
-void rebuild_support_graph(aux::graph& g_aux,
-			   std::mt19937& random_device,
-			   vq3::demo2d::sample::density& density,
-			   unsigned int nb_threads);
-
-// Simulation parameters.
-
-#define SLIDER_INIT               1000
-#define NB_SAMPLES_PER_M2_SUPPORT 1000
-#define NB_SOM_VERTICES            100 
-#define ALPHA                       .1
 
 int main(int argc, char* argv[]) {
   
@@ -104,7 +105,17 @@ int main(int argc, char* argv[]) {
   
   unsigned int nb_threads = std::thread::hardware_concurrency(); // We use parallelisme for CHL here.
 
+  /////
+  //
+  // Setting up the input density
+  //
+  /////
   
+  double intensity = 1. ;
+  double radius    =  .5;
+  double hole      =  .3;
+  auto density     = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole, intensity);
+
   
   /////
   //
@@ -114,58 +125,47 @@ int main(int argc, char* argv[]) {
   
   aux::graph g_aux; // this is the graph
 
-  // We sill build it up from a density with a fancy shape.
+  
+  // Setting vertices of the support graph
+  {
+    auto sampler_triangles = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2_SUPPORT);
+    auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    for(auto pt : S)       g_aux += pt;
+  }
 
-  // wire shapes thickness
-  double thickness = .1;
-  double fig_pos   = .60;
-  double up_bar    = .70;
+  
+  // Setting edges of the support graph with CHL.
+  // (a Delaunay triangulation would have been better but it is not available in vq3)
+  {
+    std::vector<vq3::demo2d::Point> S;
+    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, 20*NB_SAMPLES_PER_M2_SUPPORT);
+    auto S_                = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    auto out               = std::back_inserter(S);
+    std::copy(S_.begin(), S_.end(), out);
     
-  // Left square
-  double i1             = 1;
-  double w1             = 1;
-  double h1             = 1;
-  vq3::demo2d::Point o1 = {-fig_pos, 0};
-  auto shape1           = vq3::demo2d::sample::rectangle(w1, h1, i1) + o1;
-    
-  // Right crown
-  double i2             =  1;
-  double r2             = .5;
-  double h2             = r2 - thickness;
-  vq3::demo2d::Point o2 = { fig_pos, 0};
-  auto shape2 = (vq3::demo2d::sample::disk(r2, i2) - vq3::demo2d::sample::disk(h2, i2)) + o2;
-  
-  // Bars
-  
-  double i3               =  1;
-  vq3::demo2d::Point min3 = {-fig_pos - thickness*.5, .5};
-  vq3::demo2d::Point max3 = {-fig_pos + thickness*.5,  up_bar + thickness*.5};
-  auto shape3             = vq3::demo2d::sample::rectangle(min3, max3, i3);
-  
-  double i4               =  1;
-  vq3::demo2d::Point min4 = {fig_pos - thickness*.5, .5};
-  vq3::demo2d::Point max4 = {fig_pos + thickness*.5,  up_bar + thickness*.5};
-  auto shape4             = vq3::demo2d::sample::rectangle(min4, max4, i4);
-  
-  double i5               =  1;
-  vq3::demo2d::Point min5 = {-fig_pos, up_bar - thickness*.5};
-  vq3::demo2d::Point max5 = { fig_pos, up_bar + thickness*.5};
-  auto shape5             = vq3::demo2d::sample::rectangle(min5, max5, i5);
+    auto chl = vq3::epoch::chl::processor(g_aux);
+    chl.process(nb_threads,
+                S.begin(), S.end(),
+                [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
+                [](const aux::vertex& v) {return v.vq3_value;},   // Gets the prototype from the vertex value.
+                aux::d2,                                          // d2(prototype, sample).
+                aux::edge());                                     // New edge initialization value.
 
-  // Bridge
+    // We remove some edges afterwards.
+    g_aux.foreach_edge([](auto& ref_e) {
+	auto extr_pair = ref_e->extremities();           
+	if(vq3::invalid_extremities(extr_pair)) {
+	  ref_e->kill();
+	  return;
+	}
+	auto& A = (*(extr_pair.first))().vq3_value;
+	auto& B = (*(extr_pair.second))().vq3_value;
+	if(A.y > 0 && B.y > 0 && (A.x * B.x < 0))
+	  ref_e->kill();
+      });
+  }
 
-  
-  double i6             =  1;
-  double w6             =  .4;
-  double h6             =  thickness;
-  auto shape6           = vq3::demo2d::sample::rectangle(w6, h6, i6);
-  
-  
-  // All
-  auto density = shape1 || shape2 || shape3 || shape4 || shape5 || shape6;
 
-  // See the code below.
-  rebuild_support_graph(g_aux, random_device, density, nb_threads);  
 
   /////
   //
@@ -181,16 +181,12 @@ int main(int argc, char* argv[]) {
   
   auto random_sample = [bbox = density->bbox(), &random_device]() {return vq3::demo2d::uniform(random_device, bbox.bottom_left(), bbox.top_right());};
   
-  // We build up a ring of random graph-induced values.
-  auto prev  = g_som += vq3::topology::gi::value(traits, random_sample());
-  auto curr  = prev;
-  auto first = prev;
-  for(unsigned int i = 1; i < NB_SOM_VERTICES; ++i, prev = curr) {
-    curr = g_som += vq3::topology::gi::value(traits, random_sample());
-    g_som.connect(prev, curr);
-  }
-  g_som.connect(prev, first);
+  vq3::utils::make_grid(g_som, GRID_WIDTH, GRID_HEIGHT,
+			[&random_sample, &traits](unsigned int w, unsigned int h) {
+			  return vq3::topology::gi::value(traits, random_sample());
+			});
 
+  
   // This is the topology for WTM computation.
   auto topology = vq3::topology::table<som::topology_key_type>(g_som);
   
@@ -198,8 +194,8 @@ int main(int argc, char* argv[]) {
   // is easily available from the traits instance.
   auto som_d2 = vq3::topology::gi::distance<som::vertex>(traits,
 							 [](const som::vertex& vertex) -> const som::prototype& {return vertex.vq3_value;});
-  
 
+  
   /////
   //
   // Setting up the display
@@ -207,24 +203,18 @@ int main(int argc, char* argv[]) {
   /////
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
-  auto image = cv::Mat(500, 1000, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .3*image.size().width, true);
+  auto image = cv::Mat(800, 800, CV_8UC3, cv::Scalar(255,255,255));
+  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().width, true);
 
   int old_slider = -1;
   int slider = SLIDER_INIT;
-  cv::createTrackbar("100 * kernel radius", "image", &slider, 5000, nullptr);
+  cv::createTrackbar("100 * kernel radius", "image", &slider, 3000, nullptr);
 
-  auto draw_vertex_aux = vq3::demo2d::opencv::vertex_drawer<aux::graph::ref_vertex>(image, frame,
-  										    [](const aux::vertex& v) {return                      true;},  // always draw
-  										    [](const aux::vertex& v) {return               v.vq3_value;},  // position
-  										    [](const aux::vertex& v) {return                         3;},  // radius
-  										    [](const aux::vertex& v) {return cv::Scalar(255, 180, 180);},  // color	
-  										    [](const aux::vertex& v) {return                        -1;}); // thickness
 
   auto draw_edge_aux = vq3::demo2d::opencv::edge_drawer<aux::graph::ref_edge>(image, frame,
   									      [](const aux::vertex& v1, const aux::vertex& v2, const aux::edge& e) {return true;}, // always draw
   									      [](const aux::vertex& v)  {return                                     v.vq3_value;}, // position
-  									      [](const aux::edge&   e)  {return                       cv::Scalar(255, 210, 210);}, // color
+  									      [](const aux::edge&   e)  {return                       cv::Scalar(210, 210, 210);}, // color
   									      [](const aux::edge&   e)  {return                                              1;}); // thickness
 
   auto draw_vertex_som = vq3::demo2d::opencv::vertex_drawer<som::graph::ref_vertex>(image, frame,
@@ -253,7 +243,7 @@ int main(int argc, char* argv[]) {
             << "##################" << std::endl
             << std::endl
             << "Press ESC to quit." << std::endl
-            << "Press space to toggle the bridge." << std::endl
+            << "Press 'return' to reset the map." << std::endl
             << std::endl
             << "##################" << std::endl
             << std::endl;
@@ -261,6 +251,9 @@ int main(int argc, char* argv[]) {
   int keycode = 0;
   while(keycode != 27) {
 
+    if(keycode == 10)
+      g_som.foreach_vertex([&random_sample](auto& ref_v){(*ref_v)().vq3_value = random_sample();});
+    
     if(slider != old_slider) {
       // We change the WTM kernel.
       topology.declare_distance(0, // This the key of the single neighborhood declared in this example.
@@ -271,17 +264,17 @@ int main(int argc, char* argv[]) {
       old_slider = slider;
     }
 
-    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
-    vq3::online::wtm::learn(topology, 0,
-			    [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
-			    som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
-
+    for(unsigned int i = 0; i < CHUNK_SIZE; ++i) {
+      auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
+      vq3::online::wtm::learn(topology, 0,
+			      [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
+			      som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+    }
     
     
     image = cv::Scalar(255, 255, 255);
     
     g_aux.foreach_edge(draw_edge_aux);
-    g_aux.foreach_vertex(draw_vertex_aux);
 
     g_som.foreach_edge(draw_edge_som);
     g_som.foreach_vertex(draw_vertex_som);
@@ -289,48 +282,8 @@ int main(int argc, char* argv[]) {
     
     cv::imshow("image", image);
     keycode = cv::waitKey(1) & 0xFF;
-    if(keycode == 32) {
-      i6 = 1 - i6;
-      rebuild_support_graph(g_aux, random_device, density, nb_threads);
-      // The auxiliary graph has changed. We need to reset all the GIT
-      // values that we handle. Indeed, they are the g_som vertices.
-      g_som.foreach_vertex([](auto& ref_v){(*ref_v)().vq3_value.reset();});
-    }
   }
 
   
   return 0;
-}
-
-
-void rebuild_support_graph(aux::graph& g_aux,
-			   std::mt19937& random_device,
-			   vq3::demo2d::sample::density& density,
-			   unsigned int nb_threads) {
-  
-  g_aux.foreach_vertex([](auto ref_v){ref_v->kill();});
-  
-  // Setting vertices of the support graph
-  {
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
-    auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
-    for(auto pt : S)       g_aux += pt;
-  }
-  
-  // Setting edges of the support graph with CHL.
-  {
-    std::vector<vq3::demo2d::Point> S;
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, 5*NB_SAMPLES_PER_M2_SUPPORT);
-    auto S_                = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
-    auto out               = std::back_inserter(S);
-    std::copy(S_.begin(), S_.end(), out);
-    
-    auto chl = vq3::epoch::chl::processor(g_aux);
-    chl.process(nb_threads,
-                S.begin(), S.end(),
-                [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                [](const aux::vertex& v) {return v.vq3_value;},   // Gets the prototype from the vertex value.
-                aux::d2,                                          // d2(prototype, sample).
-                aux::edge());                                     // New edge initialization value.
-  }
 }

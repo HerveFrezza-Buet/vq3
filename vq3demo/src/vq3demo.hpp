@@ -74,4 +74,5 @@
    @example example-007-001-git-path.cpp
    @example example-007-002-git-wta.cpp
    @example example-007-003-git-tsp-som1D.cpp
+   @example example-007-004-git-som2D.cpp
 */
