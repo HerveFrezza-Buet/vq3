@@ -92,7 +92,7 @@ namespace som {
 
 #define SLIDER_INIT                1000
 #define NB_SAMPLES_PER_M2_SUPPORT 20000
-#define GRID_WIDTH                   50
+#define GRID_WIDTH                   30
 #define GRID_HEIGHT                   5
 #define ALPHA                        .1
 #define CHUNK_SIZE                   20

@@ -93,7 +93,7 @@ void rebuild_support_graph(aux::graph& g_aux,
 // Simulation parameters.
 
 #define SLIDER_INIT               1000
-#define NB_SAMPLES_PER_M2_SUPPORT 1000
+#define NB_SAMPLES_PER_M2_SUPPORT 5000
 #define NB_SOM_VERTICES            100 
 #define ALPHA                       .1
 
@@ -207,19 +207,12 @@ int main(int argc, char* argv[]) {
   /////
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
-  auto image = cv::Mat(500, 1000, CV_8UC3, cv::Scalar(255,255,255));
+  auto image = cv::Mat(750, 1500, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .3*image.size().width, true);
 
   int old_slider = -1;
   int slider = SLIDER_INIT;
   cv::createTrackbar("100 * kernel radius", "image", &slider, 5000, nullptr);
-
-  auto draw_vertex_aux = vq3::demo2d::opencv::vertex_drawer<aux::graph::ref_vertex>(image, frame,
-  										    [](const aux::vertex& v) {return                      true;},  // always draw
-  										    [](const aux::vertex& v) {return               v.vq3_value;},  // position
-  										    [](const aux::vertex& v) {return                         3;},  // radius
-  										    [](const aux::vertex& v) {return cv::Scalar(255, 180, 180);},  // color	
-  										    [](const aux::vertex& v) {return                        -1;}); // thickness
 
   auto draw_edge_aux = vq3::demo2d::opencv::edge_drawer<aux::graph::ref_edge>(image, frame,
   									      [](const aux::vertex& v1, const aux::vertex& v2, const aux::edge& e) {return true;}, // always draw
@@ -281,7 +274,6 @@ int main(int argc, char* argv[]) {
     image = cv::Scalar(255, 255, 255);
     
     g_aux.foreach_edge(draw_edge_aux);
-    g_aux.foreach_vertex(draw_vertex_aux);
 
     g_som.foreach_edge(draw_edge_som);
     g_som.foreach_vertex(draw_vertex_som);
