@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
 
   /////
   //
-  // Setting up the SOM (1D)
+  // Setting up the SOM (2D)
   //
   /////
 
