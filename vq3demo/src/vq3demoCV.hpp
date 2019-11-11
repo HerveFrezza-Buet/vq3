@@ -356,6 +356,16 @@ namespace vq3 {
 	}
       };
 
+	/**
+	 * @param cv_center The position of the frame origin (in pixel) in the CV image.
+	 * @param cv_Ox The abscissa unity vector of the frame (in pixel size).
+	 * @param cv_Oy The ordinate unity vector of the frame (in pixel size).
+	 */
+      inline Frame frame(demo2d::Point cv_center,
+			 demo2d::Point cv_Ox,
+			 demo2d::Point cv_Oy) {
+	return Frame(cv_center, cv_Ox, cv_Oy);
+      }
 
       /**
        * @param x_unit_size The size of the horizontal unit vector in pixels.
