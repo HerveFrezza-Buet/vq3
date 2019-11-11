@@ -128,9 +128,9 @@ int main(int argc, char* argv[]) {
   
   // Setting vertices of the support graph
   {
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2_SUPPORT);
-    auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
-    for(auto pt : S)       g_aux += pt;
+    auto sampler_random = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2_SUPPORT);
+    auto S              = vq3::demo2d::sample::sample_set(random_device, sampler_random, density);
+    for(auto pt : S)    g_aux += pt;
   }
 
   
