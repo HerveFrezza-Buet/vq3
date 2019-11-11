@@ -176,14 +176,10 @@ int main(int argc, char* argv[]) {
   som::graph g_som;
 
   auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::interpolate, aux::shortest_path);
-
-  // This tosses a random value in the distribution bounding box.
-  
-  auto random_sample = [bbox = density->bbox(), &random_device]() {return vq3::demo2d::uniform(random_device, bbox.bottom_left(), bbox.top_right());};
   
   vq3::utils::make_grid(g_som, GRID_WIDTH, GRID_HEIGHT,
-			[&random_sample, &traits](unsigned int w, unsigned int h) {
-			  return vq3::topology::gi::value(traits, random_sample());
+			[&random_device, &traits, bbox = density->bbox()](unsigned int w, unsigned int h) {
+			  return vq3::topology::gi::value(traits, bbox.uniform(random_device));
 			});
 
   
@@ -252,7 +248,7 @@ int main(int argc, char* argv[]) {
   while(keycode != 27) {
 
     if(keycode == 10)
-      g_som.foreach_vertex([&random_sample](auto& ref_v){(*ref_v)().vq3_value = random_sample();});
+      g_som.foreach_vertex([&random_device, bbox=density->bbox()](auto& ref_v){(*ref_v)().vq3_value = bbox.uniform(random_device);});
     
     if(slider != old_slider) {
       // We change the WTM kernel.

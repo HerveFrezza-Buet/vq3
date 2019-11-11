@@ -178,15 +178,13 @@ int main(int argc, char* argv[]) {
   auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::interpolate, aux::shortest_path);
 
   // This tosses a random value in the distribution bounding box.
-  
-  auto random_sample = [bbox = density->bbox(), &random_device]() {return vq3::demo2d::uniform(random_device, bbox.bottom_left(), bbox.top_right());};
-  
+    
   // We build up a ring of random graph-induced values.
-  auto prev  = g_som += vq3::topology::gi::value(traits, random_sample());
+  auto prev  = g_som += vq3::topology::gi::value(traits, density->bbox().uniform(random_device));
   auto curr  = prev;
   auto first = prev;
   for(unsigned int i = 1; i < NB_SOM_VERTICES; ++i, prev = curr) {
-    curr = g_som += vq3::topology::gi::value(traits, random_sample());
+    curr = g_som += vq3::topology::gi::value(traits, density->bbox().uniform(random_device));
     g_som.connect(prev, curr);
   }
   g_som.connect(prev, first);
