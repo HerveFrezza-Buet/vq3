@@ -33,5 +33,7 @@ The documentation is in /usr/share/doc/vq3
 
 ## Find a optimal path for a surveillance patrol.
 
-<video width="100%" src="./movies/git-TSP-building.avi"  controls autobuffer/>
+<video width="100%" src="./movies/git-TSP-building.avi"  controls autobuffer>
+</video>
+
 
