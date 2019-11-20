@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
 	ref_v->foreach_edge([&edge_count](const graph::ref_edge& ref_e) {
 	    // Let us get the edge extremities
 	    auto extremity_pair = ref_e->extremities();
-	    if(invalid_extremities(extremity_pair)) {// if some extremity is a dead node.
+	    if(vq3::invalid_extremities(extremity_pair)) {// if some extremity is a dead node.
 	      ref_e->kill(); // The edge is invalid, we kill it. 
 	      return;
 	    }

@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
     unsigned int nb_edges = 0;
     g.foreach_edge([&nb_edges](graph::ref_edge& ref_e) {
 	auto extr = ref_e->extremities();
-	if(invalid_extremities(extr))
+	if(vq3::invalid_extremities(extr))
 	  ref_e->kill();
 	else
 	  ++nb_edges;

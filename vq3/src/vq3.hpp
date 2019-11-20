@@ -303,11 +303,11 @@ bool tag = ref_e->vq3_tag;
 
    In vq3, the concept of epoch is highlighted, even if many VQ
    algorithms are usually online. Indeed, for the sake of multi-thread
-   computing, it is more efficient to consider a bunch of data whose
+   computing, it is more efficient to consider a bunch of samples whose
    computation can be split to feed several threads. A computation pass on 
    this bunch is what is called an 'epoch' in vq3.
 
-   When computing an epoch, i.e. presenting a bunch of data to a
+   When computing an epoch, i.e. presenting a bunch of samples to a
    graph, the trick is to bind temporarily each node of the graph and
    a dedicated data, called an 'epoch data'. This temporary binding is
    done internally, within each thread. At the end of the parallel
@@ -322,12 +322,12 @@ bool tag = ref_e->vq3_tag;
 
    The meaning of epoch data lifecycle is summarized in this piece of <b>pseudo-code</b>.
    @code
-// This is done in parallel by splitting that loop between several threads.
+// This pseudo-code is described as a sequential code hereafter, but it is executed in parallel by splitting that loop between several threads.
 for(sample : current_epoch) {
 
   // We get the vertex that is closest to the sample, as well as the distance
-  // between the two. Then, we notify this information to the data associated 
-  // with that vertex.
+  // between the two. Then, we notify this information to the epoch data 
+  // associated with that vertex.
   auto [min_dist, ref_min_v] = closest(sample);
   min_data = epoch_data_associated_with(ref_min_v);
   vertex_content = (*ref_vv)();
