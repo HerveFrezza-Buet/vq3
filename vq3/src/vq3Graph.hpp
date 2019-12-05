@@ -32,6 +32,8 @@
 #include <list> 
 #include <utility>
 #include <atomic>
+#include <iostream>
+#include <map>
 
 
 namespace vq3 {
@@ -306,7 +308,6 @@ namespace vq3 {
     
 
   public:
-
     /**
      * This is the support of minimal heaps for shortest path computation.
      */
@@ -471,6 +472,57 @@ namespace vq3 {
       this->E.push_back(res);
       return res;
     }
+
+    /**
+     * This writes the graph into a stream. You can use the << operator as well.
+     */
+    void write(std::ostream& os) {
+      std::map<typename graph_<VERTEX_VALUE, EDGE_VALUE>::ref_vertex, unsigned int> vertex_idf;
+      unsigned int idf = 0;
+      
+      os << this->nb_vertices() << std::endl;
+      this->foreach_vertex([&idf, &vertex_idf, &os](auto& ref_v){
+	  vertex_idf[ref_v] = idf++;
+	  os << (*ref_v)() << std::endl;
+	});
+
+      os << this->nb_edges() << std::endl;
+      this->foreach_edge([&vertex_idf, &os](auto& ref_e){
+	  auto extr_pair = ref_e->extremities();
+	  os << vertex_idf[extr_pair.first] << ' ' <<  vertex_idf[extr_pair.second] << std::endl;
+	  os << (*ref_e)() << std::endl;
+	});
+    }
+     
+
+    /**
+     * This reads the graph from a stream. You can use the >> operator as well.
+     */
+    void read(std::istream& is) {
+      this->foreach_vertex([](auto ref_v){ref_v->kill();});
+      this->foreach_edge  ([](auto ref_e){ref_e->kill();});
+
+      unsigned int nb;
+      char c;
+      typename graph_<VERTEX_VALUE, EDGE_VALUE>::vertex_value_type v;
+      typename graph_<VERTEX_VALUE, EDGE_VALUE>::edge_value_type e;
+      
+      is >> nb; is.get(c);
+      std::vector<typename graph_<VERTEX_VALUE, EDGE_VALUE>::ref_vertex> vtx(nb);
+      for(auto& ref_v : vtx) {
+	is >> v; is.get(c);
+	ref_v = ((*this) += v);
+      }
+      
+      is >> nb; is.get(c);
+      for(unsigned int i=0; i < nb; ++i) {
+      	unsigned int v1, v2;
+      	is >> v1 >> v2; is.get(c);
+      	is >> e; is.get(c);
+      	this->connect(vtx[v1], vtx[v2], e);
+      }
+    }
+
   };
   
   template<typename VERTEX_VALUE>
