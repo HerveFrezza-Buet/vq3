@@ -127,13 +127,13 @@ int main(int argc, char* argv[]) {
     file << g1;
   }
   
-  {
-    std::ifstream file("tmp.gph");
-    file >> g2;
-  }
+  // {
+  //   std::ifstream file("tmp.gph");
+  //   file >> g2;
+  // }
 
   // Then, we move all the vertices of the two graphs.
-  auto shift = vq3::demo2d::Point(.5, 0);
+  auto shift = vq3::demo2d::Point(.75, 0);
   g1.foreach_vertex([s = -shift](auto ref_v){(*ref_v)().vq3_value += s;});
   g2.foreach_vertex([s =  shift](auto ref_v){(*ref_v)().vq3_value += s;});
 

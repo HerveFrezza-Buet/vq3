@@ -515,8 +515,8 @@ namespace vq3 {
 
       unsigned int nb;
       char c;
-      typename graph_<VERTEX_VALUE, EDGE_VALUE>::vertex_value_type v;
-      typename graph_<VERTEX_VALUE, EDGE_VALUE>::edge_value_type e;
+      typename graph_<VERTEX_VALUE, EDGE_VALUE>::vertex_value_type v {};
+      typename graph_<VERTEX_VALUE, EDGE_VALUE>::edge_value_type e {};
       
       is >> nb; is.get(c);
       std::vector<typename graph_<VERTEX_VALUE, EDGE_VALUE>::ref_vertex> vtx(nb);
@@ -599,8 +599,7 @@ namespace vq3 {
 
       unsigned int nb;
       char c;
-      typename graph_<VERTEX_VALUE, void>::vertex_value_type v;
-      typename graph_<VERTEX_VALUE, void>::edge_value_type e;
+      typename graph_<VERTEX_VALUE, void>::vertex_value_type v {};
       
       is >> nb; is.get(c);
       std::vector<typename graph_<VERTEX_VALUE, void>::ref_vertex> vtx(nb);

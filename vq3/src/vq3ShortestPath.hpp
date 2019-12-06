@@ -99,7 +99,7 @@ namespace vq3 {
 	state = status::done;
       }
 
-      Info() {raz();}
+      Info() : qpos(0) {raz();}
       Info(const Info&)            = default;
       Info& operator=(const Info&) = default;
     };
