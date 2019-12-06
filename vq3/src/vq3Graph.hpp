@@ -34,6 +34,7 @@
 #include <atomic>
 #include <iostream>
 #include <map>
+#include <functional>
 
 
 namespace vq3 {
@@ -439,11 +440,19 @@ namespace vq3 {
     
     
   };
-  
-  template<typename VERTEX_VALUE, typename EDGE_VALUE>
+
+   
+  template<typename VERTEX_VALUE,
+	   typename EDGE_VALUE>
   class graph : public graph_<VERTEX_VALUE, EDGE_VALUE> {
 
   public:
+
+    // I use this since I have ADL issues....
+    std::function<void (std::ostream&, const VERTEX_VALUE&)> vertex_to_stream;
+    std::function<void (std::ostream&, const EDGE_VALUE&)>   edge_to_stream;
+    std::function<void (std::istream&, VERTEX_VALUE&)>       vertex_from_stream;
+    std::function<void (std::istream&, EDGE_VALUE&)>         edge_from_stream;
 
     graph()                        = default;
     graph(const graph&)            = delete;
@@ -481,16 +490,18 @@ namespace vq3 {
       unsigned int idf = 0;
       
       os << this->nb_vertices() << std::endl;
-      this->foreach_vertex([&idf, &vertex_idf, &os](auto& ref_v){
+      this->foreach_vertex([&idf, &vertex_idf, &os, this](auto& ref_v){
 	  vertex_idf[ref_v] = idf++;
-	  os << (*ref_v)() << std::endl;
+	  vertex_to_stream(os, (*ref_v)());
+	  os << std::endl;
 	});
 
       os << this->nb_edges() << std::endl;
-      this->foreach_edge([&vertex_idf, &os](auto& ref_e){
+      this->foreach_edge([&vertex_idf, &os, this](auto& ref_e){
 	  auto extr_pair = ref_e->extremities();
 	  os << vertex_idf[extr_pair.first] << ' ' <<  vertex_idf[extr_pair.second] << std::endl;
-	  os << (*ref_e)() << std::endl;
+	  edge_to_stream(os, (*ref_e)());
+	  os << std::endl;
 	});
     }
      
@@ -510,7 +521,8 @@ namespace vq3 {
       is >> nb; is.get(c);
       std::vector<typename graph_<VERTEX_VALUE, EDGE_VALUE>::ref_vertex> vtx(nb);
       for(auto& ref_v : vtx) {
-	is >> v; is.get(c);
+	vertex_from_stream(is, (*ref_v)());
+	is.get(c);
 	ref_v = ((*this) += v);
       }
       
@@ -518,7 +530,10 @@ namespace vq3 {
       for(unsigned int i=0; i < nb; ++i) {
       	unsigned int v1, v2;
       	is >> v1 >> v2; is.get(c);
-      	is >> e; is.get(c);
+	edge_from_stream(is, e);
+      	is.get(c);
+	is.get(c);
+	
       	this->connect(vtx[v1], vtx[v2], e);
       }
     }
@@ -527,7 +542,15 @@ namespace vq3 {
   template<typename VERTEX_VALUE>
   class graph<VERTEX_VALUE, void> : public graph_<VERTEX_VALUE, void> {
 
+  private:
+
+
+    // I use this since I have ADL issues....
+    std::function<void (std::ostream&, const VERTEX_VALUE&)> vertex_to_stream;
+    std::function<void (std::istream&, VERTEX_VALUE&)>       vertex_from_stream;
+
   public:
+    
 
     graph()                        = default;
     graph(const graph&)            = delete;
@@ -553,9 +576,10 @@ namespace vq3 {
       unsigned int idf = 0;
       
       os << this->nb_vertices() << std::endl;
-      this->foreach_vertex([&idf, &vertex_idf, &os](auto& ref_v){
+      this->foreach_vertex([&idf, &vertex_idf, &os, this](auto& ref_v){
 	  vertex_idf[ref_v] = idf++;
-	  os << (*ref_v)() << std::endl;
+	  vertex_to_stream(os, (*ref_v)());
+	  os << std::endl;
 	});
 
       os << this->nb_edges() << std::endl;
@@ -581,7 +605,8 @@ namespace vq3 {
       is >> nb; is.get(c);
       std::vector<typename graph_<VERTEX_VALUE, void>::ref_vertex> vtx(nb);
       for(auto& ref_v : vtx) {
-	is >> v; is.get(c);
+	vertex_from_stream(is, v);
+	is.get(c);
 	ref_v = ((*this) += v);
       }
       
@@ -594,7 +619,7 @@ namespace vq3 {
     }
   };
 
-
+  
   template<typename VERTEX_VALUE, typename EDGE_VALUE>
   std::ostream& operator<<(std::ostream& os, graph<VERTEX_VALUE, EDGE_VALUE>& g) {
     g.write(os);

@@ -30,29 +30,6 @@ using edge     = elayer_1;
 
 using graph   = vq3::graph<vertex, edge>;
 
-// We need to specify of vertex and edge types serialization.
-
-std::ostream& operator<<(std::ostream& os, const vertex& v) {
-  os << v.vq3_value << std::endl;
-  return os;
-}
-
-std::istream& operator>>(std::istream& is, vertex& v) {
-  char c;
-  is >> v.vq3_value; is.get(c);
-  return is;
-}
-
-std::ostream& operator<<(std::ostream& os, const edge& e) {
-  os << e.vq3_value << std::endl;
-  return os;
-}
-
-std::istream& operator>>(std::istream& is, edge& e) {
-  char c;
-  is >> e.vq3_value; is.get(c);
-  return is;
-}
 
 // Distance
 //
@@ -62,6 +39,8 @@ std::istream& operator>>(std::istream& is, edge& e) {
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
 double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+
+
 
 
 // Main
@@ -105,6 +84,15 @@ int main(int argc, char* argv[]) {
 
 
   graph g1,g2;
+
+  // We need to specify the serialization functions at graph creation.
+
+  g1.vertex_to_stream = [](std::ostream& os, const vertex& v) {os << v.vq3_value << std::endl;};
+  g1.edge_to_stream   = [](std::ostream& os, const edge&   e) {os << e.vq3_value << std::endl;};
+  
+  g2.vertex_from_stream = [](std::istream& is, vertex& v) {char c; is >> v.vq3_value; is.get(c);};
+  g2.edge_from_stream   = [](std::istream& is, edge&   e) {char c; is >> e.vq3_value; is.get(c);;};
+  
 
   for(unsigned int i = 0; i < NB_VERTICES; ++i)
     g1 += vq3::demo2d::sample::get_one_sample(random_device, density);
