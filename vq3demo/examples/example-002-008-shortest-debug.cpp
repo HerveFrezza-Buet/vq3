@@ -43,14 +43,14 @@ std::istream& operator>>(std::istream& is, vertex& v) {
   return is;
 }
 
-std::ostream& operator<<(std::ostream& os, const edge& v) {
-  os << v.vq3_value << std::endl;
+std::ostream& operator<<(std::ostream& os, const edge& e) {
+  os << e.vq3_value << std::endl;
   return os;
 }
 
-std::istream& operator>>(std::istream& is, edge& v) {
+std::istream& operator>>(std::istream& is, edge& e) {
   char c;
-  is >> v.vq3_value; is.get(c);
+  is >> e.vq3_value; is.get(c);
   return is;
 }
 
@@ -61,7 +61,7 @@ std::istream& operator>>(std::istream& is, edge& v) {
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v, p);}
+double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
 
 
 // Main
@@ -131,6 +131,25 @@ int main(int argc, char* argv[]) {
 	(*ref_e)().vq3_value = vq3::demo2d::d((*v1)().vq3_value, (*v2)().vq3_value);
       });
   }
+
+  // we create g1 as a copy of g1.... we use the serialization into a
+  // file for that, which is a bit tricky.
+  {
+    std::ofstream file("tmp.gph");
+    file << g1;
+  }
+  
+  {
+    std::ifstream file("tmp.gph");
+    file >> g2;
+  }
+
+  // Then, we move all the vertices of the two graphs.
+  auto shift = vq3::demo2d::Point(.5, 0);
+  g1.foreach_vertex([s = -shift](auto ref_v){(*ref_v)().vq3_value += s;});
+  g2.foreach_vertex([s =  shift](auto ref_v){(*ref_v)().vq3_value += s;});
+
+  
   
     
   std::cout << std::endl
@@ -149,6 +168,8 @@ int main(int argc, char* argv[]) {
     image = cv::Scalar(255, 255, 255);
     g1.foreach_edge(draw_edge); 
     g1.foreach_vertex(draw_vertex);
+    g2.foreach_edge(draw_edge); 
+    g2.foreach_vertex(draw_vertex);
     cv::imshow("image", image);
     keycode = cv::waitKey(0) & 0xFF;
   }

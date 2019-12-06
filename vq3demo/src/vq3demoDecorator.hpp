@@ -44,6 +44,7 @@ namespace vq3 {
       struct Colored : public MOTHER {
 	using decorated_type = typename MOTHER::decorated_type;
 	cv::Scalar vq3_color = cv::Scalar(0, 0, 0);
+	Colored() = default;
 	Colored(const decorated_type& val) : MOTHER(val), vq3_color(cv::Scalar(0, 0, 0)) {}
 	Colored& operator=(const decorated_type& val) {this->vq3_value = val;}
       };
@@ -54,6 +55,7 @@ namespace vq3 {
 	using decorated_type = MOTHER;
 	MOTHER vq3_value;
 	cv::Scalar vq3_color = cv::Scalar(0, 0, 0);
+	Colored() = default;
 	Colored(const decorated_type& val) : vq3_value(val), vq3_color(cv::Scalar(0, 0, 0)) {}
 	Colored& operator=(const decorated_type& val) {vq3_value = val;}
       };

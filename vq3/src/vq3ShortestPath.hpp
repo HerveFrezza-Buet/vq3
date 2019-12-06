@@ -204,6 +204,7 @@ namespace vq3 {
       struct Shortest: public MOTHER {
 	using decorated_type = typename MOTHER::decorated_type;
 	vq3::path::Info vq3_shortest_path;
+	Shortest() = default;
 	Shortest(const decorated_type& val) : MOTHER(val), vq3_shortest_path() {}
 	Shortest& operator=(const decorated_type& val) {this->vq3_value = val;}
       };
@@ -214,6 +215,7 @@ namespace vq3 {
 	using decorated_type = MOTHER;
 	MOTHER vq3_value;
 	vq3::path::Info vq3_shortest_path;
+	Shortest() = default;
 	Shortest(const decorated_type& val) : vq3_value(val), vq3_shortest_path() {}
 	/** Affectation from a value has to work */
 	Shortest& operator=(const decorated_type& val) {vq3_value = val;}
