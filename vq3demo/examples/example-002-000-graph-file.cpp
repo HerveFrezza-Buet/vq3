@@ -11,6 +11,15 @@ using vertex = vq3::demo2d::Point;
 using edge   = double;
 using graph  = vq3::graph<vertex, edge>;
 
+/* 
+   Warning :
+
+   The vertex or edge type is required to permitt a serialization by <<
+   and >> operators. You may need to implement these, when values are
+   decorated for example.
+
+*/
+
 #define NB_VERTICES  20
 #define NB_EDGES     50
 #define OFFSET       .02

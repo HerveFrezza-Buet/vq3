@@ -156,7 +156,6 @@ int main(int argc, char* argv[]) {
     chl.process(nb_threads,
 		S.begin(), S.end(),
 		[](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
-		[](const vertex& v) {return v;},             // Gets the prototype from the vertex value.
 		d2,                                          // d2(prototype, sample).
 		edge());                                     // New edge initialization value.
     auto t_end = std::chrono::high_resolution_clock::now();

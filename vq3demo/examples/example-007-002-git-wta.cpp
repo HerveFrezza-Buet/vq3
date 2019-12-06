@@ -164,7 +164,6 @@ int main(int argc, char* argv[]) {
     chl.process(nb_threads,
                 S.begin(), S.end(),
                 [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                [](const aux::vertex& v) {return v.vq3_value;},   // Gets the prototype from the vertex value.
                 aux::d2,                                          // d2(prototype, sample).
                 aux::edge());                                     // New edge initialization value.
     

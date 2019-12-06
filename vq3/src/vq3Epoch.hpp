@@ -475,10 +475,10 @@ namespace vq3 {
 	 * This processes Competitive Hebbian learning, adding or removing edges in the graph.
 	 * @return true if the process has modified the graph topology. 
 	 */
-	template<typename ITERATOR, typename SAMPLE_OF, typename PROTOTYPE_OF_VERTEX_VALUE, typename DISTANCE>
+	template<typename ITERATOR, typename SAMPLE_OF, typename DISTANCE>
 	bool process(unsigned int nb_threads,
 		     const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
-		     const PROTOTYPE_OF_VERTEX_VALUE& prototype_of, const DISTANCE& distance,
+		     const DISTANCE& distance,
 		     const edge& value_for_new_edges) {
 	  auto nb_vertices = g.nb_vertices();
 	  if(nb_vertices < 2)

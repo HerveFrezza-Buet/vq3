@@ -549,7 +549,7 @@ namespace vq3 {
      * This writes the graph into a stream. You can use the << operator as well.
      */
     void write(std::ostream& os) {
-      std::map<typename graph_<VERTEX_VALUE, EDGE_VALUE>::ref_vertex, unsigned int> vertex_idf;
+      std::map<typename graph_<VERTEX_VALUE, void>::ref_vertex, unsigned int> vertex_idf;
       unsigned int idf = 0;
       
       os << this->nb_vertices() << std::endl;
@@ -575,11 +575,11 @@ namespace vq3 {
 
       unsigned int nb;
       char c;
-      typename graph_<VERTEX_VALUE, EDGE_VALUE>::vertex_value_type v;
-      typename graph_<VERTEX_VALUE, EDGE_VALUE>::edge_value_type e;
+      typename graph_<VERTEX_VALUE, void>::vertex_value_type v;
+      typename graph_<VERTEX_VALUE, void>::edge_value_type e;
       
       is >> nb; is.get(c);
-      std::vector<typename graph_<VERTEX_VALUE, EDGE_VALUE>::ref_vertex> vtx(nb);
+      std::vector<typename graph_<VERTEX_VALUE, void>::ref_vertex> vtx(nb);
       for(auto& ref_v : vtx) {
 	is >> v; is.get(c);
 	ref_v = ((*this) += v);

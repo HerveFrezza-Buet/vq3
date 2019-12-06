@@ -29,7 +29,7 @@ namespace aux { // This contains the definition for the auxiliary graph.
   using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
   using vertex   = vlayer_1;
   
-  //                                                        ## Node properties :
+  //                                                        ## Edge properties :
   using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
   using elayer_1 = vq3::decorator::tagged<elayer_0>;        // We need a tag for CHL.
   using edge     = elayer_1;
@@ -319,7 +319,6 @@ void rebuild_support_graph(aux::graph& g_aux,
     chl.process(nb_threads,
                 S.begin(), S.end(),
                 [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                [](const aux::vertex& v) {return v.vq3_value;},   // Gets the prototype from the vertex value.
                 aux::d2,                                          // d2(prototype, sample).
                 aux::edge());                                     // New edge initialization value.
   }
