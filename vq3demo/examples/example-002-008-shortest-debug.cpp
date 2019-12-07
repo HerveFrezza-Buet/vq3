@@ -13,7 +13,35 @@
 //
 ///////////////
 
-enum class Status : char {Source = 's', Destination = 'd', Computed = 'c'};
+enum class Status : char {Source = 's', Destination = 'd', Computed = 'c', None = 'n'};
+
+auto color_of(Status s) {
+  switch(s) {
+  case Status::Source :
+    return cv::Scalar( 80,  80, 200);
+  case Status::Destination :
+    return cv::Scalar( 80, 200,  80);
+  case Status::Computed :
+    return cv::Scalar(200,   0,   0);
+  case Status::None :
+    return cv::Scalar(200,  80,  80);
+  }
+  return cv::Scalar(0, 0, 0);
+}
+
+auto radius_of(Status s) {
+  switch(s) {
+  case Status::Source :
+    return 5;
+  case Status::Destination :
+    return 5;
+  case Status::Computed :
+    return 5;
+  case Status::None :
+    return 3;
+  }
+  return 0;
+}
 
 // Vertex values have to be instrumented with shortest path
 // computation structure.
@@ -76,11 +104,11 @@ int main(int argc, char* argv[]) {
   								     [](const edge& e)   {return        cv::Scalar(200, 200, 200);},  // color
   								     [](const edge& e)   {return                                1;}); // thickness
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
-									   [](const vertex& v) {return                  true;},  // always draw
-									   [](const vertex& v) {return           v.vq3_value;},  // position
-									   [](const vertex& v) {return                     3;},  // radius
-									   [](const vertex& v) {return cv::Scalar(200,  80,  80);},   // color
-									   [](const vertex& v) {return                   -1;});  // thickness
+									   [](const vertex& v) {return                       true;},  // always draw
+									   [](const vertex& v) {return                v.vq3_value;},  // position
+									   [](const vertex& v) {return    radius_of(v.vq3_custom);},  // radius
+									   [](const vertex& v) {return     color_of(v.vq3_custom);},  // color
+									   [](const vertex& v) {return                         -1;}); // thickness
 
 
   graph g1,g2;
@@ -136,10 +164,30 @@ int main(int argc, char* argv[]) {
   auto shift = vq3::demo2d::Point(.75, 0);
   g1.foreach_vertex([s = -shift](auto ref_v){(*ref_v)().vq3_value += s;});
   g2.foreach_vertex([s =  shift](auto ref_v){(*ref_v)().vq3_value += s;});
+  
+  
+  // These vectors store the vertices in the order of their
+  // computation by the two shortest path algoritms.
+  std::vector<graph::ref_vertex> dijkstra_vertices;
+  std::vector<graph::ref_vertex> astar_vertices;
+
+  // The iterators used for display.
+  auto current_dijkstra = dijkstra_vertices.begin();
+  auto current_astar    = astar_vertices.begin();
+
+  // Let us apply dijkstra and a* to the graphs, with similar nodes.
+  auto source_locus             = vq3::demo2d::Point(.2, .2);
+  auto destination_locus        = - source_locus;
+  auto source_1                 = vq3::utils::closest(g1, source_locus - shift, d2);
+  auto source_2                 = vq3::utils::closest(g2, source_locus + shift, d2);
+  auto destination_1            = vq3::utils::closest(g1, destination_locus - shift, d2);
+  auto destination_2            = vq3::utils::closest(g2, destination_locus + shift, d2);
+  (*source_1)().vq3_custom      = Status::Source;
+  (*source_2)().vq3_custom      = Status::Source;
+  (*destination_1)().vq3_custom = Status::Destination;
+  (*destination_2)().vq3_custom = Status::Destination;
 
   
-  
-    
   std::cout << std::endl
             << std::endl
             << std::endl
@@ -153,6 +201,17 @@ int main(int argc, char* argv[]) {
             << std::endl;
   int keycode = 0;
   while(keycode != 27) {    
+
+    if(current_dijkstra == dijkstra_vertices.end() && current_astar == astar_vertices.end()) {
+      // We initialize the statue used for display.
+      g1.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
+      g2.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
+    }
+    (*source_1)().vq3_custom = Status::Source;
+    (*source_2)().vq3_custom = Status::Source;
+    (*destination_1)().vq3_custom = Status::Destination;
+    (*destination_2)().vq3_custom = Status::Destination;
+    
     image = cv::Scalar(255, 255, 255);
     g1.foreach_edge(draw_edge); 
     g1.foreach_vertex(draw_vertex);
