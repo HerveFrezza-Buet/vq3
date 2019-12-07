@@ -2,6 +2,7 @@
 #include <vq3demo.hpp>
 #include <opencv2/opencv.hpp>
 
+#include <iterator>
 #include <utility>
 #include <iostream>
 #include <fstream>
@@ -22,7 +23,7 @@ auto color_of(Status s) {
   case Status::Destination :
     return cv::Scalar( 80, 200,  80);
   case Status::Computed :
-    return cv::Scalar(200,   0,   0);
+    return cv::Scalar(  0, 100,   0);
   case Status::None :
     return cv::Scalar(200,  80,  80);
   }
@@ -172,12 +173,10 @@ int main(int argc, char* argv[]) {
   std::vector<graph::ref_vertex> astar_vertices;
 
   // The iterators used for display.
-  auto current_dijkstra = dijkstra_vertices.begin();
-  auto current_astar    = astar_vertices.begin();
 
   // Let us apply dijkstra and a* to the graphs, with similar nodes.
   auto source_locus             = vq3::demo2d::Point(.2, .2);
-  auto destination_locus        = - source_locus;
+  auto destination_locus        = -source_locus;
   auto source_1                 = vq3::utils::closest(g1, source_locus - shift, d2);
   auto source_2                 = vq3::utils::closest(g2, source_locus + shift, d2);
   auto destination_1            = vq3::utils::closest(g1, destination_locus - shift, d2);
@@ -187,26 +186,38 @@ int main(int argc, char* argv[]) {
   (*destination_1)().vq3_custom = Status::Destination;
   (*destination_2)().vq3_custom = Status::Destination;
 
+  // We collect the vertices in their order of computation by the shortest path algorithms.
+  vq3::path::dijkstra<false, false>(g1, source_1, destination_1,
+				    [](auto& ref_e){return (*ref_e)().vq3_value;},
+				    std::back_inserter(dijkstra_vertices));
+ 
   
   std::cout << std::endl
             << std::endl
             << std::endl
             << "##################" << std::endl
             << std::endl
-	    << "Press any key to display the next step." << std::endl
-	    << "Press r to restart." << std::endl
 	    << "Press ESC to quit." << std::endl
             << std::endl
             << "##################" << std::endl
             << std::endl;
   int keycode = 0;
+  auto current_dijkstra = dijkstra_vertices.begin();
+  auto current_astar    = astar_vertices.begin();
   while(keycode != 27) {    
 
     if(current_dijkstra == dijkstra_vertices.end() && current_astar == astar_vertices.end()) {
       // We initialize the statue used for display.
       g1.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
       g2.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
-    }
+      current_dijkstra = dijkstra_vertices.begin();
+      current_astar = astar_vertices.begin();
+    }    
+    if(current_dijkstra !=  dijkstra_vertices.end())
+      (*(*(current_dijkstra++)))().vq3_custom = Status::Computed;
+    if(current_astar !=  astar_vertices.end())
+      (*(*(current_astar++)))().vq3_custom = Status::Computed;
+    
     (*source_1)().vq3_custom = Status::Source;
     (*source_2)().vq3_custom = Status::Source;
     (*destination_1)().vq3_custom = Status::Destination;
@@ -218,7 +229,7 @@ int main(int argc, char* argv[]) {
     g2.foreach_edge(draw_edge); 
     g2.foreach_vertex(draw_vertex);
     cv::imshow("image", image);
-    keycode = cv::waitKey(0) & 0xFF;
+    keycode = cv::waitKey(50) & 0xFF;
   }
   return 0;
 }

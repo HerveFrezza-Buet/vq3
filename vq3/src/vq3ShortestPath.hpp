@@ -528,7 +528,7 @@ namespace vq3 {
      * @param out It is an output iterator for storing the vertices ib the order they are extracted from the inner queue.
      */
     template<bool VERTEX_EFFICIENCY, bool EDGE_EFFICIENCY, typename GRAPH, typename EDGE_COST, typename OUTPUT_ITERATOR>
-    void dijkstra(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest, const EDGE_COST& edge_cost, OUTPUT_ITERATOR& out) {
+    void dijkstra(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest, const EDGE_COST& edge_cost, OUTPUT_ITERATOR out) {
 
       
       // Init
