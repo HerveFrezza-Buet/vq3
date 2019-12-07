@@ -7,8 +7,8 @@
 #include <iostream>
 #include <fstream>
 
-#define NB_VERTICES                 200
-#define NB_SAMPLES_PER_M2_SUPPORT 10000
+#define NB_VERTICES                1000
+#define NB_SAMPLES_PER_M2_SUPPORT 50000
 
 // Graph definition
 //
@@ -170,13 +170,11 @@ int main(int argc, char* argv[]) {
   // These vectors store the vertices in the order of their
   // computation by the two shortest path algoritms.
   std::vector<graph::ref_vertex> dijkstra_vertices;
-  std::vector<graph::ref_vertex> astar_vertices;
-
-  // The iterators used for display.
+  std::vector<graph::ref_vertex> a_star_vertices;
 
   // Let us apply dijkstra and a* to the graphs, with similar nodes.
-  auto source_locus             = vq3::demo2d::Point(.2, .2);
-  auto destination_locus        = -source_locus;
+  auto source_locus             = vq3::demo2d::Point(0,   1);
+  auto destination_locus        = vq3::demo2d::Point(-.2, -.2);
   auto source_1                 = vq3::utils::closest(g1, source_locus - shift, d2);
   auto source_2                 = vq3::utils::closest(g2, source_locus + shift, d2);
   auto destination_1            = vq3::utils::closest(g1, destination_locus - shift, d2);
@@ -190,7 +188,22 @@ int main(int argc, char* argv[]) {
   vq3::path::dijkstra<false, false>(g1, source_1, destination_1,
 				    [](auto& ref_e){return (*ref_e)().vq3_value;},
 				    std::back_inserter(dijkstra_vertices));
+  
+  vq3::path::a_star<false, false>(g2, source_2, destination_2,
+				  [](auto& ref_e){return (*ref_e)().vq3_value;},
+				  [start = source_1](const auto& ref_v){ // This is the heuristic
+				   if(start)
+				     return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); // direct distance is lower than real cost.
+				   else
+				     return 0.0;
+				  },
+				  std::back_inserter(a_star_vertices));
  
+  
+  // The iterators used for display.
+  auto current_dijkstra = dijkstra_vertices.begin();
+  auto current_a_star    = a_star_vertices.begin();
+
   
   std::cout << std::endl
             << std::endl
@@ -202,21 +215,20 @@ int main(int argc, char* argv[]) {
             << "##################" << std::endl
             << std::endl;
   int keycode = 0;
-  auto current_dijkstra = dijkstra_vertices.begin();
-  auto current_astar    = astar_vertices.begin();
+
   while(keycode != 27) {    
 
-    if(current_dijkstra == dijkstra_vertices.end() && current_astar == astar_vertices.end()) {
+    if(current_dijkstra == dijkstra_vertices.end() && current_a_star == a_star_vertices.end()) {
       // We initialize the statue used for display.
       g1.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
       g2.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
       current_dijkstra = dijkstra_vertices.begin();
-      current_astar = astar_vertices.begin();
+      current_a_star = a_star_vertices.begin();
     }    
     if(current_dijkstra !=  dijkstra_vertices.end())
       (*(*(current_dijkstra++)))().vq3_custom = Status::Computed;
-    if(current_astar !=  astar_vertices.end())
-      (*(*(current_astar++)))().vq3_custom = Status::Computed;
+    if(current_a_star !=  a_star_vertices.end())
+      (*(*(current_a_star++)))().vq3_custom = Status::Computed;
     
     (*source_1)().vq3_custom = Status::Source;
     (*source_2)().vq3_custom = Status::Source;
@@ -229,7 +241,7 @@ int main(int argc, char* argv[]) {
     g2.foreach_edge(draw_edge); 
     g2.foreach_vertex(draw_vertex);
     cv::imshow("image", image);
-    keycode = cv::waitKey(50) & 0xFF;
+    keycode = cv::waitKey(1) & 0xFF;
   }
   return 0;
 }

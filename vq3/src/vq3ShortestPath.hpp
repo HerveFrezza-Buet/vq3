@@ -684,6 +684,99 @@ namespace vq3 {
     }
 
     /**
+     * This function fills the vq3_shortest_path values at each vertex
+     * according to the shortest path linking each vertex to the
+     * destination vertex. The boolean template parameters
+     * VERTEX_EFFICIENCY and EDGE_EFFICIENCY toggle the efficiency
+     * test on vertices and edges (see the efficiency decorator).
+     * @param g the graph
+     * @param start the start vertex. Provide nullptr for computing shortest path from all the vertices to dest.
+     * @param dest the destination vertex
+     * @param edge_cost a function such as edge_cost(ref_edge) is the cost of the edge.
+     * @param to_start_estimation a function such as to_dest_estimation(ref_vertex) gives a pessimistic optimation of the cumulated cost from ref_vertex to start.
+     * @param out It is an output iterator for storing the vertices ib the order they are extracted from the inner queue.
+     */
+    template<bool VERTEX_EFFICIENCY, bool EDGE_EFFICIENCY, typename GRAPH, typename EDGE_COST, typename TO_START, typename OUTPUT_ITERATOR>
+    void a_star(GRAPH& g, typename GRAPH::ref_vertex start, typename GRAPH::ref_vertex dest,
+		const EDGE_COST& edge_cost,
+		const TO_START& to_start_estimation,
+		OUTPUT_ITERATOR out) {      
+
+      if(start == nullptr) {
+	dijkstra<VERTEX_EFFICIENCY, EDGE_EFFICIENCY>(g, nullptr, dest, edge_cost);
+	return;
+      }
+      
+      // Init
+      priority_queue::make_empty(g.heap);
+      g.foreach_vertex([](typename GRAPH::ref_vertex ref_v){(*ref_v)().vq3_shortest_path.raz();});
+
+      if constexpr(VERTEX_EFFICIENCY) {
+	  if((*dest)().vq3_efficient) {
+	    (*dest)().vq3_shortest_path.set(0, to_start_estimation(dest));
+	    priority_queue::push<true>(g.heap, dest);
+	  }
+	  else
+	    return;
+	}
+      else {
+	(*dest)().vq3_shortest_path.set(0, to_start_estimation(dest));
+	priority_queue::push<true>(g.heap, dest);
+      }
+      
+      while(!priority_queue::is_empty(g.heap)) {
+	auto curr = priority_queue::pop<true>(g.heap);
+	*(out++) = curr;
+	auto& curr_path_info = (*curr)().vq3_shortest_path;
+	curr_path_info.ended();
+	if(curr == start) break;
+	
+	curr->foreach_edge([curr, &edge_cost, &to_start_estimation, &g, &curr_path_info](typename GRAPH::ref_edge ref_e) {
+	    auto extr_pair = ref_e->extremities();           
+	    if(vq3::invalid_extremities(extr_pair)) {
+	      ref_e->kill();
+	      return;
+	    }
+
+	    if constexpr(EDGE_EFFICIENCY) {
+		if(!(*ref_e)().vq3_efficient)
+		  return;
+	      }
+			  
+	    double cost           = edge_cost(ref_e);
+	    auto& other           = vq3::other_extremity(extr_pair, curr);
+	    auto& other_path_info = (*other)().vq3_shortest_path;
+
+	    if constexpr(VERTEX_EFFICIENCY) {
+		if(!(*other)().vq3_efficient) {
+		  other_path_info.ended();
+		  return;
+		}
+	      }
+	    
+	    switch(other_path_info.state) {
+	    case status::done :
+	      break;
+	    case status::unprocessed :
+	      other_path_info.set(cost + curr_path_info.cost, to_start_estimation(other), ref_e);
+	      priority_queue::push<true>(g.heap, other);
+	      break;
+	    case status::processing :
+	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
+		other_path_info.set_estimated(cost_candidate, ref_e);
+		priority_queue::notify_decrease<true>(g.heap, other_path_info.qpos);
+	      }
+	      break;
+	    }
+	  });
+      }
+    }
+
+
+
+    
+
+    /**
      * Computes a position along the path. Some shortest path
      * algorithm allowing to compute the path from start to dest has
      * to have been performed beforehand. The vertex dest is the one with
