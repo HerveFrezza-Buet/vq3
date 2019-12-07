@@ -521,7 +521,7 @@ namespace vq3 {
       is >> nb; is.get(c);
       std::vector<typename graph_<VERTEX_VALUE, EDGE_VALUE>::ref_vertex> vtx(nb);
       for(auto& ref_v : vtx) {
-	vertex_from_stream(is, (*ref_v)());
+	vertex_from_stream(is, v);
 	is.get(c);
 	ref_v = ((*this) += v);
       }
@@ -532,7 +532,6 @@ namespace vq3 {
       	is >> v1 >> v2; is.get(c);
 	edge_from_stream(is, e);
       	is.get(c);
-	is.get(c);
 	
       	this->connect(vtx[v1], vtx[v2], e);
       }

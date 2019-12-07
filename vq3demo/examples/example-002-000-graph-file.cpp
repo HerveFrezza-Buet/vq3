@@ -42,6 +42,19 @@ int main(int argc, char* argv[]) {
     g1.connect(ref_v1, ref_v2, random_value(random_device));
   }
 
+  // For graph serialization writing functions have to be implemented
+  // for the graph that writes, and reding functions have to be
+  // implemented for the graph that reads. They consist of
+  // writing/reading vertex values and edge values (if any).
+
+  // Writing
+  g1.vertex_to_stream = [](std::ostream& os, const vertex& v) {os << v << std::endl;};
+  g1.edge_to_stream   = [](std::ostream& os, const edge&   e) {os << e << std::endl;};
+  
+  // Reading
+  g2.vertex_from_stream = [](std::istream& is, vertex& v) {char c; is >> v; is.get(c);};
+  g2.edge_from_stream   = [](std::istream& is, edge&   e) {char c; is >> e; is.get(c);;};
+
   {
     std::ofstream file("example.gph");
     file << g1;

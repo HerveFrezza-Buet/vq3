@@ -127,10 +127,10 @@ int main(int argc, char* argv[]) {
     file << g1;
   }
   
-  // {
-  //   std::ifstream file("tmp.gph");
-  //   file >> g2;
-  // }
+  {
+    std::ifstream file("tmp.gph");
+    file >> g2;
+  }
 
   // Then, we move all the vertices of the two graphs.
   auto shift = vq3::demo2d::Point(.75, 0);
