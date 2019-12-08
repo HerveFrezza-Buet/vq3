@@ -7,7 +7,7 @@
 #include <iostream>
 #include <fstream>
 
-#define NB_VERTICES                1000
+#define NB_VERTICES                5000
 #define NB_SAMPLES_PER_M2_SUPPORT 50000
 
 // Graph definition
@@ -23,9 +23,9 @@ auto color_of(Status s) {
   case Status::Destination :
     return cv::Scalar( 80, 200,  80);
   case Status::Computed :
-    return cv::Scalar(  0, 100,   0);
-  case Status::None :
     return cv::Scalar(200,  80,  80);
+  case Status::None :
+    return cv::Scalar(0, 0, 0);
   }
   return cv::Scalar(0, 0, 0);
 }
@@ -33,13 +33,13 @@ auto color_of(Status s) {
 auto radius_of(Status s) {
   switch(s) {
   case Status::Source :
-    return 5;
+    return 11;
   case Status::Destination :
-    return 5;
+    return 11;
   case Status::Computed :
-    return 5;
-  case Status::None :
     return 3;
+  case Status::None :
+    return 0;
   }
   return 0;
 }
@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
 
   // Let us apply dijkstra and a* to the graphs, with similar nodes.
   auto source_locus             = vq3::demo2d::Point(0,   1);
-  auto destination_locus        = vq3::demo2d::Point(-.2, -.2);
+  auto destination_locus        = vq3::demo2d::Point(-.3, -.3);
   auto source_1                 = vq3::utils::closest(g1, source_locus - shift, d2);
   auto source_2                 = vq3::utils::closest(g2, source_locus + shift, d2);
   auto destination_1            = vq3::utils::closest(g1, destination_locus - shift, d2);
@@ -203,6 +203,8 @@ int main(int argc, char* argv[]) {
   // The iterators used for display.
   auto current_dijkstra = dijkstra_vertices.begin();
   auto current_a_star    = a_star_vertices.begin();
+  g1.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
+  g2.foreach_vertex([](auto ref_v){(*ref_v)().vq3_custom = Status::None;});
 
   
   std::cout << std::endl
