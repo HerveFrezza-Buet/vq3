@@ -294,7 +294,7 @@ namespace vq3 {
 
 	  
 	  // We update the edges thanks to Competitive Hebbian learning.
-	  if(chl.process(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance, edge())) 
+	  if(chl.process(nb_threads, begin, end, sample_of, bmu_distance, edge())) 
 	    table.update_full();
 
 	  //  We update more once the edges are created.
