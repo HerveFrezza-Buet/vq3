@@ -191,7 +191,7 @@ int main(int argc, char* argv[]) {
   
   vq3::path::a_star<false, false>(g2, source_2, destination_2,
 				  [](auto& ref_e){return (*ref_e)().vq3_value;},
-				  [start = source_1](const auto& ref_v){ // This is the heuristic
+				  [start = source_2](const auto& ref_v){ // This is the heuristic
 				   if(start)
 				     return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); // direct distance is lower than real cost.
 				   else
