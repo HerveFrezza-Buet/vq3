@@ -372,9 +372,9 @@ namespace vq3 {
        * @param y_unit_size The size of the vertical unit vector in pixels.
        * @param origin The center of the frame in the CV image.
        */
-      inline Frame direct_orthonormal_frame(double x_unit_size,
-					    double y_unit_size,
-					    demo2d::Point origin) {
+      inline Frame direct_orthogonal_frame(double x_unit_size,
+					   double y_unit_size,
+					   demo2d::Point origin) {
 	demo2d::Point Ox(x_unit_size, 0);
 	demo2d::Point Oy(0, -y_unit_size);
 	return Frame(origin, Ox, Oy);
