@@ -396,6 +396,45 @@ namespace vq3 {
 	  return Frame(demo2d::Point(0, size.height-1), Ox, Oy);
       
       }
+
+      /**
+       * @param size The image size in pixels.
+       * @param bbox The area that has to be displayed in the image.
+       * @param pixel_margin The margin left between the area and the image border.
+       */
+      inline Frame direct_orthonormal_frame(const cv::Size& size,
+      					    const vq3::demo2d::sample::BBox& bbox,
+      					    unsigned int pixel_margin) {
+	if((unsigned int)(size.width) < 2*pixel_margin)
+	  throw std::runtime_error("vq3::demo2d::opencv::direct_orthonormal_frame : img_width  < 2*pixel_margin");
+	if((unsigned int)(size.height) < 2*pixel_margin)
+	  throw std::runtime_error("vq3::demo2d::opencv::direct_orthonormal_frame : img_height < 2*pixel_margin");
+
+	unsigned int pix_width = size.width - 2 * pixel_margin;
+	unsigned int pix_height = size.height - 2 * pixel_margin;
+	auto bbox_size = bbox.size();
+
+	double bbox_pix_width = 0;
+
+	if(bbox_size.x > bbox_size.y) {
+	  bbox_pix_width = pix_width;
+	}
+	else {
+	  bbox_pix_width = pix_height * bbox_size.x / bbox_size.y;
+	}
+
+	std::cout << bbox << std::endl
+		  << bbox_size << std::endl;
+
+	vq3::demo2d::Point Ox = {bbox_pix_width / bbox_size.x, 0};
+	vq3::demo2d::Point Oy = {0, -Ox.x};
+
+	auto bbox_center  = .5*(bbox.bottom_left() + bbox.top_right());
+	auto image_center = vq3::demo2d::Point(size.width, size.height)*.5;
+	vq3::demo2d::Point O = image_center + ((bbox_center * Ox.x) & vq3::demo2d::Point(-1, 1));
+	std::cout << O << ' ' << Ox << ' ' << Oy << std::endl; 
+	return Frame(O, Ox, Oy);
+      }
       
       /**
        * This draws a bounding box.
