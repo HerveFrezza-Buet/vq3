@@ -322,7 +322,7 @@ int main(int argc, char* argv[]) {
   
   auto image       = cv::Mat(600, 1500, CV_8UC3, cv::Scalar(255,255,255));
   auto params      = cv::Mat(1, 600, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(220, 220, {512, 288});
+  auto frame       = vq3::demo2d::opencv::direct_orthogonal_frame(220, 220, {512, 288});
   callback_data cb(frame, slider_density);
   cv::setMouseCallback("algorithm", on_mouse, reinterpret_cast<void*>(&cb));
   

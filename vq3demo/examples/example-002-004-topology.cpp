@@ -95,8 +95,8 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(50, 50, 50));
   double unit_size  = 640/(GRID_WIDTH+1.0);
-  auto frame        = vq3::demo2d::opencv::direct_orthonormal_frame(unit_size, unit_size,
-								    vq3::demo2d::Point(unit_size, 480 - unit_size));
+  auto frame        = vq3::demo2d::opencv::direct_orthogonal_frame(unit_size, unit_size,
+								   vq3::demo2d::Point(unit_size, 480 - unit_size));
   callback_data user_data(frame, topology);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   

@@ -12,6 +12,7 @@
 
 #define HOUSE_RADIUS .50
 #define HOUSE_ROOF   .75
+#define PIXEL_MARGIN 10
 
 struct Drawing {
   cv::Mat image;
@@ -42,6 +43,9 @@ struct Drawing {
   }
 
   void draw() {
+    // The frame transforms mathematical points a pixel positions on
+    // the image.
+    
     image = cv::Scalar(255, 255, 255);
     auto prev = house[0];
     for(auto& pt : house) {
@@ -61,6 +65,8 @@ struct Drawing {
   }
 
   void click(int x, int y) {
+    // From a pixel position, the frame gives the corresponding point
+    // in the mathematical frame.
     click_pos = frame(cv::Point(x, y));
   }
 };
@@ -86,32 +92,66 @@ int main(int argc, char* argv[]) {
   std::vector<Drawing> drawings;
   auto out = std::back_inserter(drawings);
 
+
+  // We draw a "house" made of a square with a triangle (roof) on the
+  // top of it. The square side is 1, its center is (0,0). The drawing
+  // are expressed in a "mathematical" frame, i.e. an orthonormal
+  // frame where coordinates are floating point values.
+  //
+  // On an image, the frame coordinate of pixel positions is
+  // indirect. The coordinates are integers, (0,0) is the top left
+  // corner of the image. The x-axis points to the right and the y
+  // axis points downwards. A point expressed in this "image" frame is
+  // denoted by an "image coordinate".
+  //
+  // The mathematical frame (i.e. the x and w unit vectors at the
+  // origin) is displayed on the image.
+  
+
+  // Here, the frame is such as mathematical (0,0) is at the center of
+  // the image. The length 1 in the mathematical frame corresponds to
+  // .5*img_height pixels in the image. 
   *(out++) = Drawing(img_width, img_height, click_pos,
 		     "direct orthonormal centered",
 		     vq3::demo2d::opencv::direct_orthonormal_frame(cv::Size(img_width, img_height),
 								   .5*img_height,
 								   true));
+  
+  // This is same as previously, except that mathematical (0,0) is at
+  // the bottom left pixel of the image.
   *(out++) = Drawing(img_width, img_height, click_pos,
 		     "direct orthonormal not centered",
 		     vq3::demo2d::opencv::direct_orthonormal_frame(cv::Size(img_width, img_height),
 								   .5*img_height,
 								   false));
+
+  // This frame is such as the bounding box in the mathematical frame
+  // fits the image (leaving a border margin), keeping the aspect
+  // ration.
   *(out++) = Drawing(img_width, img_height, click_pos,
 		     "direct orthonormal bbox",
 		     vq3::demo2d::opencv::direct_orthonormal_frame(cv::Size(img_width, img_height),
 								   vq3::demo2d::sample::BBox({-HOUSE_RADIUS, HOUSE_RADIUS}, {0, HOUSE_ROOF}),
-								   10));
-		     
+								   PIXEL_MARGIN));
+
+  // The origin of the mathematical frame, here, is at pixel (200,
+  // 400). The length of the x unit vector is 200, the length of the y
+  // unit vector is 50.
   *(out++) = Drawing(img_width, img_height, click_pos,
 		     "direct orthogonal",
 		     vq3::demo2d::opencv::direct_orthogonal_frame(200,
 								  50,
 								  {200, 400}));
+  // The origin of the mathematical frame is at pixel (200, 100). The
+  // x unit vector of the mathematical frame is transformed into a
+  // vector (200, -50) in the image frame. The y unit vector of the
+  // mathematical frame is transformed into a vector (30, 120) in the
+  // image frame.
   *(out++) = Drawing(img_width, img_height, click_pos,
 		     "Frame",
-		     vq3::demo2d::opencv::Frame(vq3::demo2d::Point(200, 100),
-						vq3::demo2d::Point(150, -50),
-						vq3::demo2d::Point( 30, 120)));
+		     vq3::demo2d::opencv::Frame({200, 100},
+						{100, -50},
+						{ 30, 120}));
 		     
 
   for(auto& drawing : drawings) {

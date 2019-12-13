@@ -84,9 +84,9 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   int delay = 500;
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size().width,
-							     image.size().height,
-							     {0., image.size().height - 1.0});
+  auto frame = vq3::demo2d::opencv::direct_orthogonal_frame(image.size().width,
+							    image.size().height,
+							    {0., image.size().height - 1.0});
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
   								     [](const vertex_value_type&, const vertex_value_type&, const edge_value_type&) {return true;},  // always draw
   								     [](const vertex_value_type& v)                {return                                 v.pos;},  // position

@@ -416,15 +416,12 @@ namespace vq3 {
 
 	double bbox_pix_width = 0;
 
-	if(bbox_size.x > bbox_size.y) {
+	if(bbox_size.y/bbox_size.x < size.height/size.width) {
 	  bbox_pix_width = pix_width;
 	}
 	else {
 	  bbox_pix_width = pix_height * bbox_size.x / bbox_size.y;
 	}
-
-	std::cout << bbox << std::endl
-		  << bbox_size << std::endl;
 
 	vq3::demo2d::Point Ox = {bbox_pix_width / bbox_size.x, 0};
 	vq3::demo2d::Point Oy = {0, -Ox.x};
@@ -432,7 +429,6 @@ namespace vq3 {
 	auto bbox_center  = .5*(bbox.bottom_left() + bbox.top_right());
 	auto image_center = vq3::demo2d::Point(size.width, size.height)*.5;
 	vq3::demo2d::Point O = image_center + ((bbox_center * Ox.x) & vq3::demo2d::Point(-1, 1));
-	std::cout << O << ' ' << Ox << ' ' << Oy << std::endl; 
 	return Frame(O, Ox, Oy);
       }
       
