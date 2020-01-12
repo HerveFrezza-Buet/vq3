@@ -119,7 +119,7 @@ namespace vq3 {
     template<typename FUN>
     auto range(irange rg, const FUN& f)  {return Range<decltype(f(0))>(rg, f);}
 
-    Range<double> range(double first, double last, unsigned int nb_intervals) {
+    inline Range<double> range(double first, double last, unsigned int nb_intervals) {
       return range(irange(0, (int)(nb_intervals+1)),
 		   [first, coef = (last - first)/nb_intervals](int i) {return first + i*coef;});
     }

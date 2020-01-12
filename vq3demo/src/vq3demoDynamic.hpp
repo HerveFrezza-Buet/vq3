@@ -58,7 +58,7 @@ namespace vq3 {
       };
 
       template<> 
-      void linear<bound::saturate>::operator++() {
+      inline void linear<bound::saturate>::operator++() {
 	value += dv;
 	if(value > max)
 	  value = max;
@@ -67,7 +67,7 @@ namespace vq3 {
       }
     
       template<> 
-      void linear<bound::wrap>::operator++() {
+      inline void linear<bound::wrap>::operator++() {
 	value += dv;
 	if(value > max)
 	  value -= max-min;
@@ -76,7 +76,7 @@ namespace vq3 {
       }
     
       template<> 
-      void linear<bound::bounce>::operator++() {
+      inline void linear<bound::bounce>::operator++() {
 	value += dv;
 	if(value > max) {
 	  value = 2*max-value;

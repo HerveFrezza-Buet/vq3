@@ -202,7 +202,7 @@ namespace vq3 {
     /**
      * This returns (if it exists) the single point where the segments do intersect. If the segments overlap (i.e they share a common segment), no intersection is returned. If on segment is a point, no intersection is returned.
      */
-    std::optional<Point> operator&&(const std::pair<Point, Point>& seg1, const std::pair<Point, Point>& seg2) {
+    inline std::optional<Point> operator&&(const std::pair<Point, Point>& seg1, const std::pair<Point, Point>& seg2) {
       auto& P = seg1.first;
       auto  R = seg1.second - P;
       auto& Q = seg2.first;
