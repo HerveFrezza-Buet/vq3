@@ -1,14 +1,23 @@
 #include <vq3demo.hpp>
 #include <random>
+#include <cstdlib>
 
 int main(int argc, char* argv[]) {
+
+  if(argc != 2) {
+    std::cout << "Usage : " << argv[0] << " <device-id>" << std::endl
+	      << "   e.g. " << argv[0] << " 0" << std::endl;
+    return 0;
+  }
+  int video_id = std::atoi(argv[1]);
+  
   std::random_device rd;  
   std::mt19937 random_device(rd());
   
   int N_slider =  5000;
   int T_slider =   127;
 
-  auto video_data = vq3::demo2d::opencv::sample::video_data(0, [&T_slider](const unsigned char* rgb_pixel) {if(rgb_pixel[1] < (unsigned char)(T_slider)) return 1.; else return 0.;});
+  auto video_data = vq3::demo2d::opencv::sample::video_data(video_id, [&T_slider](const unsigned char* rgb_pixel) {if(rgb_pixel[1] < (unsigned char)(T_slider)) return 1.; else return 0.;});
 
   auto webcam_distribution = vq3::demo2d::opencv::sample::webcam(video_data);
 

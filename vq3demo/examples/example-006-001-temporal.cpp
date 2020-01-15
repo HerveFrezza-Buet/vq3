@@ -1,6 +1,7 @@
 #include <vq3demo.hpp>
 #include <random>
 #include <string>
+#include <cstdlib>
 
 #define GRID_WIDTH             15
 #define GRID_HEIGHT             8
@@ -29,6 +30,13 @@ using epoch_data   = epoch_data_1;
 #define SPEED_TO_METER .5
 
 int main(int argc, char* argv[]) {
+
+  if(argc != 2) {
+    std::cout << "Usage : " << argv[0] << " <device-id>" << std::endl
+	      << "   e.g. " << argv[0] << " 0" << std::endl;
+    return 0;
+  }
+  int video_id = std::atoi(argv[1]);
   
   unsigned int nb_threads = std::thread::hardware_concurrency();
   if(nb_threads == 0) {
@@ -50,7 +58,7 @@ int main(int argc, char* argv[]) {
   int N_slider =  5000;
 
   vq3::demo2d::opencv::HueSelector selector;
-  auto video_data = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
+  auto video_data = vq3::demo2d::opencv::sample::video_data(video_id, selector.build_pixel_test());
 
   auto density = vq3::demo2d::opencv::sample::webcam(video_data);
 

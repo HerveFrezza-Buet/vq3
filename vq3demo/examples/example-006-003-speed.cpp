@@ -1,5 +1,6 @@
 #include <vq3demo.hpp>
 #include <random>
+#include <cstdlib>
 
 #define SPEED_TO_METER .5
 
@@ -66,6 +67,13 @@ double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d
 // Here is the main.
 
 int main(int argc, char* argv[]) {
+
+  if(argc != 2) {
+    std::cout << "Usage : " << argv[0] << " <device-id>" << std::endl
+	      << "   e.g. " << argv[0] << " 0" << std::endl;
+    return 0;
+  }
+  int video_id = std::atoi(argv[1]);
   
   unsigned int nb_threads = std::thread::hardware_concurrency();
   if(nb_threads == 0) {
@@ -86,7 +94,7 @@ int main(int argc, char* argv[]) {
   selector.S_slider = INIT_SLIDER_S;
   selector.V_slider = INIT_SLIDER_V;
   selector.T_slider = INIT_SLIDER_TOLERANCE;
-  auto video_data   = vq3::demo2d::opencv::sample::video_data(0, selector.build_pixel_test());
+  auto video_data   = vq3::demo2d::opencv::sample::video_data(video_id, selector.build_pixel_test());
   
   int N_slider = INIT_SLIDER_N;
   int T_slider = INIT_SLIDER_T;
