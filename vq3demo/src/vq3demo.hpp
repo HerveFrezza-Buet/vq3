@@ -29,7 +29,6 @@
 
 #include <vq3demoCV.hpp>
 #include <vq3demoDecorator.hpp>
-#include <vq3demoDynamic.hpp>
 #include <vq3demoGnuplot.hpp>
 #include <vq3demoPoint.hpp>
 #include <vq3demoSample.hpp>
@@ -45,12 +44,7 @@
 
 
 /**
-   @example example-000-001-opencv-frames.cpp
    @example example-000-002-savitzky-golay.cpp
-   @example example-001-001-sampling-basics.cpp
-   @example example-001-002-dynamic-distribution.cpp
-   @example example-001-003-video-distribution.cpp
-   @example example-001-004-base-samplers.cpp
    @example example-002-000-graph-basics.cpp
    @example example-002-000-graph-file.cpp
    @example example-002-001-graph-drawing.cpp
