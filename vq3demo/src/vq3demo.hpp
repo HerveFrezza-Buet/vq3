@@ -33,7 +33,6 @@
 #include <vq3demoGnuplot.hpp>
 #include <vq3demoPoint.hpp>
 #include <vq3demoSample.hpp>
-#include <vq3demoUtils.hpp>
 
 /**
 
@@ -46,7 +45,6 @@
 
 
 /**
-   @example example-000-001-opencv-basics.cpp
    @example example-000-001-opencv-frames.cpp
    @example example-000-002-savitzky-golay.cpp
    @example example-001-001-sampling-basics.cpp
