@@ -7,7 +7,7 @@ SET(PACKAGE_LICENSE "GPL")
 SET(PROJECT_DESCRIPTION_SUMMARY "Demo for vq3")
 
 SET(CMAKE_BUILD_TYPE Release)
-SET(PROJECT_CFLAGS "-std=c++17 -O3 -g")
+SET(PROJECT_CFLAGS "-std=c++17 -O3")
 
  
 ###################################
