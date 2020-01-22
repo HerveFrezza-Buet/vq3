@@ -22,7 +22,7 @@ struct edge_value_type {
 struct vertex_value_type {
   static int nb;
   intensity          i;
-  vq3::demo2d::Point pos;
+  demo2d::Point pos;
   
   vertex_value_type(intensity i, double x, double y) : i(i), pos(x,y) {++nb;}
   vertex_value_type() = delete;
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     
     std::vector<graph::ref_vertex> temporary_vertex_references;
     auto out = std::back_inserter(temporary_vertex_references);
-    auto r = vq3::demo::range(.1, .9, mesh_side);
+    auto r = demo::range(.1, .9, mesh_side);
     for(auto y : r)
       for(auto x : r) {
 	// we create a vertex : g += vertex_value_type
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
       g.connect(*iit, *(iit + nb_vertex_side), intensity(*(yit)*255));
     }
     for(unsigned int w = 0; w < nb_vertex_side - 1; ++w, ++it)
-    	g.connect(*it, *(it + 1), intensity(*(yit)*255));
+      g.connect(*it, *(it + 1), intensity(*(yit)*255));
     
   } // The temporary references to vertices are released here.
 
@@ -84,9 +84,9 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   int delay = 500;
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthogonal_frame(image.size().width,
-							    image.size().height,
-							    {0., image.size().height - 1.0});
+  auto frame = demo2d::opencv::direct_orthogonal_frame(image.size().width,
+						       image.size().height,
+						       {0., image.size().height - 1.0});
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
   								     [](const vertex_value_type&, const vertex_value_type&, const edge_value_type&) {return true;},  // always draw
   								     [](const vertex_value_type& v)                {return                                 v.pos;},  // position

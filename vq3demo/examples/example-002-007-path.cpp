@@ -16,7 +16,7 @@
 // Vertex values have to be instrumented with shortest path
 // computation structure.
 //                                                         ## Node properties :
-using vlayer_0 = vq3::demo2d::Point;                       // prototypes are 2D points (this is the "user defined" value).
+using vlayer_0 = demo2d::Point;                            // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
 using vlayer_2 = vq3::decorator::tagged<vlayer_1>;         // We will tag extermities of the shortest path for display.
 using vlayer_3 = vq3::decorator::efficiency<vlayer_2>;     // We consider only efficient edges for paths.
@@ -41,7 +41,7 @@ using graph   = vq3::graph<vertex, edge>;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 // We compute the edge cost as being its length. As we use an optional
 // cost, we can check if the computation is necessary.
@@ -51,7 +51,7 @@ double edge_cost(const graph::ref_edge& ref_e) {
     auto extr_pair = ref_e->extremities();
     const auto& pt1 = (*(extr_pair.first))().vq3_value;
     const auto& pt2 = (*(extr_pair.second))().vq3_value;
-    opt_cost = vq3::demo2d::d(pt1, pt2);
+    opt_cost = demo2d::d(pt1, pt2);
   }
   return *opt_cost;
 }
@@ -64,9 +64,9 @@ double edge_cost(const graph::ref_edge& ref_e) {
 
 struct callback_data {
   graph& g;
-  vq3::demo2d::opencv::Frame& frame;
+  demo2d::opencv::Frame& frame;
   graph::ref_vertex start, dest;
-  callback_data(graph& g, vq3::demo2d::opencv::Frame& frame) : g(g), frame(frame) {}
+  callback_data(graph& g, demo2d::opencv::Frame& frame) : g(g), frame(frame) {}
   callback_data()                                = delete;
   callback_data(const callback_data&)            = delete;
   callback_data& operator=(const callback_data&) = delete;
@@ -109,18 +109,18 @@ int main(int argc, char* argv[]) {
 
   double intensity = 1.;
   double radius    = 0.5;
-  auto density     = vq3::demo2d::sample::disk(radius, intensity);
+  auto density     = demo2d::sample::disk(radius, intensity);
 
   graph g;
   
-  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
+  auto sampler = demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
 
   // We add vertices
-  for(auto& location : vq3::demo2d::sample::sample_set(random_device, sampler, density)) g += location;
+  for(auto& location : demo2d::sample::sample_set(random_device, sampler, density)) g += location;
 
   // We add edges
   sampler = NB_SAMPLES_PER_M2;
-  for(auto& sample : vq3::demo2d::sample::sample_set(random_device, sampler, density)) {
+  for(auto& sample : demo2d::sample::sample_set(random_device, sampler, density)) {
     auto closest = vq3::utils::two_closest(g, sample, d2);
     if(g.get_edge(closest.first, closest.second) == nullptr) 
       g.connect(closest.first, closest.second);
@@ -131,11 +131,11 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);  
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);  
   callback_data user_data(g, frame);
 
-  user_data.start = vq3::utils::closest(g, vq3::demo2d::Point(-100, 0), d2);
-  user_data.dest  = vq3::utils::closest(g, vq3::demo2d::Point( 100, 0), d2);
+  user_data.start = vq3::utils::closest(g, demo2d::Point(-100, 0), d2);
+  user_data.dest  = vq3::utils::closest(g, demo2d::Point( 100, 0), d2);
 
   // This is for path drawing.
   vq3::utils::clear_vertex_tags(g, false);

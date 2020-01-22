@@ -47,7 +47,7 @@ auto radius_of(Status s) {
 // Vertex values have to be instrumented with shortest path
 // computation structure.
 //                                                         ## Node properties :
-using vlayer_0 = vq3::demo2d::Point;                       // prototypes are 2D points (this is the "user defined" value).
+using vlayer_0 = demo2d::Point;                            // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
 using vlayer_2 = vq3::decorator::custom<vlayer_1, Status>; // We will tag some nodes for display.
 using vertex   = vlayer_2;
@@ -67,7 +67,7 @@ using graph   = vq3::graph<vertex, edge>;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 
 
@@ -92,12 +92,12 @@ int main(int argc, char* argv[]) {
   double side      = 1.;
   double hole_side = .5;
   
-  auto density = vq3::demo2d::sample::rectangle(side, side, intensity)
-    -  vq3::demo2d::sample::rectangle(hole_side, hole_side, intensity);
+  auto density = demo2d::sample::rectangle(side, side, intensity)
+    -  demo2d::sample::rectangle(hole_side, hole_side, intensity);
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 1280, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
 
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
   								     [](const vertex&, const vertex&, const edge&) {return   true;},  // always draw
@@ -124,28 +124,28 @@ int main(int argc, char* argv[]) {
   
 
   for(unsigned int i = 0; i < NB_VERTICES; ++i)
-    g1 += vq3::demo2d::sample::get_one_sample(random_device, density);
+    g1 += demo2d::sample::get_one_sample(random_device, density);
 
   
   // Setting edges of the support graph with CHL.
   {
-    std::vector<vq3::demo2d::Point> S;
-    auto sampler = vq3::demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
-    auto S_      = vq3::demo2d::sample::sample_set(random_device, sampler, density);
+    std::vector<demo2d::Point> S;
+    auto sampler = demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
+    auto S_      = demo2d::sample::sample_set(random_device, sampler, density);
     auto out     = std::back_inserter(S);
     std::copy(S_.begin(), S_.end(), out);
     
     auto chl = vq3::epoch::chl::processor(g1);
     chl.process(std::thread::hardware_concurrency(),
                 S.begin(), S.end(),
-                [](const vq3::demo2d::Point& s) {return s;}, // Gets the point from *it.
+                [](const demo2d::Point& s) {return s;}, // Gets the point from *it.
                 d2,                                          // d2(vertex, sample).
 		0);                                          // New edge initialization value.
 
     // We set the edge cost to the Euclidian distance between vertices.
     g1.foreach_edge([](auto ref_e) {
 	auto [v1, v2] = ref_e->extremities();
-	(*ref_e)().vq3_value = vq3::demo2d::d((*v1)().vq3_value, (*v2)().vq3_value);
+	(*ref_e)().vq3_value = demo2d::d((*v1)().vq3_value, (*v2)().vq3_value);
       });
   }
 
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Then, we move all the vertices of the two graphs.
-  auto shift = vq3::demo2d::Point(.75, 0);
+  auto shift = demo2d::Point(.75, 0);
   g1.foreach_vertex([s = -shift](auto ref_v){(*ref_v)().vq3_value += s;});
   g2.foreach_vertex([s =  shift](auto ref_v){(*ref_v)().vq3_value += s;});
   
@@ -173,8 +173,8 @@ int main(int argc, char* argv[]) {
   std::vector<graph::ref_vertex> a_star_vertices;
 
   // Let us apply dijkstra and a* to the graphs, with similar nodes.
-  auto source_locus             = vq3::demo2d::Point(0,   1);
-  auto destination_locus        = vq3::demo2d::Point(-.3, -.3);
+  auto source_locus             = demo2d::Point(0,   1);
+  auto destination_locus        = demo2d::Point(-.3, -.3);
   auto source_1                 = vq3::utils::closest(g1, source_locus - shift, d2);
   auto source_2                 = vq3::utils::closest(g2, source_locus + shift, d2);
   auto destination_1            = vq3::utils::closest(g1, destination_locus - shift, d2);
@@ -193,7 +193,7 @@ int main(int argc, char* argv[]) {
 				  [](auto& ref_e){return (*ref_e)().vq3_value;},
 				  [start = source_2](const auto& ref_v){ // This is the heuristic
 				   if(start)
-				     return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); // direct distance is lower than real cost.
+				     return demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); // direct distance is lower than real cost.
 				   else
 				     return 0.0;
 				  },

@@ -15,11 +15,11 @@
 
 // This is what we want for vertex value.
 struct ScalarAt {
-  vq3::demo2d::Point pos;
+  demo2d::Point pos;
   double value;
 
   ScalarAt() : pos(), value(0) {}
-  ScalarAt(const vq3::demo2d::Point& pos) : pos(pos), value(0) {}
+  ScalarAt(const demo2d::Point& pos) : pos(pos), value(0) {}
   ScalarAt(const ScalarAt&)            = default;
   ScalarAt& operator=(const ScalarAt&) = default;
 };
@@ -46,13 +46,13 @@ using key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value.pos, p);}
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value.pos, p);}
 
 struct callback_data {
-  vq3::demo2d::opencv::Frame&            frame;
+  demo2d::opencv::Frame&            frame;
   vq3::topology::Table<graph, key_type>& topology;
 
-  callback_data(vq3::demo2d::opencv::Frame& frame,
+  callback_data(demo2d::opencv::Frame& frame,
 		vq3::topology::Table<graph, key_type>& topology)
     : frame(frame),
       topology(topology) {}
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
   graph g; 
 
   vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
-			[](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w, h));},
+			[](unsigned int w, unsigned int h) {return ScalarAt(demo2d::Point(w, h));},
 			false, true); // Do not loop on with, loop on height.
   
 
@@ -95,8 +95,8 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(50, 50, 50));
   double unit_size  = 640/(GRID_WIDTH+1.0);
-  auto frame        = vq3::demo2d::opencv::direct_orthogonal_frame(unit_size, unit_size,
-								   vq3::demo2d::Point(unit_size, 480 - unit_size));
+  auto frame        = demo2d::opencv::direct_orthogonal_frame(unit_size, unit_size,
+							      demo2d::Point(unit_size, 480 - unit_size));
   callback_data user_data(frame, topology);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   

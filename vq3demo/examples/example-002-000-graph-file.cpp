@@ -7,7 +7,7 @@
 #include <random>
 #include <fstream>
 
-using vertex = vq3::demo2d::Point;
+using vertex = demo2d::Point;
 using edge   = double;
 using graph  = vq3::graph<vertex, edge>;
 
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
   std::random_device rd;  
   std::mt19937 random_device(rd());
   
-  vq3::demo2d::sample::BBox bbox(1, 1);
+  demo2d::sample::BBox bbox(1, 1);
   std::vector<graph::ref_vertex> vertices;
   graph g1, g2;
 
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
   auto random_value = std::uniform_real_distribution<double>(0., 1.);
   for(unsigned int i=0; i < NB_EDGES; ++i) {
-    auto [ref_v1, ref_v2] = vq3::utils::two_closest(g1, bbox.uniform(rd), vq3::demo2d::d2);
+    auto [ref_v1, ref_v2] = vq3::utils::two_closest(g1, bbox.uniform(rd), demo2d::d2);
     g1.connect(ref_v1, ref_v2, random_value(random_device));
   }
 
@@ -65,11 +65,11 @@ int main(int argc, char* argv[]) {
     file >> g2;
   }
 
-  g2.foreach_vertex([](auto ref_v){(*ref_v)() += vq3::demo2d::Point(OFFSET, -OFFSET);});
+  g2.foreach_vertex([](auto ref_v){(*ref_v)() += demo2d::Point(OFFSET, -OFFSET);});
   
   
   auto image = cv::Mat(600, 600, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().width, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().width, true);
   
   auto draw_vertex_1 = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									     [](const vertex& v) {return                  true;},  // always draw

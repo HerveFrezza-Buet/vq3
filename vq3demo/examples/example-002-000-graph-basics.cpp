@@ -6,18 +6,18 @@
 #include <opencv2/opencv.hpp>
 
 
-using vertex = std::pair<char, vq3::demo2d::Point>;
+using vertex = std::pair<char, demo2d::Point>;
 using edge   = double;
 using graph             = vq3::graph<vertex, edge>;
 
 int main(int argc, char* argv[]) {
   graph g;
 
-  auto A = g += std::make_pair('A', vq3::demo2d::Point(-.5, -.5));
-  auto B = g += std::make_pair('B', vq3::demo2d::Point( .5, -.5));
-  auto C = g += std::make_pair('C', vq3::demo2d::Point( .5,  .5));
+  auto A = g += std::make_pair('A', demo2d::Point(-.5, -.5));
+  auto B = g += std::make_pair('B', demo2d::Point( .5, -.5));
+  auto C = g += std::make_pair('C', demo2d::Point( .5,  .5));
 
-  auto length = [](auto a, auto b) {return vq3::demo2d::d((*a)().second, (*b)().second);};
+  auto length = [](auto a, auto b) {return demo2d::d((*a)().second, (*b)().second);};
   
   g.connect(A, B, length(A, B));
   g.connect(A, C, length(A, C));
@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
 
   
   auto image = cv::Mat(600, 600, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .6*image.size().width, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .6*image.size().width, true);
   
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                  true;},  // always draw

@@ -26,12 +26,11 @@
 #pragma once
 
 #include <vq3.hpp>
+#include <demo2d.hpp>
 
 #include <vq3demoCV.hpp>
 #include <vq3demoDecorator.hpp>
 #include <vq3demoGnuplot.hpp>
-#include <vq3demoPoint.hpp>
-#include <vq3demoSample.hpp>
 
 /**
 

@@ -15,11 +15,11 @@
 
 // This is what we want for vertex value.
 struct ScalarAt {
-  vq3::demo2d::Point pos;
+  demo2d::Point pos;
   double value;
 
   ScalarAt() : pos(), value(0) {}
-  ScalarAt(const vq3::demo2d::Point& pos) : pos(pos), value(0) {}
+  ScalarAt(const demo2d::Point& pos) : pos(pos), value(0) {}
   ScalarAt(const ScalarAt&)            = default;
   ScalarAt& operator=(const ScalarAt&) = default;
 };
@@ -52,13 +52,13 @@ using key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value.pos, p);}
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value.pos, p);}
 
 struct callback_data {
-  vq3::demo2d::opencv::Frame&            frame;
+  demo2d::opencv::Frame&            frame;
   vq3::topology::Table<graph, key_type>& topology;
 
-  callback_data(vq3::demo2d::opencv::Frame& frame,
+  callback_data(demo2d::opencv::Frame& frame,
 		vq3::topology::Table<graph, key_type>& topology)
     : frame(frame),
       topology(topology) {}
@@ -84,17 +84,17 @@ int main(int argc, char* argv[]) {
   double intensity    = 1. ;
   double crown_radius =  .55;
   double hole_radius  =  .3;
-  vq3::demo2d::Point crown_center{-.6, 0};
+  demo2d::Point crown_center{-.6, 0};
 
-  auto density = (vq3::demo2d::sample::disk(crown_radius, intensity) - vq3::demo2d::sample::disk(hole_radius, intensity)) + crown_center;
+  auto density = (demo2d::sample::disk(crown_radius, intensity) - demo2d::sample::disk(hole_radius, intensity)) + crown_center;
   
   // First, we add vertices
-  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
-  for(auto& prototype : vq3::demo2d::sample::sample_set(random_device, sampler, density)) g += ScalarAt(prototype);
+  auto sampler = demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
+  for(auto& prototype : demo2d::sample::sample_set(random_device, sampler, density)) g += ScalarAt(prototype);
 
   // Then, we sample points, and connect the two closest prototypes (if not connected yet).
   sampler = NB_SAMPLES_PER_M2;
-  for(auto& sample : vq3::demo2d::sample::sample_set(random_device, sampler, density)) {
+  for(auto& sample : demo2d::sample::sample_set(random_device, sampler, density)) {
     auto closest = vq3::utils::two_closest(g, sample, d2);
     if(g.get_edge(closest.first, closest.second) == nullptr) 
       g.connect(closest.first, closest.second);
@@ -103,12 +103,12 @@ int main(int argc, char* argv[]) {
   // Component #2
 
   vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
-			[](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));});
+			[](unsigned int w, unsigned int h) {return ScalarAt(demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));});
   
   // If edges had values, we would have used
   /*
     vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
-    [](unsigned int w, unsigned int h) {return ScalarAt(vq3::demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));},
+    [](unsigned int w, unsigned int h) {return ScalarAt(demo2d::Point(w *GRID_SQUARE_SIZE, h * GRID_SQUARE_SIZE));},
     [](unsigned int w, unsigned int h, unsigned int ww, unsigned int hh) {return some_edge_value;});
   */
 
@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame        = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
+  auto frame        = demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
   callback_data user_data(frame, topology);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   

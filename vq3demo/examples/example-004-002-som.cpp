@@ -23,8 +23,8 @@
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
-using sample    = vq3::demo2d::Point;
-using prototype = vq3::demo2d::Point;
+using sample    = demo2d::Point;
+using prototype = demo2d::Point;
 
 //                                                      ## Node properties :
 using layer_0 = prototype;                              // prototypes are 2D points (this is the "user defined" value).
@@ -38,7 +38,7 @@ using topology_key_type = int;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 struct callback_data {
   graph& g;
@@ -55,7 +55,7 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   if(event != cv::EVENT_LBUTTONDOWN )
     return;
   auto& data = *(reinterpret_cast<callback_data*>(user_data));
-  data.g.foreach_vertex([&data](const graph::ref_vertex& v_ref) {(*v_ref)().vq3_value = vq3::demo2d::uniform(data.rd, {-.5, -.5}, {.5, .5});});
+  data.g.foreach_vertex([&data](const graph::ref_vertex& v_ref) {(*v_ref)().vq3_value = demo2d::uniform(data.rd, {-.5, -.5}, {.5, .5});});
 }
 
 // At each epoch, the sample are presented and some data is collected,
@@ -86,42 +86,42 @@ int main(int argc, char* argv[]) {
   double intensity   = 1. ;
   double radius      =  .5;
   double hole        =  .3;
-  auto density       = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole, intensity);
+  auto density       = demo2d::sample::disk(radius, intensity) - demo2d::sample::disk(hole, intensity);
 
-  std::vector<vq3::demo2d::Point> data;
+  std::vector<demo2d::Point> data;
   data.reserve(nb_samples);
   auto out = std::back_inserter(data);
 
   for(unsigned int i = 0; i < nb_samples; ++i)
-    *(out++) = vq3::demo2d::sample::get_one_sample(random_device, density); 
+    *(out++) = demo2d::sample::get_one_sample(random_device, density); 
 
   // Let us build up a grid-like graph, from a Competitive Hebbian Learning (CHL) process.
   //
   ///////////////////
   
-  double intensity_         =   1;
-  double side_              = 255;
-  vq3::demo2d::Point center = {.5*side_, .5*side_};
-  auto density_             = vq3::demo2d::sample::rectangle(side_, side_, intensity_) + center;
+  double intensity_    =   1;
+  double side_         = 255;
+  demo2d::Point center = {.5*side_, .5*side_};
+  auto density_        = demo2d::sample::rectangle(side_, side_, intensity_) + center;
 
   graph g;
 
   // we define the nodes
   for(unsigned int i = 0; i < SOM_NB_PROTOTYPES; ++i) {
-    auto pos = vq3::demo2d::sample::get_one_sample(random_device, density_);
+    auto pos = demo2d::sample::get_one_sample(random_device, density_);
     auto ref_v = g += pos;
     (*ref_v)().vq3_color = cv::Scalar(0, pos.x, pos.y);
   }
 
   // we define the edges
   for(unsigned int i = 0; i < NB_CHL_SAMPLES; ++i) {
-    auto closest = vq3::utils::two_closest(g, vq3::demo2d::sample::get_one_sample(random_device, density_), d2);
+    auto closest = vq3::utils::two_closest(g, demo2d::sample::get_one_sample(random_device, density_), d2);
     if(g.get_edge(closest.first, closest.second) == nullptr) 
       g.connect(closest.first, closest.second);
   }
 
   // we initialize the prototypes to a random value.
-  g.foreach_vertex([&random_device](const graph::ref_vertex& v_ref) {(*v_ref)().vq3_value = vq3::demo2d::uniform(random_device, {-.5, -.5}, {.5, .5});});
+  g.foreach_vertex([&random_device](const graph::ref_vertex& v_ref) {(*v_ref)().vq3_value = demo2d::uniform(random_device, {-.5, -.5}, {.5, .5});});
 
 
   // Image settings
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image       = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
+  auto frame       = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
   callback_data user_data(g, random_device);
   cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&user_data));
   auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
@@ -191,8 +191,8 @@ int main(int argc, char* argv[]) {
     // Learning : the returned value of thus function is ignored here. See next examples.
     winner_take_most.process<epoch_data>(nb_threads, 0,
 					 data.begin(), data.end(),
-					 [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},         // how to get the sample from a data content (*it).
-					 [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;}, // how to get a **reference** to the prototype from the vertex value.
+					 [](const demo2d::Point& p) -> const demo2d::Point& {return p;},              // how to get the sample from a data content (*it).
+					 [](vertex& vertex_value) -> demo2d::Point& {return vertex_value.vq3_value;}, // how to get a **reference** to the prototype from the vertex value.
 					 d2);
     auto t_end = std::chrono::high_resolution_clock::now();
     

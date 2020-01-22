@@ -9,7 +9,7 @@
 // Let us define the graph-related types. We need decorators to
 // perform connected component computation.
 
-using user_vertex    = vq3::demo2d::Point;
+using user_vertex    = demo2d::Point;
 using vertex_layer_1 = vq3::decorator::efficiency<user_vertex>;       // for connected components
 using vertex_layer_2 = vq3::decorator::tagged<vertex_layer_1>;        // for connected components
 using vertex_layer_3 = vq3::decorator::labelled<vertex_layer_2>;      // for vertex labelling
@@ -26,12 +26,12 @@ using graph = vq3::graph<vertex, edge>;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 
 auto on_circle(double degree) {
   double rad = degree*(3.141592653589793/180.0);
-  return vq3::demo2d::Point(std::cos(rad), std::sin(rad));
+  return demo2d::Point(std::cos(rad), std::sin(rad));
 }
 
 #define NB_POINTS 75
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
   std::random_device rd;  
   std::mt19937 random_device(rd());
 
-  auto color_of_label = vq3::demo2d::opencv::colormap::random(random_device);
+  auto color_of_label = demo2d::opencv::colormap::random(random_device);
 
   // Let us define a crown-shaped graph.
 
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image       = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .3*image.size().width, true);
+  auto frame       = demo2d::opencv::direct_orthonormal_frame(image.size(), .3*image.size().width, true);
   
   auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
   								       [](const vertex& v1, const vertex& v2, const edge& e) {return true;}, // always draw

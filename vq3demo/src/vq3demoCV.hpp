@@ -44,8 +44,7 @@
 #include <string>
 
 #include <vq3.hpp>
-#include <vq3demoPoint.hpp>
-#include <vq3demoSample.hpp>
+#include <demo2d.hpp>
 #include <algorithm>
 
 
@@ -63,9 +62,9 @@ namespace vq3 {
 	using vertex_value_type = typename REF_VERTEX::element_type::value_type;
 	
 	mutable cv::Mat image; // a share pointer.
-	Frame frame;
+	::demo2d::opencv::Frame frame;
 	std::function<bool (const vertex_value_type&)>          do_draw;
-	std::function<demo2d::Point (const vertex_value_type&)> point_of;
+	std::function<::demo2d::Point (const vertex_value_type&)> point_of;
 	std::function<int (const vertex_value_type&)>           radius_of;
 	std::function<cv::Scalar (const vertex_value_type&)>    color_of;
 	std::function<int (const vertex_value_type&)>           thickness_of;
@@ -75,7 +74,7 @@ namespace vq3 {
 	
 	template<typename DO_DRAW, typename POINT_OF, typename RADIUS_OF, typename COLOR_OF, typename THICKNESS_OF>
 	VertexDrawer(cv::Mat& image,
-		     Frame frame,
+		     ::demo2d::opencv::Frame frame,
 		     const DO_DRAW&      do_draw,
 		     const POINT_OF&     point_of,
 		     const RADIUS_OF&    radius_of,
@@ -102,7 +101,7 @@ namespace vq3 {
 
       template<typename REF_VERTEX, typename DO_DRAW, typename POINT_OF, typename RADIUS_OF, typename COLOR_OF, typename THICKNESS_OF>
       auto vertex_drawer(cv::Mat& image,
-			 Frame frame,
+			 ::demo2d::opencv::Frame frame,
 			 const DO_DRAW&      do_draw,
 			 const POINT_OF&     point_of,
 			 const RADIUS_OF&    radius_of,
@@ -122,10 +121,10 @@ namespace vq3 {
 	using vertex_value_type = typename REF_VERTEX::element_type::value_type;
 	
 	mutable cv::Mat image; // a share pointer.
-	Frame frame;
+	::demo2d::opencv::Frame frame;
 	std::function<bool (const vertex_value_type&)>                do_draw;
 	std::function<std::string (const vertex_value_type&)>         text_of;
-	std::function<demo2d::Point (const vertex_value_type&)>       point_of;
+	std::function<::demo2d::Point (const vertex_value_type&)>       point_of;
 	std::function<cv::Scalar (const vertex_value_type&)>          color_of;
 	std::function<int (const vertex_value_type&)>                 thickness_of;
 	std::function<std::pair<int, int> (const vertex_value_type&)> offset_of;
@@ -136,7 +135,7 @@ namespace vq3 {
 	
 	template<typename DO_DRAW, typename TEXT_OF, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF, typename OFFSET_OF, typename SCALE_OF>
 	VertexPrinter(cv::Mat& image,
-		      Frame frame,
+		      ::demo2d::opencv::Frame frame,
 		      const DO_DRAW&       do_draw,
 		      const TEXT_OF&       text_of,
 		      const POINT_OF&      point_of,
@@ -172,7 +171,7 @@ namespace vq3 {
 
       template<typename REF_VERTEX, typename DO_DRAW, typename TEXT_OF, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF, typename OFFSET_OF, typename SCALE_OF>
       auto vertex_printer(cv::Mat& image,
-			  Frame frame,
+			  ::demo2d::opencv::Frame frame,
 			  const DO_DRAW&      do_draw,
 			  const TEXT_OF&      text_of,
 			  const POINT_OF&     point_of,
@@ -192,11 +191,11 @@ namespace vq3 {
       	using vertex_value_type = typename REF_EDGE::element_type::vertex_val_type;
 	
       	mutable cv::Mat image; // a share pointer.
-      	Frame frame;
+      	::demo2d::opencv::Frame frame;
 	std::function<bool (const vertex_value_type&,
 			    const vertex_value_type&,
 			    const edge_value_type&)>            do_draw;
-      	std::function<demo2d::Point (const vertex_value_type&)> point_of;
+      	std::function<::demo2d::Point (const vertex_value_type&)> point_of;
       	std::function<cv::Scalar (const edge_value_type&)>      color_of;
       	std::function<int (const edge_value_type&)>             thickness_of;
 	
@@ -205,7 +204,7 @@ namespace vq3 {
 	
       	template<typename DO_DRAW, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF>
       	EdgeDrawer(cv::Mat& image,
-      		   Frame frame,
+      		   ::demo2d::opencv::Frame frame,
 		   const DO_DRAW&      do_draw,
       		   const POINT_OF&     point_of,
       		   const COLOR_OF&     color_of,
@@ -248,10 +247,10 @@ namespace vq3 {
       	using vertex_value_type = typename REF_EDGE::element_type::vertex_val_type;
 	
       	mutable cv::Mat image; // a share pointer.
-      	Frame frame;
+      	::demo2d::opencv::Frame frame;
 	std::function<bool (const vertex_value_type&,
 			    const vertex_value_type&)>          do_draw;
-      	std::function<demo2d::Point (const vertex_value_type&)> point_of;
+      	std::function<::demo2d::Point (const vertex_value_type&)> point_of;
       	std::function<cv::Scalar ()>                            color_of;
       	std::function<int ()>                                   thickness_of;
 	
@@ -260,7 +259,7 @@ namespace vq3 {
 	
       	template<typename DO_DRAW, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF>
       	EdgeDrawer(cv::Mat& image,
-      		   Frame frame,
+      		   ::demo2d::opencv::Frame frame,
 		   const DO_DRAW&      do_draw,
       		   const POINT_OF&     point_of,
       		   const COLOR_OF&     color_of,
@@ -295,7 +294,7 @@ namespace vq3 {
       
       template<typename REF_EDGE, typename DO_DRAW, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF>
       auto edge_drawer(cv::Mat& image,
-		       Frame frame,
+		       ::demo2d::opencv::Frame frame,
 		       const DO_DRAW&      do_draw,
 		       const POINT_OF&     point_of,
 		       const COLOR_OF&     color_of,
@@ -313,12 +312,12 @@ namespace vq3 {
       	using vertex_value_type = typename REF_EDGE::element_type::vertex_val_type;
 	
       	mutable cv::Mat image; // a share pointer.
-      	Frame frame;
+      	::demo2d::opencv::Frame frame;
 	std::function<bool (const vertex_value_type&,
 			    const vertex_value_type&,
 			    const edge_value_type&)>                do_draw;
 	std::function<std::string (const edge_value_type&)>         text_of;
-      	std::function<demo2d::Point (const vertex_value_type&)>     point_of;
+      	std::function<::demo2d::Point (const vertex_value_type&)>     point_of;
       	std::function<cv::Scalar (const edge_value_type&)>          color_of;
       	std::function<int (const edge_value_type&)>                 thickness_of;
 	std::function<std::pair<int, int> (const edge_value_type&)> offset_of;
@@ -329,7 +328,7 @@ namespace vq3 {
 	
       	template<typename DO_DRAW, typename TEXT_OF, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF, typename OFFSET_OF, typename SCALE_OF>
       	EdgePrinter(cv::Mat& image,
-		    Frame frame,
+		    ::demo2d::opencv::Frame frame,
 		    const DO_DRAW&       do_draw,
 		    const TEXT_OF&       text_of,
 		    const POINT_OF&      point_of,
@@ -379,11 +378,11 @@ namespace vq3 {
       	using vertex_value_type = typename REF_EDGE::element_type::vertex_val_type;
 	
       	mutable cv::Mat image; // a share pointer.
-      	Frame frame;
+      	::demo2d::opencv::Frame frame;
 	std::function<bool (const vertex_value_type&,
 			    const vertex_value_type&)>          do_draw;
 	std::function<std::string ()>                           text_of;
-      	std::function<demo2d::Point (const vertex_value_type&)> point_of;
+      	std::function<::demo2d::Point (const vertex_value_type&)> point_of;
       	std::function<cv::Scalar ()>                            color_of;
       	std::function<int ()>                                   thickness_of;
 	std::function<std::pair<int, int> ()>                   offset_of;
@@ -394,7 +393,7 @@ namespace vq3 {
 	
       	template<typename DO_DRAW, typename TEXT_OF, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF, typename OFFSET_OF, typename SCALE_OF>
       	EdgePrinter(cv::Mat& image,
-		    Frame frame,
+		    ::demo2d::opencv::Frame frame,
 		    const DO_DRAW&       do_draw,
 		    const TEXT_OF&       text_of,
 		    const POINT_OF&      point_of,
@@ -436,7 +435,7 @@ namespace vq3 {
       
       template<typename REF_EDGE, typename DO_DRAW, typename TEXT_OF, typename POINT_OF, typename COLOR_OF, typename THICKNESS_OF, typename OFFSET_OF, typename SCALE_OF>
       auto edge_printer(cv::Mat& image,
-			Frame frame,
+			::demo2d::opencv::Frame frame,
 			const DO_DRAW&       do_draw,
 			const TEXT_OF&       text_of,
 			const POINT_OF&      point_of,
@@ -455,10 +454,10 @@ namespace vq3 {
 	using vertex_value_type = typename REF_VERTEX::element_type::value_type;
 	
 	mutable cv::Mat image; // a share pointer.
-	Frame frame;
+	::demo2d::opencv::Frame frame;
 	std::function<bool (const vertex_value_type&)>          do_draw;
-	std::function<demo2d::Point (const vertex_value_type&)> point_of;
-	std::function<demo2d::Point (const vertex_value_type&)> segment_of;
+	std::function<::demo2d::Point (const vertex_value_type&)> point_of;
+	std::function<::demo2d::Point (const vertex_value_type&)> segment_of;
 	std::function<cv::Scalar (const vertex_value_type&)>    color_of;
 	std::function<int (const vertex_value_type&)>           thickness_of;
 	
@@ -467,7 +466,7 @@ namespace vq3 {
 	
 	template<typename DO_DRAW, typename POINT_OF, typename SEGMENT_OF, typename COLOR_OF, typename THICKNESS_OF>
 	SegmentAtVertexDrawer(cv::Mat& image,
-			      Frame frame,
+			      ::demo2d::opencv::Frame frame,
 			      const DO_DRAW&      do_draw,
 			      const POINT_OF&     point_of,
 			      const SEGMENT_OF&   segment_of,
@@ -497,7 +496,7 @@ namespace vq3 {
 
       template<typename REF_VERTEX, typename DO_DRAW, typename POINT_OF, typename SEGMENT_OF, typename COLOR_OF, typename THICKNESS_OF>
       auto segment_at_vertex_drawer(cv::Mat& image,
-				    Frame frame,
+				    ::demo2d::opencv::Frame frame,
 				    const DO_DRAW&      do_draw,
 				    const POINT_OF&     point_of,
 				    const SEGMENT_OF&   segment_of,
@@ -509,7 +508,7 @@ namespace vq3 {
       class histogram : public stats::histogram {
       public:
 
-	demo2d::Point min, max;
+	::demo2d::Point min, max;
 	std::optional<std::string> title;
 	std::optional<std::pair<double,double>> range;
 	std::optional<std::pair<double,double>> value_bounds;
@@ -529,14 +528,14 @@ namespace vq3 {
 	int        range_thickness  = 3;
 	
 	
-	histogram(const demo2d::Point& min, const demo2d::Point& max)
+	histogram(const ::demo2d::Point& min, const ::demo2d::Point& max)
 	  : stats::histogram(),
 	  min(min), max(max){
 	}
 	
       private:
 	double y_coef;
-	demo2d::Point pA, pB; // plot drawing area.
+	::demo2d::Point pA, pB; // plot drawing area.
 	
 	double value_min, value_max;
 	double value_coef;
@@ -555,7 +554,7 @@ namespace vq3 {
 	  return bin_min + bin*bin_coef;
 	}
 	
-	void draw_bar(cv::Mat& image, const Frame& frame, unsigned int bin) {
+	void draw_bar(cv::Mat& image, const ::demo2d::opencv::Frame& frame, unsigned int bin) {
 
 	  double value = value_of(bin+.5);
 	  double a     = abscissa_of(value_of(bin+ 0));
@@ -564,12 +563,12 @@ namespace vq3 {
 	  if(sci_range && sci_range.value().first <= value && value < sci_range.value().second)
 	    color = frame_sci_bar;
 
-	  auto AA = demo2d::Point(a, pA.y);
-	  auto BB = demo2d::Point(b, pA.y + maxh*std::min(1.0, h[bin]*y_coef));
+	  auto AA = ::demo2d::Point(a, pA.y);
+	  auto BB = ::demo2d::Point(b, pA.y + maxh*std::min(1.0, h[bin]*y_coef));
 	  cv::rectangle(image, frame(AA), frame(BB), color, -1);
 	}
 
-	bool in_drawing_area(const demo2d::Point& pt) {
+	bool in_drawing_area(const ::demo2d::Point& pt) {
 	  return pA.x <= pt.x && pt.x <= pB.x
 	    &&   pA.y <= pt.y && pt.y <= pB.y;
 	}
@@ -587,7 +586,7 @@ namespace vq3 {
 	/**
 	 * This draw the histogram. Call this before any other supplementary drawings.
 	 */
-	void draw(cv::Mat& image, const Frame& frame) {
+	void draw(cv::Mat& image, const ::demo2d::opencv::Frame& frame) {
 
 	  if(draw_sci_histo)
 	    sci_range = sci;
@@ -599,8 +598,8 @@ namespace vq3 {
 	  if(title) 
 	    cv::putText(image, *title, frame(min) + cv::Point(0,20), cv::FONT_HERSHEY_PLAIN, 1., cv::Scalar(0,0,0), 1);
 
-	  pA = min + demo2d::Point( frame_margin,  frame_margin);
-	  pB = max + demo2d::Point(-frame_margin, -frame_margin);
+	  pA = min + ::demo2d::Point( frame_margin,  frame_margin);
+	  pB = max + ::demo2d::Point(-frame_margin, -frame_margin);
 	  maxh  = pB.y - pA.y;
 	  
 	  if(max_histo_display)
@@ -648,16 +647,16 @@ namespace vq3 {
 
 	  if(NT) {
 	    double v = abscissa_of(NT.value());
-	    auto AA = demo2d::Point(v, pA.y);
-	    auto BB = demo2d::Point(v, max.y - frame_margin);
+	    auto AA = ::demo2d::Point(v, pA.y);
+	    auto BB = ::demo2d::Point(v, max.y - frame_margin);
 	    cv::line(image, frame(AA), frame(BB), NT_color, NT_thickness);
 	  }
 
 	  if(range) {
 	    
 	    auto [rmin, rmax] = range.value();
-	    auto rA = demo2d::Point(abscissa_of(rmin), pA.y);
-	    auto rB = demo2d::Point(abscissa_of(rmax), pA.y);
+	    auto rA = ::demo2d::Point(abscissa_of(rmin), pA.y);
+	    auto rB = ::demo2d::Point(abscissa_of(rmax), pA.y);
 
 	    if(rA.x < pA.x)
 	      rA.x = pA.x;
@@ -672,12 +671,12 @@ namespace vq3 {
 	    cv::line(image, frame(rA), frame(rB), range_color, range_thickness);
 	  }
 	  
-	  cv::line(image, frame(pA), frame(demo2d::Point(pB.x,pA.y)), frame_foreground, axis_thickness);
+	  cv::line(image, frame(pA), frame(::demo2d::Point(pB.x,pA.y)), frame_foreground, axis_thickness);
 	}
 
-	void interval(cv::Mat& image, const Frame& frame, double vmin, double vmax, int pix_offset, const cv::Scalar& color, int thickness) {
-	  auto rA = demo2d::Point(abscissa_of(vmin), pA.y);
-	  auto rB = demo2d::Point(abscissa_of(vmax), pA.y);
+	void interval(cv::Mat& image, const ::demo2d::opencv::Frame& frame, double vmin, double vmax, int pix_offset, const cv::Scalar& color, int thickness) {
+	  auto rA = ::demo2d::Point(abscissa_of(vmin), pA.y);
+	  auto rB = ::demo2d::Point(abscissa_of(vmax), pA.y);
 
 	  if(rA.x < pA.x)
 	    rA.x = pA.x;
@@ -699,11 +698,11 @@ namespace vq3 {
 	/**
 	 * This draws a vertical line at abscissa value. Be sure that draw has been called before.
 	 */
-	void vline(cv::Mat& image, const Frame& frame, double value, const cv::Scalar& color, int thickness) {
+	void vline(cv::Mat& image, const ::demo2d::opencv::Frame& frame, double value, const cv::Scalar& color, int thickness) {
 	  double x = abscissa_of(value);
 	  if(pA.x <= x && x <= pB.x) {
-	    auto lA = demo2d::Point(abscissa_of(value), pA.y);
-	    auto lB = demo2d::Point(abscissa_of(value), pB.y);
+	    auto lA = ::demo2d::Point(abscissa_of(value), pA.y);
+	    auto lB = ::demo2d::Point(abscissa_of(value), pB.y);
 	    cv::line(image, frame(lA), frame(lB), color, thickness);
 	  }
 	}
@@ -711,11 +710,11 @@ namespace vq3 {
 	/**
 	 * This draws a curve over the histogram. Be sure that draw has been called before.
 	 * @param begin, end The range of dato to be plotted.
-	 * @param point_of The call point_of(*it) must produce a demo2d::Point.
+	 * @param point_of The call point_of(*it) must produce a ::demo2d::Point.
 	 * @param clip true means that the curve is clipped in the drawing area.
 	 */
 	template<typename Iter, typename PointOf>
-	void curve(cv::Mat& image, const Frame& frame, const Iter& begin, const Iter& end, const PointOf& point_of, const cv::Scalar& color, int thickness, bool clip) {
+	void curve(cv::Mat& image, const ::demo2d::opencv::Frame& frame, const Iter& begin, const Iter& end, const PointOf& point_of, const cv::Scalar& color, int thickness, bool clip) {
 
 	  if(begin == end) return;
 	  auto prev = begin;
@@ -738,7 +737,7 @@ namespace vq3 {
 	/**
 	 * This draws a gaussian function, using nb_points points.
 	 */
-	void gaussian_stddev(cv::Mat& image, const Frame& frame,
+	void gaussian_stddev(cv::Mat& image, const ::demo2d::opencv::Frame& frame,
 			     double mean, double std_dev, double amplitude, unsigned nb_points,
 			     const cv::Scalar& color, int thickness, bool clip) {
 	  gaussian_var(image,frame, mean, std_dev*std_dev, amplitude, nb_points, color, thickness, clip);
@@ -747,10 +746,10 @@ namespace vq3 {
 	/**
 	 * This draws a gaussian function, using nb_points points.
 	 */
-	void gaussian_var(cv::Mat& image, const Frame& frame,
+	void gaussian_var(cv::Mat& image, const ::demo2d::opencv::Frame& frame,
 			  double mean, double var, double amplitude, unsigned nb_points,
 			  const cv::Scalar& color, int thickness, bool clip) {
-	  std::vector<demo2d::Point> points;
+	  std::vector<::demo2d::Point> points;
 	  auto out = std::back_inserter(points);
 	  double coef  = (value_max - value_min)/nb_points;
 	  double gamma = -.5/var;
@@ -760,7 +759,7 @@ namespace vq3 {
 	    *(out++) = {x, amplitude*std::exp(gamma*dx*dx)};
 	  }
 
-	  curve(image, frame, points.begin(), points.end(), [](const demo2d::Point& p) {return p;},
+	  curve(image, frame, points.begin(), points.end(), [](const ::demo2d::Point& p) {return p;},
 		color, thickness, clip);
 	}
       };

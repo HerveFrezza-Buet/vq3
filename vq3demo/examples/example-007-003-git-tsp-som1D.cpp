@@ -21,8 +21,8 @@
 
 namespace aux { // This contains the definition for the auxiliary graph.
   
-  using sample    = vq3::demo2d::Point;
-  using prototype = vq3::demo2d::Point;
+  using sample    = demo2d::Point;
+  using prototype = demo2d::Point;
   
   //                                                         ## Node properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
@@ -45,13 +45,13 @@ namespace aux { // This contains the definition for the auxiliary graph.
       auto extr_pair = ref_e->extremities();
       const auto& pt1 = (*(extr_pair.first))().vq3_value;
       const auto& pt2 = (*(extr_pair.second))().vq3_value;
-      opt_cost = vq3::demo2d::d(pt1, pt2);
+      opt_cost = demo2d::d(pt1, pt2);
     }
     return *opt_cost;
   }
 
   // The distance between a node and a sample.
-  double d2(const vertex& v, const sample& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+  double d2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
 
   // The linear interpolation
   sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -60,7 +60,7 @@ namespace aux { // This contains the definition for the auxiliary graph.
   void shortest_path(graph& g, graph::ref_vertex start, graph::ref_vertex dest) {
     vq3::path::a_star<false, false>(g, start, dest, edge_cost,
     				    [start](const graph::ref_vertex& ref_v){ // This is the heuristic
-    				      if(start) return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
+    				      if(start) return demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
     				      else      return 0.0;
     				    });
   }
@@ -87,7 +87,7 @@ namespace som { // This namespace defines the SOM graph
 
 void rebuild_support_graph(aux::graph& g_aux,
 			   std::mt19937& random_device,
-			   vq3::demo2d::sample::density& density,
+			   demo2d::sample::density& density,
 			   unsigned int nb_threads);
 
 // Simulation parameters.
@@ -122,43 +122,43 @@ int main(int argc, char* argv[]) {
   double up_bar    = .70;
     
   // Left square
-  double i1             = 1;
-  double w1             = 1;
-  double h1             = 1;
-  vq3::demo2d::Point o1 = {-fig_pos, 0};
-  auto shape1           = vq3::demo2d::sample::rectangle(w1, h1, i1) + o1;
+  double i1        = 1;
+  double w1        = 1;
+  double h1        = 1;
+  demo2d::Point o1 = {-fig_pos, 0};
+  auto shape1      = demo2d::sample::rectangle(w1, h1, i1) + o1;
     
   // Right crown
-  double i2             =  1;
-  double r2             = .5;
-  double h2             = r2 - thickness;
-  vq3::demo2d::Point o2 = { fig_pos, 0};
-  auto shape2 = (vq3::demo2d::sample::disk(r2, i2) - vq3::demo2d::sample::disk(h2, i2)) + o2;
+  double i2        =  1;
+  double r2        = .5;
+  double h2        = r2 - thickness;
+  demo2d::Point o2 = { fig_pos, 0};
+  auto shape2 = (demo2d::sample::disk(r2, i2) - demo2d::sample::disk(h2, i2)) + o2;
   
   // Bars
   
-  double i3               =  1;
-  vq3::demo2d::Point min3 = {-fig_pos - thickness*.5, .5};
-  vq3::demo2d::Point max3 = {-fig_pos + thickness*.5,  up_bar + thickness*.5};
-  auto shape3             = vq3::demo2d::sample::rectangle(min3, max3, i3);
+  double i3          =  1;
+  demo2d::Point min3 = {-fig_pos - thickness*.5, .5};
+  demo2d::Point max3 = {-fig_pos + thickness*.5,  up_bar + thickness*.5};
+  auto shape3        = demo2d::sample::rectangle(min3, max3, i3);
   
-  double i4               =  1;
-  vq3::demo2d::Point min4 = {fig_pos - thickness*.5, .5};
-  vq3::demo2d::Point max4 = {fig_pos + thickness*.5,  up_bar + thickness*.5};
-  auto shape4             = vq3::demo2d::sample::rectangle(min4, max4, i4);
+  double i4          =  1;
+  demo2d::Point min4 = {fig_pos - thickness*.5, .5};
+  demo2d::Point max4 = {fig_pos + thickness*.5,  up_bar + thickness*.5};
+  auto shape4        = demo2d::sample::rectangle(min4, max4, i4);
   
-  double i5               =  1;
-  vq3::demo2d::Point min5 = {-fig_pos, up_bar - thickness*.5};
-  vq3::demo2d::Point max5 = { fig_pos, up_bar + thickness*.5};
-  auto shape5             = vq3::demo2d::sample::rectangle(min5, max5, i5);
+  double i5          =  1;
+  demo2d::Point min5 = {-fig_pos, up_bar - thickness*.5};
+  demo2d::Point max5 = { fig_pos, up_bar + thickness*.5};
+  auto shape5        = demo2d::sample::rectangle(min5, max5, i5);
 
   // Bridge
 
   
-  double i6             =  1;
-  double w6             =  .4;
-  double h6             =  thickness;
-  auto shape6           = vq3::demo2d::sample::rectangle(w6, h6, i6);
+  double i6        =  1;
+  double w6        =  .4;
+  double h6        =  thickness;
+  auto shape6      = demo2d::sample::rectangle(w6, h6, i6);
   
   
   // All
@@ -206,7 +206,7 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(750, 1500, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .3*image.size().width, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .3*image.size().width, true);
 
   int old_slider = -1;
   int slider = SLIDER_INIT;
@@ -262,7 +262,7 @@ int main(int argc, char* argv[]) {
       old_slider = slider;
     }
 
-    auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
+    auto sample_point = demo2d::sample::get_one_sample(random_device, density);
     vq3::online::wtm::learn(topology, 0,
 			    [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
 			    som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
@@ -295,30 +295,30 @@ int main(int argc, char* argv[]) {
 
 void rebuild_support_graph(aux::graph& g_aux,
 			   std::mt19937& random_device,
-			   vq3::demo2d::sample::density& density,
+			   demo2d::sample::density& density,
 			   unsigned int nb_threads) {
   
   g_aux.foreach_vertex([](auto ref_v){ref_v->kill();});
   
   // Setting vertices of the support graph
   {
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
-    auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    auto sampler_triangles = demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
+    auto S                 = demo2d::sample::sample_set(random_device, sampler_triangles, density);
     for(auto pt : S)       g_aux += pt;
   }
   
   // Setting edges of the support graph with CHL.
   {
-    std::vector<vq3::demo2d::Point> S;
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, 5*NB_SAMPLES_PER_M2_SUPPORT);
-    auto S_                = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    std::vector<demo2d::Point> S;
+    auto sampler_triangles = demo2d::sample::base_sampler::triangles(random_device, 5*NB_SAMPLES_PER_M2_SUPPORT);
+    auto S_                = demo2d::sample::sample_set(random_device, sampler_triangles, density);
     auto out               = std::back_inserter(S);
     std::copy(S_.begin(), S_.end(), out);
     
     auto chl = vq3::epoch::chl::processor(g_aux);
     chl.process(nb_threads,
                 S.begin(), S.end(),
-                [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
+                [](const demo2d::Point& s) {return s;},      // Gets the sample from *it.
                 aux::d2,                                          // d2(prototype, sample).
                 aux::edge());                                     // New edge initialization value.
   }

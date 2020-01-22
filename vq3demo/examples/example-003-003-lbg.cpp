@@ -16,8 +16,8 @@
 //
 ///////////////
 
-using sample    = vq3::demo2d::Point;
-using prototype = vq3::demo2d::Point;
+using sample    = demo2d::Point;
+using prototype = demo2d::Point;
 
 using vertex = prototype;
 using graph  = vq3::graph<vertex, void>;
@@ -32,7 +32,7 @@ using topology_key_type = int;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double dist2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v, p);}
+double dist2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v, p);}
 
 // Statistics
 //
@@ -77,13 +77,13 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image       = cv::Mat(768, 1024, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame       = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .2*image.size().width, true);
-  auto dd          = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
-									 [](const vq3::demo2d::Point& pt) {return                      true;},
-									 [](const vq3::demo2d::Point& pt) {return                        pt;},
-									 [](const vq3::demo2d::Point& pt) {return                         1;},
-									 [](const vq3::demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
-									 [](const vq3::demo2d::Point& pt) {return                        -1;});
+  auto frame       = demo2d::opencv::direct_orthonormal_frame(image.size(), .2*image.size().width, true);
+  auto dd          = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
+							       [](const demo2d::Point& pt) {return                      true;},
+							       [](const demo2d::Point& pt) {return                        pt;},
+							       [](const demo2d::Point& pt) {return                         1;},
+							       [](const demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
+							       [](const demo2d::Point& pt) {return                        -1;});
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                true;},  // always draw
 									   [](const vertex& v) {return                   v;},  // position
@@ -100,19 +100,19 @@ int main(int argc, char* argv[]) {
   double sep       =  1;
   double i         =  1;
 
-  double w              = 1;
-  double h              = 1;
-  vq3::demo2d::Point p1 = {-sep, 0};
-  auto rect             = vq3::demo2d::sample::rectangle(w, h, i) + p1;
+  double w         = 1;
+  double h         = 1;
+  demo2d::Point p1 = {-sep, 0};
+  auto rect        = demo2d::sample::rectangle(w, h, i) + p1;
 
-  double R              = .5;
-  double r              = R - thickness;
-  vq3::demo2d::Point p2 = {sep, 0};
-  auto crown            = (vq3::demo2d::sample::disk(R, i) - vq3::demo2d::sample::disk(r, i)) + p2;
+  double R         = .5;
+  double r         = R - thickness;
+  demo2d::Point p2 = {sep, 0};
+  auto crown       = (demo2d::sample::disk(R, i) - demo2d::sample::disk(r, i)) + p2;
 
-  vq3::demo2d::Point A = {-sep + w/2, -thickness/2};
-  vq3::demo2d::Point B = { sep - r,    thickness/2};
-  auto bar             = vq3::demo2d::sample::rectangle(A, B, i);
+  demo2d::Point A = {-sep + w/2, -thickness/2};
+  demo2d::Point B = { sep - r,    thickness/2};
+  auto bar        = demo2d::sample::rectangle(A, B, i);
 
   auto density = rect || bar || crown;
   
@@ -123,11 +123,11 @@ int main(int argc, char* argv[]) {
  
   // We need to register the input samples in a vector since we want
   // to both use and display them.
-  std::vector<vq3::demo2d::Point> S;
+  std::vector<demo2d::Point> S;
 
   
-  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
-  auto S_      = vq3::demo2d::sample::sample_set(random_device, sampler, density);
+  auto sampler = demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
+  auto S_      = demo2d::sample::sample_set(random_device, sampler, density);
   std::copy(S_.begin(), S_.end(), std::back_inserter(S));
 
   
@@ -140,15 +140,15 @@ int main(int argc, char* argv[]) {
   vq3::algo::lbg<prototype>(random_device,
 			    nb_threads, g, K,
 			    S.begin(), S.end(),
-			    [](const vq3::demo2d::Point& s) {return s;},                    // Gets the sample from *it.
-			    [](vertex& v) -> vertex& {return v;},                           // Gets the prototype ***reference*** from the vertex value.
-			    dist2,                                                          // dist2(prototype, sample).
-			    [&random_device](const vq3::demo2d::Point& proto) {             // Makes a prototype nearly similar to proto.
-			      return vq3::demo2d::alter(random_device, proto, MAX_DIST2);},  
-			    [](const vertex& previous, const vertex& current) {             // check function : if check(previous, current) is false for each vertex, the convergence is achieved.
+			    [](const demo2d::Point& s) {return s;},                    // Gets the sample from *it.
+			    [](vertex& v) -> vertex& {return v;},                      // Gets the prototype ***reference*** from the vertex value.
+			    dist2,                                                     // dist2(prototype, sample).
+			    [&random_device](const demo2d::Point& proto) {             // Makes a prototype nearly similar to proto.
+			      return demo2d::alter(random_device, proto, MAX_DIST2);},  
+			    [](const vertex& previous, const vertex& current) {        // check function : if check(previous, current) is false for each vertex, the convergence is achieved.
 			      return dist2(previous, current) > MAX_DIST2;
 			    },
-			    true);                                                          // Verbosity             
+			    true);                                                     // Verbosity             
   auto t_end = std::chrono::high_resolution_clock::now();
 
     
@@ -175,9 +175,9 @@ int main(int argc, char* argv[]) {
   auto wta = vq3::epoch::wta::processor(topology);
   auto epoch_result = wta.process<epoch_data>(nb_threads,
 					      S.begin(), S.end(), 
-					      [](const vq3::demo2d::Point& s) {return s;}, // Gets the sample from *it.
-					      [](vertex& v) -> vertex& {return v;},        // Gets the prototype ***reference*** from the vertex value.
-					      dist2);                                      // dist2(prototype, sample).
+					      [](const demo2d::Point& s) {return s;}, // Gets the sample from *it.
+					      [](vertex& v) -> vertex& {return v;},   // Gets the prototype ***reference*** from the vertex value.
+					      dist2);                                 // dist2(prototype, sample).
   
   auto disto_histo = vq3::demo::gnuplot::histogram("distortion distribution", "histo");
   disto_histo.set_xlabel("distortion values");

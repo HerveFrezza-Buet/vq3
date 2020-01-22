@@ -22,8 +22,8 @@
 
 namespace aux { 
   
-  using sample    = vq3::demo2d::Point;
-  using prototype = vq3::demo2d::Point;
+  using sample    = demo2d::Point;
+  using prototype = demo2d::Point;
   
   //                                                         ## Node properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
@@ -47,13 +47,13 @@ namespace aux {
       auto extr_pair = ref_e->extremities();
       const auto& pt1 = (*(extr_pair.first))().vq3_value;
       const auto& pt2 = (*(extr_pair.second))().vq3_value;
-      opt_cost = vq3::demo2d::d(pt1, pt2);
+      opt_cost = demo2d::d(pt1, pt2);
     }
     return *opt_cost;
   }
 
   // The distance between a node and a sample.
-  double d2(const vertex& v, const sample& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+  double d2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
 
   // The linear interpolation
   sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -62,7 +62,7 @@ namespace aux {
   void shortest_path(graph& g, graph::ref_vertex start, graph::ref_vertex dest) {
     vq3::path::a_star<false, false>(g, start, dest, edge_cost,
     				    [start](const graph::ref_vertex& ref_v){ // This is the heuristic
-    				      if(start) return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
+    				      if(start) return demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
     				      else      return 0.0;
     				    });
   }
@@ -129,22 +129,22 @@ int main(int argc, char* argv[]) {
   double bar_height    = .5;
   double bbar_width    = .9*bar_height;
   
-  auto crown        = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole_radius, intensity);
-  auto middle_break = vq3::demo2d::sample::rectangle(break_width, break_height, intensity);
-  auto bar          = vq3::demo2d::sample::rectangle(bar_width, bar_height, intensity);
-  auto bbar         = vq3::demo2d::sample::rectangle(bbar_width, bar_width, intensity);
+  auto crown        = demo2d::sample::disk(radius, intensity) - demo2d::sample::disk(hole_radius, intensity);
+  auto middle_break = demo2d::sample::rectangle(break_width, break_height, intensity);
+  auto bar          = demo2d::sample::rectangle(bar_width, bar_height, intensity);
+  auto bbar         = demo2d::sample::rectangle(bbar_width, bar_width, intensity);
 
-  vq3::demo2d::Point up      = {0., hole_radius + .5*thickness};
-  vq3::demo2d::Point barpos  = {bar_width, bar_height*.5};
-  vq3::demo2d::Point bbarpos = {0, bar_height*.9};
+  demo2d::Point up      = {0., hole_radius + .5*thickness};
+  demo2d::Point barpos  = {bar_width, bar_height*.5};
+  demo2d::Point bbarpos = {0, bar_height*.9};
   
   // All
   auto density = (((crown + up) || (crown - up)) - middle_break) || (bar + barpos) || (bar - barpos)|| (bbar + bbarpos) || (bbar - bbarpos);
   
   // Setting vertices of the support graph
   {
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
-    auto S                 = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    auto sampler_triangles = demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2_SUPPORT);
+    auto S                 = demo2d::sample::sample_set(random_device, sampler_triangles, density);
     for(auto pt : S) {
       auto ref_v = g_aux += pt;
       (*ref_v)().vq3_color = cv::Scalar(180, 180, 180);
@@ -154,16 +154,16 @@ int main(int argc, char* argv[]) {
   
   // Setting edges of the support graph with CHL.
   {
-    std::vector<vq3::demo2d::Point> S;
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, 5*NB_SAMPLES_PER_M2_SUPPORT);
-    auto S_                = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    std::vector<demo2d::Point> S;
+    auto sampler_triangles = demo2d::sample::base_sampler::triangles(random_device, 5*NB_SAMPLES_PER_M2_SUPPORT);
+    auto S_                = demo2d::sample::sample_set(random_device, sampler_triangles, density);
     auto out               = std::back_inserter(S);
     std::copy(S_.begin(), S_.end(), out);
     
     auto chl = vq3::epoch::chl::processor(g_aux);
     chl.process(nb_threads,
                 S.begin(), S.end(),
-                [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
+                [](const demo2d::Point& s) {return s;},      // Gets the sample from *it.
                 aux::d2,                                          // d2(prototype, sample).
                 aux::edge());                                     // New edge initialization value.
     
@@ -179,9 +179,9 @@ int main(int argc, char* argv[]) {
   auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::interpolate, aux::shortest_path);
 
   {
-    auto colormap = vq3::demo2d::opencv::colormap::random(random_device, .1, 50);
+    auto colormap = demo2d::opencv::colormap::random(random_device, .1, 50);
     for(unsigned int i = 0; i < K; ++i) {
-      auto ref_v = g_kmeans += vq3::topology::gi::value(traits, vq3::demo2d::sample::get_one_sample(random_device, density));
+      auto ref_v = g_kmeans += vq3::topology::gi::value(traits, demo2d::sample::get_one_sample(random_device, density));
       (*ref_v)().vq3_color = colormap(i);
     }
   }
@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   cv::createTrackbar("1000 * alpha", "image", &slider_alpha, 500, nullptr);
   auto image = cv::Mat(600, 350, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().width, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().width, true);
 
   auto draw_vertex_aux = vq3::demo2d::opencv::vertex_drawer<aux::graph::ref_vertex>(image, frame,
   										    [](const aux::vertex& v) {return        true;},  // always draw
@@ -282,16 +282,16 @@ int main(int argc, char* argv[]) {
       wait_ms = 1;
 
       if(keycode == 10) { // return key was pressed, we reset the prototypes
-	auto colormap = vq3::demo2d::opencv::colormap::random(random_device, .1, 50);
+	auto colormap = demo2d::opencv::colormap::random(random_device, .1, 50);
 	unsigned int i=0;
 	g_kmeans.foreach_vertex([&random_device, &density, &colormap, &i](kmeans::graph::ref_vertex ref_v){
-	    (*ref_v)().vq3_value = vq3::demo2d::sample::get_one_sample(random_device, density); // GIT values can be initialized from a regular value.
+	    (*ref_v)().vq3_value = demo2d::sample::get_one_sample(random_device, density); // GIT values can be initialized from a regular value.
 	    (*ref_v)().vq3_color = colormap(i++);
 	  });
       }
       else // We compute the usual k-mean update.
 	for(unsigned int i = 0; i < CHUNK_SIZE; ++i) {
-	  auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
+	  auto sample_point = demo2d::sample::get_one_sample(random_device, density);
 	  vq3::online::wta::learn(g_kmeans,
 	  			  [](kmeans::vertex& vertex_value) -> kmeans::prototype& {return vertex_value.vq3_value;},
 	  			  kmeans_d2, vq3::topology::gi::value(traits, sample_point),

@@ -22,8 +22,8 @@
 
 namespace aux { 
   
-  using sample    = vq3::demo2d::Point;
-  using prototype = vq3::demo2d::Point;
+  using sample    = demo2d::Point;
+  using prototype = demo2d::Point;
   
   //                                                         ## Node properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
@@ -47,13 +47,13 @@ namespace aux {
       auto extr_pair = ref_e->extremities();
       const auto& pt1 = (*(extr_pair.first))().vq3_value;
       const auto& pt2 = (*(extr_pair.second))().vq3_value;
-      opt_cost = vq3::demo2d::d(pt1, pt2);
+      opt_cost = demo2d::d(pt1, pt2);
     }
     return *opt_cost;
   }
 
   // The distance between a node and a sample.
-  double d2(const vertex& v, const sample& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+  double d2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
 
   // The linear interpolation
   sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -62,7 +62,7 @@ namespace aux {
   void shortest_path(graph& g, graph::ref_vertex start, graph::ref_vertex dest) {
     vq3::path::a_star<false, false>(g, start, dest, edge_cost,
     				    [start](const graph::ref_vertex& ref_v){ // This is the heuristic
-    				      if(start) return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
+    				      if(start) return demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
     				      else      return 0.0;
     				    });
   }
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
   double intensity = 1. ;
   double radius    =  .5;
   double hole      =  .3;
-  auto density     = vq3::demo2d::sample::disk(radius, intensity) - vq3::demo2d::sample::disk(hole, intensity);
+  auto density     = demo2d::sample::disk(radius, intensity) - demo2d::sample::disk(hole, intensity);
 
   
   /////
@@ -128,8 +128,8 @@ int main(int argc, char* argv[]) {
   
   // Setting vertices of the support graph
   {
-    auto sampler_random = vq3::demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2_SUPPORT);
-    auto S              = vq3::demo2d::sample::sample_set(random_device, sampler_random, density);
+    auto sampler_random = demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2_SUPPORT);
+    auto S              = demo2d::sample::sample_set(random_device, sampler_random, density);
     for(auto pt : S)    g_aux += pt;
   }
 
@@ -137,16 +137,16 @@ int main(int argc, char* argv[]) {
   // Setting edges of the support graph with CHL.
   // (a Delaunay triangulation would have been better but it is not available in vq3)
   {
-    std::vector<vq3::demo2d::Point> S;
-    auto sampler_triangles = vq3::demo2d::sample::base_sampler::triangles(random_device, 20*NB_SAMPLES_PER_M2_SUPPORT);
-    auto S_                = vq3::demo2d::sample::sample_set(random_device, sampler_triangles, density);
+    std::vector<demo2d::Point> S;
+    auto sampler_triangles = demo2d::sample::base_sampler::triangles(random_device, 20*NB_SAMPLES_PER_M2_SUPPORT);
+    auto S_                = demo2d::sample::sample_set(random_device, sampler_triangles, density);
     auto out               = std::back_inserter(S);
     std::copy(S_.begin(), S_.end(), out);
     
     auto chl = vq3::epoch::chl::processor(g_aux);
     chl.process(nb_threads,
                 S.begin(), S.end(),
-                [](const vq3::demo2d::Point& s) {return s;},      // Gets the sample from *it.
+                [](const demo2d::Point& s) {return s;},      // Gets the sample from *it.
                 aux::d2,                                          // d2(prototype, sample).
                 aux::edge());                                     // New edge initialization value.
 
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(800, 800, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().width, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().width, true);
 
   int old_slider = -1;
   int slider = SLIDER_INIT;
@@ -260,7 +260,7 @@ int main(int argc, char* argv[]) {
     }
 
     for(unsigned int i = 0; i < CHUNK_SIZE; ++i) {
-      auto sample_point = vq3::demo2d::sample::get_one_sample(random_device, density);
+      auto sample_point = demo2d::sample::get_one_sample(random_device, density);
       vq3::online::wtm::learn(topology, 0,
 			      [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
 			      som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.

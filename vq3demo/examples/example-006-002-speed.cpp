@@ -34,13 +34,13 @@
 //
 ///////////////
 
-using sample    = vq3::demo2d::Point;
-using prototype = vq3::demo2d::Point;
+using sample    = demo2d::Point;
+using prototype = demo2d::Point;
 
 //                                                                                 ## Node properties :
 using vlayer_0 = prototype;                                                        // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::tagged<vlayer_0>;                                 // we add a tag for topology computation.
-using vlayer_2 = vq3::decorator::smoother<vlayer_1, vq3::demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
+using vlayer_2 = vq3::decorator::smoother<vlayer_1, demo2d::Point, 1, 21, 2>; // we smooth of prototypes.
 using vertex   = vlayer_2;
 
 //                                                        ## Edge properties :
@@ -59,7 +59,7 @@ using neighbour_key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double dist(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 
 // Here is the main.
@@ -90,15 +90,15 @@ int main(int argc, char* argv[]) {
 
 #define BAR_SIDE 2.
   
-  auto bar_theta     = vq3::demo::dyn::linear<vq3::demo::dyn::bound::wrap>(0, 0, 360, D_ANGLE);
-  auto bar_pos_x     = vq3::demo::dyn::sin(-2, 2,  0,     D_ANGLE);
-  auto bar_size_x    = vq3::demo::dyn::cos(BAR_SIDE, 5,  0, 1.25*D_ANGLE);
-  auto bar_pos       = vq3::demo2d::dyn::point(bar_pos_x, 0.);
-  auto bar_size      = vq3::demo2d::dyn::point(bar_size_x, BAR_SIDE);
+  auto bar_theta     = demo::dyn::linear<demo::dyn::bound::wrap>(0, 0, 360, D_ANGLE);
+  auto bar_pos_x     = demo::dyn::sin(-2, 2,  0,     D_ANGLE);
+  auto bar_size_x    = demo::dyn::cos(BAR_SIDE, 5,  0, 1.25*D_ANGLE);
+  auto bar_pos       = demo2d::dyn::point(bar_pos_x, 0.);
+  auto bar_size      = demo2d::dyn::point(bar_size_x, BAR_SIDE);
   double bar_density =   1;
   double bar_width   =   1;
   double bar_height  =   1;
-  auto bar = (vq3::demo2d::sample::rectangle(bar_width, bar_height, bar_density) * bar_size()) % bar_theta() + bar_pos();
+  auto bar = (demo2d::sample::rectangle(bar_width, bar_height, bar_density) * bar_size()) % bar_theta() + bar_pos();
   
   
   auto density = bar;
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
   cv::createTrackbar("T",                   "image", &T_slider, 1000, nullptr);
   
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .1*image.size().width, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .1*image.size().width, true);
 
 
   cv::namedWindow("speed", CV_WINDOW_AUTOSIZE);
@@ -124,12 +124,12 @@ int main(int argc, char* argv[]) {
   auto speed_image = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
 
   
-  auto dd = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
-								[](const vq3::demo2d::Point& pt) {return                      true;},
-								[](const vq3::demo2d::Point& pt) {return                        pt;},
-								[](const vq3::demo2d::Point& pt) {return                         1;},
-								[](const vq3::demo2d::Point& pt) {return cv::Scalar(255, 120, 120);},
-								[](const vq3::demo2d::Point& pt) {return                        -1;});
+  auto dd = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
+						      [](const demo2d::Point& pt) {return                      true;},
+						      [](const demo2d::Point& pt) {return                        pt;},
+						      [](const demo2d::Point& pt) {return                         1;},
+						      [](const demo2d::Point& pt) {return cv::Scalar(255, 120, 120);},
+						      [](const demo2d::Point& pt) {return                        -1;});
   
   auto smooth_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 								       [](const vertex& v1, const vertex& v2, const edge& e) {
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
 
   // We need to register the input samples in a vector since we want
   // to both use and display them.
-  std::vector<vq3::demo2d::Point> S;
+  std::vector<demo2d::Point> S;
 
   graph g;
   
@@ -202,7 +202,7 @@ int main(int argc, char* argv[]) {
   unsigned int step = 0;
   unsigned int mode = 0;
   
-  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, N_slider);
+  auto sampler = demo2d::sample::base_sampler::random(random_device, N_slider);
   
   int keycode = 0;
   while(keycode != 27) {
@@ -227,7 +227,7 @@ int main(int argc, char* argv[]) {
     // Get the samples and plot them.
     
     sampler = N_slider;
-    auto S_ = vq3::demo2d::sample::sample_set(random_device, sampler, density);
+    auto S_ = demo2d::sample::sample_set(random_device, sampler, density);
     S.clear();
     std::copy(S_.begin(), S_.end(), std::back_inserter(S));
 
@@ -243,12 +243,12 @@ int main(int argc, char* argv[]) {
 
     // We compute the topology evolution of the graph...
     gngt.process(nb_threads,
-		 S.begin(), S.end(),                                                    // The sample set. Shuffle if the dataser is not sampled randomly.
-		 [](const sample& s) {return s;},                                       // get sample from *iter (identity here).
-		 [](vertex& v) -> prototype& {return v.vq3_value;},                     // get a prototype reference from the vertex value.
-		 [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},   // get a point close to a prototype.
-		 dist,                                                                  // The squared distance, faster, used for bmu-related stuff.
-		 "wide som", "narrow som", "avg",                                       // Neighborhood keys.
+		 S.begin(), S.end(),                                               // The sample set. Shuffle if the dataser is not sampled randomly.
+		 [](const sample& s) {return s;},                                  // get sample from *iter (identity here).
+		 [](vertex& v) -> prototype& {return v.vq3_value;},                // get a prototype reference from the vertex value.
+		 [](const prototype& p) {return p + demo2d::Point(-1e-5,1e-5);},   // get a point close to a prototype.
+		 dist,                                                             // The squared distance, faster, used for bmu-related stuff.
+		 "wide som", "narrow som", "avg",                                  // Neighborhood keys.
 		 evolution,
 		 true);
     
@@ -270,14 +270,14 @@ int main(int argc, char* argv[]) {
 
     speed_image = cv::Scalar(255, 255, 255);
     double max_speed = Z_slider*.001;
-    auto speed_frame = vq3::demo2d::opencv::direct_orthonormal_frame(speed_image.size(), .5*speed_image.size().width/std::max(max_speed, 1e-3), true);
+    auto speed_frame = demo2d::opencv::direct_orthonormal_frame(speed_image.size(), .5*speed_image.size().width/std::max(max_speed, 1e-3), true);
     cv::line(speed_image,
-	     speed_frame(vq3::demo2d::Point(0, -max_speed)),
-	     speed_frame(vq3::demo2d::Point(0,  max_speed)),
+	     speed_frame(demo2d::Point(0, -max_speed)),
+	     speed_frame(demo2d::Point(0,  max_speed)),
 	     cv::Scalar(0,0,0), 1);
     cv::line(speed_image,
-	     speed_frame(vq3::demo2d::Point(-max_speed, 0)),
-	     speed_frame(vq3::demo2d::Point( max_speed, 0)),
+	     speed_frame(demo2d::Point(-max_speed, 0)),
+	     speed_frame(demo2d::Point( max_speed, 0)),
 	     cv::Scalar(0,0,0), 1);
     g.foreach_vertex([&speed_image, &speed_frame](graph::ref_vertex ref_v) {
 	auto& vertex = (*ref_v)();

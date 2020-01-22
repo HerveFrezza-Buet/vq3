@@ -12,14 +12,14 @@
 
 // Let us consider 2D points.
 
-using sample = vq3::demo2d::Point;
+using sample = demo2d::Point;
 
 // Let us define the auxiliary graph.
 
 
 
 //                                                         ## Node properties :
-using vlayer_0 = vq3::demo2d::Point;                       // The graph nodes are points.
+using vlayer_0 = demo2d::Point;                            // The graph nodes are points.
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
 using vertex   = vlayer_1;
   
@@ -35,7 +35,7 @@ using graph = vq3::graph<vertex, void>;
 double edge_cost(const graph::ref_edge& ref_e) {return 1.;}
 
 // This is the distance between a node value and a sample.
-double d2(const vertex& v, const sample& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double d2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
 
 // This is the linear interpolation between samples, when no graph is used.
 sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -44,7 +44,7 @@ sample interpolate(const sample& a, const sample& b, double lambda) {return (1-l
 void shortest_path(graph& g, graph::ref_vertex start, graph::ref_vertex dest) {
   vq3::path::a_star<false, false>(g, start, dest, edge_cost,
 				  [start](const graph::ref_vertex& ref_v){ // This is the heuristic
-				    return vq3::demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
+				    return demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
 				  });
 }
 
@@ -58,18 +58,18 @@ int main(int argc, char* argv[]) {
   graph g;
 
   // Let us build a very simple auxiliary graph.
-  auto A = g += vq3::demo2d::Point(-.5, -.5);
-  auto B = g += vq3::demo2d::Point( .5, -.5);
-  auto C = g += vq3::demo2d::Point( .5,  .5);
-  auto D = g += vq3::demo2d::Point(-.5,  .5);
+  auto A = g += demo2d::Point(-.5, -.5);
+  auto B = g += demo2d::Point( .5, -.5);
+  auto C = g += demo2d::Point( .5,  .5);
+  auto D = g += demo2d::Point(-.5,  .5);
 
   g.connect(A, B);
   g.connect(B, C);
   g.connect(C, D);
 
   // Let us consider two samples.
-  auto x = vq3::demo2d::Point(-.5,  .1);
-  auto y = vq3::demo2d::Point(-.5, -.1);
+  auto x = demo2d::Point(-.5,  .1);
+  auto y = demo2d::Point(-.5, -.1);
 
   // They are usual Eucidian points, distance and linear
   // interpolations between them are linear, ignoring the auxiliary
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
   
   cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().height, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().height, true);
   int slider = 500;
   cv::createTrackbar("walk ratio", "image", &slider, 1000, nullptr);
 

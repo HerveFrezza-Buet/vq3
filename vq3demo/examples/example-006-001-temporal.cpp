@@ -9,10 +9,10 @@
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
 
-//                                                                               ## Node properties :
-using layer_0 = vq3::demo2d::Point;                                              // prototypes are 2D points (this is the "user defined" value).
-using layer_1 = vq3::decorator::tagged<layer_0>;                                 // we add a tag for topology computation.
-using layer_2 = vq3::decorator::smoother<layer_1, vq3::demo2d::Point, 1, 21, 2>; // smoothing of prototypes.
+//                                                                          ## Node properties :
+using layer_0 = demo2d::Point;                                              // prototypes are 2D points (this is the "user defined" value).
+using layer_1 = vq3::decorator::tagged<layer_0>;                            // we add a tag for topology computation.
+using layer_2 = vq3::decorator::smoother<layer_1, demo2d::Point, 1, 21, 2>; // smoothing of prototypes.
 using vertex  = layer_2;
 
 using graph  = vq3::graph<vertex, void>;
@@ -21,10 +21,10 @@ using neighbour_key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double d2(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
-using epoch_data_0 = vq3::epoch::data::none<vq3::demo2d::Point, vertex, vq3::demo2d::Point>; // This is the root of the stack.
-using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;                                    // This gathers computation for batch winner-take-most.
+using epoch_data_0 = vq3::epoch::data::none<demo2d::Point, vertex, demo2d::Point>; // This is the root of the stack.
+using epoch_data_1 = vq3::epoch::data::wtm<epoch_data_0>;                          // This gathers computation for batch winner-take-most.
 using epoch_data   = epoch_data_1;
 
 #define SPEED_TO_METER .5
@@ -57,13 +57,13 @@ int main(int argc, char* argv[]) {
   
   int N_slider =  5000;
 
-  vq3::demo2d::opencv::HueSelector selector;
-  auto video_data = vq3::demo2d::opencv::sample::video_data(video_id, selector.build_pixel_test());
+  demo2d::opencv::HueSelector selector;
+  auto video_data = demo2d::opencv::sample::video_data(video_id, selector.build_pixel_test());
 
-  auto density = vq3::demo2d::opencv::sample::webcam(video_data);
+  auto density = demo2d::opencv::sample::webcam(video_data);
 
   auto input_size  = video_data.image.size();
-  video_data.frame = vq3::demo2d::opencv::direct_orthonormal_frame(input_size, .5*input_size.width, true);
+  video_data.frame = demo2d::opencv::direct_orthonormal_frame(input_size, .5*input_size.width, true);
 
   
   cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
@@ -73,14 +73,14 @@ int main(int argc, char* argv[]) {
 
   
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame = vq3::demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
+  auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
   
-  auto dd    = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
-								   [](const vq3::demo2d::Point& pt) {return                      true;},
-								   [](const vq3::demo2d::Point& pt) {return                        pt;},
-								   [](const vq3::demo2d::Point& pt) {return                         1;},
-								   [](const vq3::demo2d::Point& pt) {return cv::Scalar(255, 120, 120);},
-								   [](const vq3::demo2d::Point& pt) {return                        -1;});
+  auto dd    = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
+							 [](const demo2d::Point& pt) {return                      true;},
+							 [](const demo2d::Point& pt) {return                        pt;},
+							 [](const demo2d::Point& pt) {return                         1;},
+							 [](const demo2d::Point& pt) {return cv::Scalar(255, 120, 120);},
+							 [](const demo2d::Point& pt) {return                        -1;});
 
   auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 								       [](const vertex& v1, const vertex& v2) {return   true;}, // always drawing
@@ -125,14 +125,14 @@ int main(int argc, char* argv[]) {
   
   vq3::utils::make_grid(g, GRID_WIDTH, GRID_HEIGHT,
 			[&random_device](unsigned int w, unsigned int h) {
-			  graph::vertex_value_type value(vq3::demo2d::uniform(random_device, {-.5, -.5}, {.5, .5}));
+			  graph::vertex_value_type value(demo2d::uniform(random_device, {-.5, -.5}, {.5, .5}));
 			  return value;
 			});
   
 
   // We need to register the input samples in a vector since we want
   // to both use and display them.
-  std::vector<vq3::demo2d::Point> S;
+  std::vector<demo2d::Point> S;
   
   // This keeps up to date information about the graph topology.
   auto topology = vq3::topology::table<neighbour_key_type>(g);
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
 
   vq3::temporal::dt_averager frame_delay(.05);
   
-  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, N_slider);
+  auto sampler = demo2d::sample::base_sampler::random(random_device, N_slider);
   
   int keycode = 0;
   while(keycode != 27) {
@@ -170,7 +170,7 @@ int main(int argc, char* argv[]) {
     // Get the samples
     
     sampler = N_slider;
-    auto S_ = vq3::demo2d::sample::sample_set(random_device, sampler, density);
+    auto S_ = demo2d::sample::sample_set(random_device, sampler, density);
     S.clear();
     std::copy(S_.begin(), S_.end(), std::back_inserter(S));
 
@@ -178,8 +178,8 @@ int main(int argc, char* argv[]) {
     
     som.process<epoch_data>(nb_threads, "som",
 			    S.begin(), S.end(),
-			    [](const vq3::demo2d::Point& p) -> const vq3::demo2d::Point& {return p;},
-			    [](vertex& vertex_value) -> vq3::demo2d::Point& {return vertex_value.vq3_value;},
+			    [](const demo2d::Point& p) -> const demo2d::Point& {return p;},
+			    [](vertex& vertex_value) -> demo2d::Point& {return vertex_value.vq3_value;},
 			    d2);
     
     // Temporal update

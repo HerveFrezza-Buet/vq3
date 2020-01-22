@@ -20,6 +20,9 @@ foreach(f ${usage_examples})
     target_include_directories(${exampleName} PUBLIC                     ${VQ3_INCLUDE_DIRS}      )
     target_link_libraries     (${exampleName}                            ${VQ3_LIBRARIES}         )
     target_link_libraries     (${exampleName}                            ${VQ3_LDFLAGS}           )
+    target_include_directories(${exampleName} PUBLIC                     ${DEMO_INCLUDE_DIRS}     )
+    target_link_libraries     (${exampleName}                            ${DEMO_LIBRARIES}        )
+    target_link_libraries     (${exampleName}                            ${DEMO_LDFLAGS}          )
 
     install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${exampleName} 
             DESTINATION bin

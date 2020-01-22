@@ -61,15 +61,15 @@ struct callback_data {
   bool b3 = true;    // visibility of object 3
   bool b4 = false;   // visibility of object 4
 
-  vq3::demo2d::sample::density d1;
-  vq3::demo2d::sample::density d2;
-  vq3::demo2d::sample::density d3;
-  vq3::demo2d::sample::density d4;
+  demo2d::sample::density d1;
+  demo2d::sample::density d2;
+  demo2d::sample::density d3;
+  demo2d::sample::density d4;
 
-  const vq3::demo2d::opencv::Frame& frame;
+  const demo2d::opencv::Frame& frame;
   int& d_slider;
 
-  callback_data(const vq3::demo2d::opencv::Frame& frame, int& d_slider)
+  callback_data(const demo2d::opencv::Frame& frame, int& d_slider)
     : frame(frame), d_slider(d_slider) {
     update();
   }
@@ -103,8 +103,8 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
 
 // Graph definition
 
-using sample    = vq3::demo2d::Point;
-using prototype = vq3::demo2d::Point;
+using sample    = demo2d::Point;
+using prototype = demo2d::Point;
 
 //                                                        ## Node properties :
 using vlayer_0 = prototype;                               // prototypes are 2D points (this is the "user defined" value).
@@ -125,7 +125,7 @@ using neighbour_key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double dist(const vertex& v, const vq3::demo2d::Point& p) {return vq3::demo2d::d2(v.vq3_value, p);}
+double dist(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 
 // Network evolution rule.
@@ -322,16 +322,16 @@ int main(int argc, char* argv[]) {
   
   auto image       = cv::Mat(600, 1500, CV_8UC3, cv::Scalar(255,255,255));
   auto params      = cv::Mat(1, 600, CV_8UC3, cv::Scalar(255,255,255));
-  auto frame       = vq3::demo2d::opencv::direct_orthogonal_frame(220, 220, {512, 288});
+  auto frame       = demo2d::opencv::direct_orthogonal_frame(220, 220, {512, 288});
   callback_data cb(frame, slider_density);
   cv::setMouseCallback("algorithm", on_mouse, reinterpret_cast<void*>(&cb));
   
-  auto dd          = vq3::demo2d::opencv::dot_drawer<vq3::demo2d::Point>(image, frame,
-									 [](const vq3::demo2d::Point& pt) {return                      true;},
-									 [](const vq3::demo2d::Point& pt) {return                        pt;},
-									 [](const vq3::demo2d::Point& pt) {return                         1;},
-									 [](const vq3::demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
-									 [](const vq3::demo2d::Point& pt) {return                        -1;});
+  auto dd          = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
+							       [](const demo2d::Point& pt) {return                      true;},
+							       [](const demo2d::Point& pt) {return                        pt;},
+							       [](const demo2d::Point& pt) {return                         1;},
+							       [](const demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
+							       [](const demo2d::Point& pt) {return                        -1;});
   auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 								       [](const vertex& v1, const vertex& v2, const edge& e) {return true;}, // always draw
 								       [](const vertex& v)              {return               v.vq3_value;}, // position
@@ -351,37 +351,37 @@ int main(int argc, char* argv[]) {
   double rect_dist = 1.5;
     
   // Left square
-  double w1             = 1;
-  double h1             = 1;
-  vq3::demo2d::Point o1 = {-rect_dist, 0};
-  auto shape1           = vq3::demo2d::sample::rectangle(w1, h1, cb.i1) + o1;
-  cb.d1                 = shape1;
+  double w1        = 1;
+  double h1        = 1;
+  demo2d::Point o1 = {-rect_dist, 0};
+  auto shape1      = demo2d::sample::rectangle(w1, h1, cb.i1) + o1;
+  cb.d1            = shape1;
     
   // Middle crown
   double i2   =  1;
   double r2   = .5;
   double h2   = r2 - thickness;
-  auto shape2 = vq3::demo2d::sample::disk(r2, cb.i2) - vq3::demo2d::sample::disk(h2, i2);
+  auto shape2 = demo2d::sample::disk(r2, cb.i2) - demo2d::sample::disk(h2, i2);
 
   // Right square
-  double w3             = 1;
-  double h3             = 1;
-  vq3::demo2d::Point o3 = {rect_dist, 0};
-  auto shape3           = vq3::demo2d::sample::rectangle(w3, h3, cb.i3) + o3;
-  cb.d3                 = shape3;
+  double w3        = 1;
+  double h3        = 1;
+  demo2d::Point o3 = {rect_dist, 0};
+  auto shape3      = demo2d::sample::rectangle(w3, h3, cb.i3) + o3;
+  cb.d3            = shape3;
 
   // Bar
-  vq3::demo2d::Point min4 = {-rect_dist +  .5, -thickness*.5};
-  vq3::demo2d::Point max4 = {             -h2,  thickness*.5};
-  auto shape4             = vq3::demo2d::sample::rectangle(min4, max4, cb.i2);
-  cb.d2                   = shape2 || shape4;
+  demo2d::Point min4 = {-rect_dist +  .5, -thickness*.5};
+  demo2d::Point max4 = {             -h2,  thickness*.5};
+  auto shape4        = demo2d::sample::rectangle(min4, max4, cb.i2);
+  cb.d2              = shape2 || shape4;
 
   // Noise
-  double w5             = 4.5;
-  double h5             = 2;
-  vq3::demo2d::Point o5 = {0, 0};
-  auto shape5           = vq3::demo2d::sample::rectangle(w5, h5, cb.i4) + o5;
-  cb.d4                 = shape5;
+  double w5        = 4.5;
+  double h5        = 2;
+  demo2d::Point o5 = {0, 0};
+  auto shape5      = demo2d::sample::rectangle(w5, h5, cb.i4) + o5;
+  cb.d4            = shape5;
 
   // All
   auto density = shape1 || shape2 || shape3 || shape4 || shape5;
@@ -408,7 +408,7 @@ int main(int argc, char* argv[]) {
   // We need to register the input samples in a vector since we want
   // to both use and display them. Moreover, for gngt, the sample set
   // is iterated several times.
-  std::vector<vq3::demo2d::Point> S;
+  std::vector<demo2d::Point> S;
 
   // This keeps up to date information about the graph topology.
   auto topology = vq3::topology::table<neighbour_key_type>(g);
@@ -427,7 +427,7 @@ int main(int argc, char* argv[]) {
   
   // This is the loop
   
-  auto sampler = vq3::demo2d::sample::base_sampler::random(random_device, slider_N);
+  auto sampler = demo2d::sample::base_sampler::random(random_device, slider_N);
 
   Mode mode = Mode::Cont;
   bool compute = true;
@@ -463,7 +463,7 @@ int main(int argc, char* argv[]) {
       // Get the samples
       
       sampler = slider_N;
-      auto S_ = vq3::demo2d::sample::sample_set(random_device, sampler, density);
+      auto S_ = demo2d::sample::sample_set(random_device, sampler, density);
       S.clear();
       auto out = std::back_inserter(S);
       std::copy(S_.begin(), S_.end(), out);
@@ -474,7 +474,7 @@ int main(int argc, char* argv[]) {
       double e = slider_T/1000.0;
       double expo_min = -5;
       double expo_max = -1;
-      evolution.T             = std::pow(10, expo_min*(1-e) + expo_max*e);
+      evolution.T     = std::pow(10, expo_min*(1-e) + expo_max*e);
       
 
       evolution.density       =     slider_N;
@@ -490,14 +490,14 @@ int main(int argc, char* argv[]) {
 
       // We compute the topology evolution of the graph...
       gngt.process(nb_threads,
-		   S.begin(), S.end(),                                                   // The sample set. Shuffle if the dataser is not sampled randomly.
-		   [](const sample& s) {return s;},                                      // get sample from *iter (identity here).
-		   [](vertex& v) -> prototype& {return v.vq3_value;},                    // get a prototype reference from the vertex value.
-		   [](const prototype& p) {return p + vq3::demo2d::Point(-1e-5,1e-5);},  // get a point close to a prototype.
-		   dist,                                                                 // The squared distance, faster, used for bmu-related stuff.
-		   "wide som", "narrow som", "avg",                                      // Neighborhood keys.
+		   S.begin(), S.end(),                                              // The sample set. Shuffle if the dataser is not sampled randomly.
+		   [](const sample& s) {return s;},                                 // get sample from *iter (identity here).
+		   [](vertex& v) -> prototype& {return v.vq3_value;},               // get a prototype reference from the vertex value.
+		   [](const prototype& p) {return p + demo2d::Point(-1e-5,1e-5);},  // get a point close to a prototype.
+		   dist,                                                            // The squared distance, faster, used for bmu-related stuff.
+		   "wide som", "narrow som", "avg",                                 // Neighborhood keys.
 		   evolution,
-		   true);                                                                // We do spatial averaging.
+		   true);                                                           // We do spatial averaging.
 
       // Display
     
