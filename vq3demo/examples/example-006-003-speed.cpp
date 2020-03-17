@@ -2,20 +2,10 @@
 #include <random>
 #include <cstdlib>
 
-#define SPEED_TO_METER .5
-
-#define INIT_SLIDER_H            0
-#define INIT_SLIDER_S           80
-#define INIT_SLIDER_V          200
-#define INIT_SLIDER_TOLERANCE   20
-
-#define INIT_SLIDER_N         2000
-#define INIT_SLIDER_T          500
-
-#define INIT_SLIDER_Z         1000
+#define SPEED_TO_METER .75
 
 #define EVOLUTION_MARGIN_ABOVE        .20
-#define EVOLUTION_MARGIN_BELOW        .20
+#define EVOLUTION_MARGIN_BELOW        .10
 #define EVOLUTION_TOPOLOGICAL_RATIO   .15
 
 #define GNGT_ALPHA                    .05
@@ -28,6 +18,16 @@
 #define SOM_MAX_DIST                  (unsigned int)(SOM_H_RADIUS)
 #define NARROW_SOM_COEF               .02
 #define AVERAGE_RADIUS                5
+
+#define INIT_SLIDER_H            0
+#define INIT_SLIDER_S           80
+#define INIT_SLIDER_V          200
+#define INIT_SLIDER_TOLERANCE   20
+
+#define INIT_SLIDER_N         2000
+#define INIT_SLIDER_T          750
+
+#define INIT_SLIDER_Z         1000
 
 // Graph definition 
 //
@@ -62,6 +62,7 @@ using neighbour_key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
+// d2 is faster, but d is more stable in our 2D case.
 double dist(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 // Here is the main.

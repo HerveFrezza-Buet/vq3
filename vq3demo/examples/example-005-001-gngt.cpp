@@ -34,7 +34,7 @@
 #define INIT_SLIDER_T                500
 #define INIT_SLIDER_DENSITY           25
 #define INIT_SLIDER_MARGIN_ABOVE      20
-#define INIT_SLIDER_MARGIN_BELOW      20
+#define INIT_SLIDER_MARGIN_BELOW      10
 #define INIT_SLIDER_AVERAGE_RADIUS     5
 #define INIT_SLIDER_EVOLUTION_RATIO   15
 #define INIT_SLIDER_NB_WTA_1           5
@@ -125,7 +125,8 @@ using neighbour_key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double dist(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
+// d2 is faster, but d is more stable in our 2D case.
+double dist(const vertex& v, const demo2d::Point& p) {return demo2d::d(v.vq3_value, p);}
 
 
 // Network evolution rule.
@@ -472,7 +473,7 @@ int main(int argc, char* argv[]) {
 
       // T do not evolve proportionally to the slider.
       double e = slider_T/1000.0;
-      double expo_min = -5;
+      double expo_min = -3;
       double expo_max = -1;
       evolution.T     = std::pow(10, expo_min*(1-e) + expo_max*e);
       
@@ -494,7 +495,7 @@ int main(int argc, char* argv[]) {
 		   [](const sample& s) {return s;},                                 // get sample from *iter (identity here).
 		   [](vertex& v) -> prototype& {return v.vq3_value;},               // get a prototype reference from the vertex value.
 		   [](const prototype& p) {return p + demo2d::Point(-1e-5,1e-5);},  // get a point close to a prototype.
-		   dist,                                                            // The squared distance, faster, used for bmu-related stuff.
+		   dist,                                                            // The distance used for bmu-related stuff.
 		   "wide som", "narrow som", "avg",                                 // Neighborhood keys.
 		   evolution,
 		   true);                                                           // We do spatial averaging.

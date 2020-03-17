@@ -5,10 +5,10 @@
 
 #define ANGLE_PERIOD 500
 #define D_ANGLE (360./ANGLE_PERIOD)
-#define SPEED_TO_METER .5
+#define SPEED_TO_METER .75
 
 #define EVOLUTION_MARGIN_ABOVE        .20
-#define EVOLUTION_MARGIN_BELOW        .30
+#define EVOLUTION_MARGIN_BELOW        .10
 #define EVOLUTION_TOPOLOGICAL_RATIO   .15
 
 #define GNGT_ALPHA                    .05
@@ -18,15 +18,15 @@
 #define GNGT_NB_WTA_3                   0
 
 
-#define SOM_H_RADIUS                  5.1
+#define SOM_H_RADIUS                  3.1
 #define SOM_MAX_DIST                  (unsigned int)(SOM_H_RADIUS)
 #define NARROW_SOM_COEF               .02
 #define AVERAGE_RADIUS                5
 
 #define FIXED_FRAME_DELAY             .03
 
-#define N_SLIDER_INIT  300
-#define T_SLIDER_INIT  500
+#define N_SLIDER_INIT  600
+#define T_SLIDER_INIT  750
 #define Z_SLIDER_INIT 2000
 
 
@@ -59,7 +59,8 @@ using neighbour_key_type = std::string;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double dist(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
+// d2 is faster, but d is more stable in our 2D case.
+double dist(const vertex& v, const demo2d::Point& p) {return demo2d::d(v.vq3_value, p);}
 
 
 // Here is the main.
@@ -235,7 +236,7 @@ int main(int argc, char* argv[]) {
 
 
     double e = T_slider/1000.0;
-    double expo_min = -2;
+    double expo_min = -3;
     double expo_max =  0;
     
     evolution.density    = N_slider;
