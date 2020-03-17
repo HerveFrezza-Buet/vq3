@@ -25,7 +25,7 @@ pkg_check_modules(OPENCV opencv REQUIRED)
 pkg_check_modules(VQ3 vq3 REQUIRED)
 pkg_check_modules(DEMO demo2d REQUIRED)
 
-set(PKG_CONFIG_DEPENDS "opencv demo2d")
+set(PKG_CONFIG_DEPENDS "opencv vq3 demo2d")
 
 
 ###################################

@@ -240,7 +240,7 @@ struct Evolution {
 	}
       }
 
-      // we delete a topo_ration fraction of the below vertices.
+      // we delete a topo_ratio fraction of the below vertices.
       auto below_end = below.begin();
       if(below_end != below.end()) {// if not empty
 	std::advance(below_end, std::max((std::size_t)(below.size()*topo_ratio), (size_t)1));
@@ -490,7 +490,7 @@ int main(int argc, char* argv[]) {
 
       // We compute the topology evolution of the graph...
       gngt.process(nb_threads,
-		   S.begin(), S.end(),                                              // The sample set. Shuffle if the dataser is not sampled randomly.
+		   S.begin(), S.end(),                                              // The sample set. Shuffle if the dataset is not sampled randomly.
 		   [](const sample& s) {return s;},                                 // get sample from *iter (identity here).
 		   [](vertex& v) -> prototype& {return v.vq3_value;},               // get a prototype reference from the vertex value.
 		   [](const prototype& p) {return p + demo2d::Point(-1e-5,1e-5);},  // get a point close to a prototype.
