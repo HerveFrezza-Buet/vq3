@@ -539,7 +539,7 @@ namespace vq3 {
 	// win = 9, degree = 2.
 	//
 	
-	template<> struct sg_norm<0, 9, 2> {double value; sg_norm(double step) {value = 1/231.0;}};
+	template<> struct sg_norm<0, 9, 2> {double value; sg_norm(double) {value = 1/231.0;}};
 	template<typename VALUE> struct sg_compute<VALUE, 0, 9, 2> {
 	  VALUE value;
 	  template<typename ITER>
@@ -595,7 +595,7 @@ namespace vq3 {
 	// win = 15, degree = 2.
 	//
 	
-	template<> struct sg_norm<0, 15, 2> {double value; sg_norm(double step) {value = 1/1105.0;}};
+	template<> struct sg_norm<0, 15, 2> {double value; sg_norm(double) {value = 1/1105.0;}};
 	template<typename VALUE> struct sg_compute<VALUE, 0, 15, 2> {
 	  VALUE value;
 	  template<typename ITER>
@@ -668,7 +668,7 @@ namespace vq3 {
 	// win = 21, degree = 2.
 	//
 	
-	template<> struct sg_norm<0, 21, 2> {double value; sg_norm(double step) {value = 1/3059.0;}};
+	template<> struct sg_norm<0, 21, 2> {double value; sg_norm(double) {value = 1/3059.0;}};
 	template<typename VALUE> struct sg_compute<VALUE, 0, 21, 2> {
 	  VALUE value;
 	  template<typename ITER>

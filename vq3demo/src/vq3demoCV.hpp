@@ -674,7 +674,7 @@ namespace vq3 {
 	  cv::line(image, frame(pA), frame(::demo2d::Point(pB.x,pA.y)), frame_foreground, axis_thickness);
 	}
 
-	void interval(cv::Mat& image, const ::demo2d::opencv::Frame& frame, double vmin, double vmax, int pix_offset, const cv::Scalar& color, int thickness) {
+	void interval(cv::Mat& image, const ::demo2d::opencv::Frame& frame, double vmin, double vmax, int pix_offset) {
 	  auto rA = ::demo2d::Point(abscissa_of(vmin), pA.y);
 	  auto rB = ::demo2d::Point(abscissa_of(vmax), pA.y);
 

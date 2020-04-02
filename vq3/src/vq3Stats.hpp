@@ -411,7 +411,7 @@ namespace vq3 {
 
       unsigned int bin_quantile = 0;
       
-      double nfit(double m, double std, double nb) {
+      double nfit(double std, double nb) {
 	return nb*bin_width*0.3989422804014327/std; // 0.39 = 1/sqrt(2*pi)
       }
       
@@ -567,7 +567,7 @@ namespace vq3 {
        * @return (mu, sigma^2, ampl) such as ampl*exp(-.5*((x-mu)/sigma)^2) is the gaussian that approximates the histogram (i.e. same mean and variance).
        */
       std::tuple<double, double, double> gaussian_fit() {
-	return {mean, std_dev*std_dev, nfit(mean, std_dev, nb_hits)};
+	return {mean, std_dev*std_dev, nfit(std_dev, nb_hits)};
       }
       
       /**
@@ -576,7 +576,7 @@ namespace vq3 {
       std::tuple<double, double, double> gaussian_fit_sci() {
 
 	  
-	return {smean, sstd_dev*sstd_dev, nfit(smean, sstd_dev, nb_hits_sci)};
+	return {smean, sstd_dev*sstd_dev, nfit(sstd_dev, nb_hits_sci)};
       }
       
     };

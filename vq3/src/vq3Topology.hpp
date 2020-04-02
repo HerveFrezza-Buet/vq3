@@ -165,7 +165,7 @@ namespace vq3 {
        * @return a map associating keys with the list of (value, idx) pairs corresponding to the neighborhood. idx is the index of the vertex in a vertices structure. The origin vertex index is in the list (at first position).
        */
       template<typename EDGE_DISTANCE_INFO_IT>
-      auto edge_based_neighborhood(index_type vertex_index, const typename graph_type::ref_vertex& ref_v,
+      auto edge_based_neighborhood(const typename graph_type::ref_vertex& ref_v,
 				   EDGE_DISTANCE_INFO_IT begin, EDGE_DISTANCE_INFO_IT end) {
 	std::string s;
 	std::map<typename std::remove_const<decltype(begin->first)>::type, std::list<Info>> res;
@@ -227,7 +227,7 @@ namespace vq3 {
 	neighborhood_tables =  utils::make_vertex_table(g,
 							[this](const typename graph_type::ref_vertex& ref_v) {
 							  utils::clear_vertex_tags(g, false);
-							  return edge_based_neighborhood((*this)(ref_v), ref_v,
+							  return edge_based_neighborhood(ref_v,
 											 edge_distances.begin(), edge_distances.end());
 							});
       }
@@ -297,7 +297,7 @@ namespace vq3 {
       auto neighborhood(const typename graph_type::ref_vertex& ref_v, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	EdgeDistanceInfo edi(voed, max_dist, min_val);
 	auto minimap = std::make_pair(0, edi);
-	return edge_based_neighborhood((*this)(ref_v), ref_v, &minimap, &minimap+1)[0];
+	return edge_based_neighborhood(ref_v, &minimap, &minimap+1)[0];
       }
       
       /**
@@ -312,7 +312,7 @@ namespace vq3 {
       auto neighborhood(index_type vertex_index, const VALUE_OF_EDGE_DISTANCE& voed, unsigned int max_dist, double min_val) {
 	EdgeDistanceInfo edi(voed, max_dist, min_val);
 	auto minimap = std::make_pair(0, edi);
-	return edge_based_neighborhood(vertex_index, (*this)(vertex_index), &minimap, &minimap+1)[0];
+	return edge_based_neighborhood((*this)(vertex_index), &minimap, &minimap+1)[0];
       }
 	  
 
