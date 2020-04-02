@@ -433,7 +433,7 @@ namespace vq3 {
 	});
       
       foreach_vertex_garbaging_on([](const ref_vertex& ref_v) {
-	  ref_v->foreach_edge_garbaging_on([](const ref_edge& ref_v) {});
+	  ref_v->foreach_edge_garbaging_on([](const ref_edge&) {});
 	});
     }
 
