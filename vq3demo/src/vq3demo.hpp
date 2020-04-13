@@ -61,7 +61,8 @@
    @example example-004-001-som.cpp
    @example example-004-002-som.cpp
    @example example-004-003-som.cpp
-   @example example-005-001-gngt.cpp
+   @example example-005-001-online-gngt.cpp
+   @example example-005-002-gngt.cpp
    @example example-006-001-temporal.cpp
    @example example-006-002-speed.cpp
    @example example-006-003-speed.cpp

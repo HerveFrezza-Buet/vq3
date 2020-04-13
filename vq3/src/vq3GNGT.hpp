@@ -219,17 +219,17 @@ namespace vq3 {
 		     EVOLUTION& evolution,
 		     bool use_average) {
  	  if(begin == end) {
-	    // No samples. We kill all nodes and keep the two topological tables updated.
+	    // No samples. We kill all nodes and keep the table updated.
 	    table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
 	    table.update_full();
 	    return;
 	  }
 
-	  auto nb_vertices = table.g.nb_vertices();
+	  auto nb_vertices = table.size();
 
 	  if(nb_vertices == 0) {
-	    // Empty graph. We create one vertex, keep the two
-	    // topological tables updated, and do one wta pass.
+	    // Empty graph. We create one vertex, keep the topological
+	    // tables updated, and do one wta pass.
 	    table.g += sample_of(*begin);
 	    table.update_full();
 	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
@@ -309,8 +309,128 @@ namespace vq3 {
       Processor<SAMPLE, TABLE> processor(TABLE& table) {
 	return Processor<SAMPLE, TABLE>(table);
       }
+    }
+
+    namespace online {
+      namespace gngt {
       
-      
+	template<typename SAMPLE, typename TABLE>
+	class Processor {
+	public:
+	
+	  using topology_table_type = TABLE;
+
+	  using graph_type = typename topology_table_type::graph_type;
+	  using ref_vertex = typename graph_type::ref_vertex;
+	  using ref_edge   = typename graph_type::ref_edge;
+	  using vertex     = typename graph_type::vertex_value_type;
+	  using edge       = typename graph_type::edge_value_type;
+
+	  using prototype_type = typename vertex::decorated_type;
+	  using sample_type    = SAMPLE;
+	  
+	  using epoch_bmu = vq3::epoch::data::bmu<vq3::epoch::data::none<sample_type, vertex, prototype_type>, vq3::epoch::data::bmu_sqrt_dist_accum<prototype_type, sample_type>>;
+	  
+	private:
+	  
+	  topology_table_type& table;
+	  
+	public:
+	  
+	  double alpha = 0.05;
+	  
+	  vq3::epoch::wta::Processor<topology_table_type> wta;
+	  vq3::epoch::chl::Processor<graph_type>          chl;
+
+	  std::vector<epoch_bmu> bmu_results;
+
+	  
+	  Processor(topology_table_type& table)
+	    : table(table), chl(table.g) {}
+	  
+	  Processor()                            = delete;
+	  Processor(const Processor&)            = default;
+	  Processor(Processor&&)                 = default;
+	  Processor& operator=(const Processor&) = default;
+	  Processor& operator=(Processor&&)      = default;
+
+	  /**
+	   * This updates the prototypes and the graph topology (i.e vertex and/or edge modification).
+	   * @param begin, end The samples
+	   * @param sample_of The samples are obtained from sample_of(*it).
+	   * @param ref_prototype_of_vertex Returns a reference to the prototype from the vertex value.
+	   * @param clone_prototype Computes a prototype value that is close to (*ref_v)().vq3_value.
+	   * @param bmu_distance Compares the vertex value to a sample.
+	   * @param key The neighborhood key for computing online SOM-like computation before evolution.
+	   * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
+	   */
+	  template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename BMU_DISTANCE>
+	  void process(unsigned int nb_threads,
+		       const ITER& begin, const ITER& end,
+		       const SAMPLE_OF& sample_of,
+		       const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
+		       const CLONE_PROTOTYPE& clone_prototype,
+		       const BMU_DISTANCE& bmu_distance,
+		       const typename topology_table_type::neighborhood_key_type& key,
+		       EVOLUTION& evolution) {
+	    
+	    if(begin == end) {
+	      // No samples. We kill all nodes and keep the table updated.
+	      table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
+	      table.update_full();
+	      return;
+	    }
+	  
+	    auto nb_vertices = table.size();
+	  
+	    if(nb_vertices == 0) {
+	      // Empty graph. We create one vertex, keep the two
+	      // topological tables updated, and do one wta pass.
+	      auto sample_it = begin;
+	      table.g += sample_of(*(sample_it++));
+	      while(sample_it != end)
+		vq3::online::wta::learn(table.g, 
+					ref_prototype_of_vertex,
+					bmu_distance,
+					*(sample_it++),
+					alpha);
+	      table.update_full();
+	      return;
+	    }
+	  
+	    // We update the graph as we update an online SOM.
+	    auto sample_it = begin;
+	    while(sample_it != end)
+	      vq3::online::wtm::learn(table,
+				      key,
+				      ref_prototype_of_vertex,
+				      bmu_distance,
+				      sample_of(*(sample_it++)),
+				      alpha);
+
+	    // We compute how distortion is distributed among the nodes.
+	    bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
+	    
+	    // We add/remove prototypes.
+	    if(evolution(table, bmu_results, clone_prototype, [](auto& accum){return accum.value;}))
+	      table.update_full();
+	    
+	    // We update the edges thanks to Competitive Hebbian learning.
+	    if(chl.process(nb_threads, begin, end, sample_of, bmu_distance, edge())) 
+	      table.update_full();
+	    
+	    //  We update more once the edges are created.
+	    sample_it = begin;
+	    while(sample_it != end)
+	      vq3::online::wtm::learn(table,
+				      key,
+				      ref_prototype_of_vertex,
+				      bmu_distance,
+				      sample_of(*(sample_it++)),
+				      alpha);
+	  }
+	};
+      }
     }
   }
 }
