@@ -117,9 +117,12 @@ struct Evolution {
     if(topology.size() == T)
       return false;
 
+    return false;
+
     if(topology.size() < T) {
       auto max_iter = std::max_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
-				       [&error_of_accum](auto& content){return error_of_accum(content.vq3_bmu_accum);});
+					 [&error_of_accum](auto& content1, auto& content2){
+					 return error_of_accum(content1.vq3_bmu_accum) < error_of_accum(content2.vq3_bmu_accum);});
       auto ref_vertex = topology(std::distance(neighboring_bmu_epoch_result.begin(), max_iter));
       topology.g += clone_prototype((*ref_vertex)().vq3_value);
       return true;
@@ -127,7 +130,8 @@ struct Evolution {
 
     if(topology.size() > T) {
       auto min_iter = std::max_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
-				       [&error_of_accum](auto& content){return error_of_accum(content.vq3_bmu_accum);});
+					 [&error_of_accum](auto& content1, auto& content2){
+					 return error_of_accum(content1.vq3_bmu_accum) < error_of_accum(content2.vq3_bmu_accum);});
       auto ref_vertex = topology(std::distance(neighboring_bmu_epoch_result.begin(), min_iter));
       ref_vertex->kill();
       return true;
@@ -268,7 +272,7 @@ int main(int argc, char* argv[]) {
 			    1,  0.0);
 
   // This processes the topology evolution (number of vertices and edges)
-  auto gngt = vq3::algo::gngt::processor<sample>(topology);
+  auto gngt = vq3::algo::online::gngt::processor<sample>(topology);
   
   // This is how the default evolution would have been obtained.
   //   auto evolution = vq3::algo::gngt::by_default::evolution();

@@ -346,7 +346,7 @@ namespace vq3 {
 
 	  
 	  Processor(topology_table_type& table)
-	    : table(table), chl(table.g) {}
+	    : table(table), wta(table), chl(table.g) {}
 	  
 	  Processor()                            = delete;
 	  Processor(const Processor&)            = default;
@@ -430,6 +430,11 @@ namespace vq3 {
 				      alpha);
 	  }
 	};
+	
+	template<typename SAMPLE, typename TABLE>
+	Processor<SAMPLE, TABLE> processor(TABLE& table) {
+	  return Processor<SAMPLE, TABLE>(table);
+	}
       }
     }
   }
