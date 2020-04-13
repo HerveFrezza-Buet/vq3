@@ -15,7 +15,7 @@
 #define INIT_SLIDER_N               5000
 #define INIT_SLIDER_DENSITY           25
 #define INIT_SLIDER_T                 50
-#define INIT_SLIDER_ALPHA             50
+#define INIT_SLIDER_ALPHA             10
 
 // Execution mode
 
@@ -114,11 +114,20 @@ struct Evolution {
 		  const BMU_RESULT&         neighboring_bmu_epoch_result,
 		  const CLONE_PROTOTYPE&    clone_prototype,
 		  const FCT_ERROR_OF_ACCUM& error_of_accum) {
-    if(topology.size() == T)
-      return false;
 
-    return false;
-
+    // If some node do not win, we remove them.
+    bool removed = false;
+    std::size_t vertex_idx = 0;
+    for(auto& res : neighboring_bmu_epoch_result) {
+      if(res.vq3_bmu_accum.nb == 0) {
+	topology(vertex_idx)->kill();
+	removed = true;
+      }
+      ++vertex_idx;
+    }
+    if(removed)
+      return true;
+    
     if(topology.size() < T) {
       auto max_iter = std::max_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
 					 [&error_of_accum](auto& content1, auto& content2){
@@ -136,6 +145,8 @@ struct Evolution {
       ref_vertex->kill();
       return true;
     }
+    
+    return false;
   }
 };
 
