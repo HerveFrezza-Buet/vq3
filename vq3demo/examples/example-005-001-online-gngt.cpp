@@ -102,6 +102,7 @@ double dist(const vertex& v, const sample& p) {return demo2d::d(v.vq3_value, p);
 
 
 // Network evolution rule.
+
 struct Evolution {
   // here, evolution consists of adding or removing prototypes so as
   // to have a determined number of prototypes.
@@ -286,7 +287,7 @@ int main(int argc, char* argv[]) {
   auto gngt = vq3::algo::online::gngt::processor<sample>(topology);
   
   // This is how the default evolution would have been obtained.
-  //   auto evolution = vq3::algo::gngt::by_default::evolution();
+  //   auto evolution = vq3::algo::gngt::size_control::evolution();
   // But we use here the one that we have handcrafted.
   auto evolution = make_evolution();
 

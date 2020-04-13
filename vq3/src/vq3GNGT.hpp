@@ -42,6 +42,59 @@
 namespace vq3 {
   namespace algo {
     namespace gngt {
+
+      namespace size_control {
+
+	/**
+	 * This evolution rule provides a simple control of the vertex
+	 * number.
+	 */
+	struct Evolution {
+	  unsigned int T = 0; //!< The desired graph size.
+  
+	  template<typename TABLE, typename BMU_RESULT, typename CLONE_PROTOTYPE, typename FCT_ERROR_OF_ACCUM>
+	  bool operator()(TABLE&                    topology,
+			  const BMU_RESULT&         neighboring_bmu_epoch_result,
+			  const CLONE_PROTOTYPE&    clone_prototype,
+			  const FCT_ERROR_OF_ACCUM& error_of_accum) {
+
+	    // If some node do not win, we remove them.
+	    bool removed = false;
+	    std::size_t vertex_idx = 0;
+	    for(auto& res : neighboring_bmu_epoch_result) {
+	      if(res.vq3_bmu_accum.nb == 0) {
+		topology(vertex_idx)->kill();
+		removed = true;
+	      }
+	      ++vertex_idx;
+	    }
+	    if(removed)
+	      return true;
+    
+	    if(topology.size() < T) {
+	      auto max_iter = std::max_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
+					       [&error_of_accum](auto& content1, auto& content2){
+						 return error_of_accum(content1.vq3_bmu_accum) < error_of_accum(content2.vq3_bmu_accum);});
+	      auto ref_vertex = topology(std::distance(neighboring_bmu_epoch_result.begin(), max_iter));
+	      topology.g += clone_prototype((*ref_vertex)().vq3_value);
+	      return true;
+	    }
+
+	    if(topology.size() > T) {
+	      auto min_iter = std::max_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
+					       [&error_of_accum](auto& content1, auto& content2){
+						 return error_of_accum(content1.vq3_bmu_accum) < error_of_accum(content2.vq3_bmu_accum);});
+	      auto ref_vertex = topology(std::distance(neighboring_bmu_epoch_result.begin(), min_iter));
+	      ref_vertex->kill();
+	      return true;
+	    }
+    
+	    return false;
+	  }
+	};
+
+	inline Evolution evolution() {return Evolution();}
+      }
       
       namespace by_default {
 
