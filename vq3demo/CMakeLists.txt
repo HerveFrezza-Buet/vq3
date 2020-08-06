@@ -21,11 +21,10 @@ SET(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include/${CMAKE_PROJECT_NAME}/"
 ###################################
 
 find_package(PkgConfig)
-pkg_check_modules(OPENCV opencv REQUIRED)
 pkg_check_modules(VQ3 vq3 REQUIRED)
 pkg_check_modules(DEMO demo2d REQUIRED)
 
-set(PKG_CONFIG_DEPENDS "opencv vq3 demo2d")
+set(PKG_CONFIG_DEPENDS "vq3 demo2d")
 
 
 ###################################
