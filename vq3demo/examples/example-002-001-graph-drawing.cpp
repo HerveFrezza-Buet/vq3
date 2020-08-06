@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
 
   // Let us display the graph
 
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   int delay = 500;
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = demo2d::opencv::direct_orthogonal_frame(image.size().width,

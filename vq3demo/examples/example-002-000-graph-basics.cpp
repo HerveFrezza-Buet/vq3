@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
   g.foreach_edge(print_edge);
   g.foreach_vertex(print_vertex);
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   cv::imshow ("image", image);
   cv::waitKey(0);
 

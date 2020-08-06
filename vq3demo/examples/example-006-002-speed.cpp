@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
   ///////////////////
 
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   cv::createTrackbar("nb/m^2",              "image", &N_slider, 1000, nullptr);
   cv::createTrackbar("T",                   "image", &T_slider, 1000, nullptr);
   
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
   auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .1*image.size().width, true);
 
 
-  cv::namedWindow("speed", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("speed", cv::WINDOW_AUTOSIZE);
   cv::createTrackbar("zoom", "speed", &Z_slider, 5000, nullptr);
   auto speed_image = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
 

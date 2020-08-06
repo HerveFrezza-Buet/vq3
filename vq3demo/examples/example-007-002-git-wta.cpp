@@ -213,7 +213,7 @@ int main(int argc, char* argv[]) {
   /////
 
   int slider_alpha = ALPHA_SLIDER_INIT;
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   cv::createTrackbar("1000 * alpha", "image", &slider_alpha, 500, nullptr);
   auto image = cv::Mat(600, 350, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().width, true);

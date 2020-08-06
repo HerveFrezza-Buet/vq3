@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
   auto density = demo2d::sample::rectangle(side, side, intensity)
     -  demo2d::sample::rectangle(hole_side, hole_side, intensity);
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 1280, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
 

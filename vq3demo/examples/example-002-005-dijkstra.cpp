@@ -157,7 +157,7 @@ int main(int argc, char* argv[]) {
     (*(*it))().vq3_efficient = false;
 
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);
   callback_data user_data(g, frame);

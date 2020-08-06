@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 								   [](const demo2d::Point& pt) {return cv::Scalar(200, 0, 0);},
 								   [](const demo2d::Point& pt) {return                    -1;});
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   cv::createTrackbar("10000*noise_radius", "image", &noise_radius, 1000, nullptr);
 
   std::cout << std::endl

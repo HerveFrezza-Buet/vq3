@@ -305,8 +305,8 @@ int main(int argc, char* argv[]) {
   
   // Image settings
   
-  cv::namedWindow("algorithm", CV_WINDOW_AUTOSIZE);
-  cv::namedWindow("params", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("algorithm", cv::WINDOW_AUTOSIZE);
+  cv::namedWindow("params", cv::WINDOW_AUTOSIZE);
   
   cv::createTrackbar("nb/m^2",                 "params", &slider_N,               50000, nullptr);
   cv::createTrackbar("T",                      "params", &slider_T,                1000, nullptr);

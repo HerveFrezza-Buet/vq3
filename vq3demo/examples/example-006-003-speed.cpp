@@ -117,17 +117,17 @@ int main(int argc, char* argv[]) {
   ///////////////////
 
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   cv::createTrackbar("nb/m^2",               "image", &N_slider, 10000, nullptr);
   cv::createTrackbar("T",                    "image", &T_slider,  1000, nullptr);
   
-  cv::namedWindow("video", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("video", cv::WINDOW_AUTOSIZE);
   selector.build_sliders("video");
   
   auto image = cv::Mat(600, 800, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .4*image.size().width, true);
   
-  cv::namedWindow("speed", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("speed", cv::WINDOW_AUTOSIZE);
   cv::createTrackbar("zoom", "speed", &Z_slider, 3000, nullptr);
   auto speed_image = cv::Mat(500, 500, CV_8UC3, cv::Scalar(255,255,255));
   

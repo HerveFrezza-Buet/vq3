@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
   g2.foreach_edge(draw_edge_2);
   g2.foreach_vertex(draw_vertex_2);
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   cv::imshow     ("image", image);
   cv::waitKey(0);
   

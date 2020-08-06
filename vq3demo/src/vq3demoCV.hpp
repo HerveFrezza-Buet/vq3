@@ -164,7 +164,7 @@ namespace vq3 {
 	    auto offset = offset_of(o);
 	    pos.x += offset.first;
 	    pos.y += offset.second;
-	    cv::putText(image, text_of(o), pos, CV_FONT_HERSHEY_DUPLEX, scale_of(o), color_of(o), thickness_of(o));
+	    cv::putText(image, text_of(o), pos, cv::FONT_HERSHEY_DUPLEX, scale_of(o), color_of(o), thickness_of(o));
 	  }
 	}
       };
@@ -364,7 +364,7 @@ namespace vq3 {
 	    auto offset = offset_of(o);
 	    pos.x += offset.first;
 	    pos.y += offset.second;
-	    cv::putText(image, text_of(o), pos, CV_FONT_HERSHEY_DUPLEX, scale_of(o), color_of(o), thickness_of(o));
+	    cv::putText(image, text_of(o), pos, cv::FONT_HERSHEY_DUPLEX, scale_of(o), color_of(o), thickness_of(o));
 	  }
 	}
       };
@@ -428,7 +428,7 @@ namespace vq3 {
 	    auto offset = offset_of();
 	    pos.x += offset.first;
 	    pos.y += offset.second;
-	    cv::putText(image, text_of(), pos, CV_FONT_HERSHEY_DUPLEX, scale_of(), color_of(), thickness_of());
+	    cv::putText(image, text_of(), pos, cv::FONT_HERSHEY_DUPLEX, scale_of(), color_of(), thickness_of());
 	  }
       	}
       };

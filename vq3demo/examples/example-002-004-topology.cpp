@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
   
   // Let us draw the graph
   
-  cv::namedWindow("image", CV_WINDOW_AUTOSIZE);
+  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   auto image        = cv::Mat(480, 640, CV_8UC3, cv::Scalar(50, 50, 50));
   double unit_size  = 640/(GRID_WIDTH+1.0);
   auto frame        = demo2d::opencv::direct_orthogonal_frame(unit_size, unit_size,
