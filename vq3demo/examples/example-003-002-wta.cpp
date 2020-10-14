@@ -78,7 +78,8 @@ int main(int argc, char* argv[]) {
   }
   
   
-  std::mt19937 random_device(0);
+  std::random_device rd;  
+  std::mt19937 random_device(rd());
 
   graph g;
 
