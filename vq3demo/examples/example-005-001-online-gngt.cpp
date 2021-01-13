@@ -348,6 +348,7 @@ int main(int argc, char* argv[]) {
       g.foreach_vertex(draw_vertex);
     }
     
+    
     cv::imshow("algorithm", image );
     cv::imshow("params",    params);
     keycode = cv::waitKey(wait_ms) & 0xFF;

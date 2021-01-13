@@ -63,6 +63,7 @@
    @example example-004-003-som.cpp
    @example example-005-001-online-gngt.cpp
    @example example-005-002-gngt.cpp
+   @example example-005-003-custom-typed-gngt.cpp
    @example example-006-001-temporal.cpp
    @example example-006-002-speed.cpp
    @example example-006-003-speed.cpp
