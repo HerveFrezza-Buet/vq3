@@ -56,7 +56,7 @@ public:
 
   // This returns a Rotation that is very close to this.
   Rotation very_close() const {
-    return {re + 1e-5, im + 1.5}; 
+    return {re + 1e-5, im + 1e-5}; 
   }
 
   // For the sake of plotting into figures, we enable a casting to 2D points.
