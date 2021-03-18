@@ -153,8 +153,8 @@ struct Evolution {
     }
 
     if(topology.size() > T) {
-      auto min_iter = std::max_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
-					 [&error_of_accum](auto& content1, auto& content2){
+      auto min_iter = std::min_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
+				       [&error_of_accum](auto& content1, auto& content2){
 					 return error_of_accum(content1.vq3_bmu_accum) < error_of_accum(content2.vq3_bmu_accum);});
       auto ref_vertex = topology(std::distance(neighboring_bmu_epoch_result.begin(), min_iter));
       ref_vertex->kill();
