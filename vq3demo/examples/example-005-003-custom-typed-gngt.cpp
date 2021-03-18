@@ -16,7 +16,7 @@
   any kind of data type, as soon as they fit some basic concept. This
   is what we detail here.
 
- */
+*/
 
 // Our custom type is the set of rotations in 2D. It can be
 // represented as a complex number, with norm 1 (as queternions
@@ -131,19 +131,33 @@ struct Evolution {
 		  const BMU_RESULT&         neighboring_bmu_epoch_result,
 		  const CLONE_PROTOTYPE&    clone_prototype,
 		  const FCT_ERROR_OF_ACCUM& error_of_accum) {
-
-    // If some node do not win, we remove them.
-    bool removed = false;
-    std::size_t vertex_idx = 0;
-    for(auto& res : neighboring_bmu_epoch_result) {
-      if(res.vq3_bmu_accum.nb == 0) {
-	topology(vertex_idx)->kill();
-	removed = true;
+    
+    // Let us check is some node is isolated and useless.
+    if(topology.size() > 1) { 
+      bool remove = false;
+      std::size_t vertex_idx = 0;
+      for(auto& res : neighboring_bmu_epoch_result) {
+	if(res.vq3_bmu_accum.nb == 0) { // The node has never won. We have to check if it has edges.
+	  // The following counts the edges of the node.
+	  auto ref_v = topology(vertex_idx);
+	  unsigned int nb_edges = 0;
+	  ref_v->foreach_edge([&nb_edges](auto ref_e) {
+				auto extr_pair = ref_e->extremities();           
+				if(vq3::invalid_extremities(extr_pair))
+				  ref_e->kill();
+				else
+				  ++nb_edges;
+			      });
+	  if(nb_edges == 0) {
+	    ref_v->kill();
+	    remove = true;
+	  }
+	}
+	++vertex_idx;
       }
-      ++vertex_idx;
+      if(remove)
+	return true;
     }
-    if(removed)
-      return true;
     
     if(topology.size() < T) {
       auto max_iter = std::max_element(neighboring_bmu_epoch_result.begin(), neighboring_bmu_epoch_result.end(),
