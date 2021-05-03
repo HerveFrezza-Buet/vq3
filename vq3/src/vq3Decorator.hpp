@@ -93,7 +93,7 @@ namespace vq3 {
     struct print<not_decorated> {void operator()() {std::cout << "not decorated" << std::endl;}};
   }
 
-  namespace concept {
+  namespace spec {
 
 
     /**

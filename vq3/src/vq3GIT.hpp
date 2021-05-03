@@ -10,7 +10,7 @@
 #include <vq3ShortestPath.hpp>
 
 namespace vq3 {
-  namespace concept {
+  namespace spec {
 
     struct GIT_Traits {
       /**

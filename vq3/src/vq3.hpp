@@ -301,7 +301,7 @@ bool tag = ref_e->vq3_tag;
    
    @subsection epoch The need for computing epochs
 
-   In vq3, the concept of epoch is highlighted, even if many VQ
+   In vq3, the spec of epoch is highlighted, even if many VQ
    algorithms are usually online. Indeed, for the sake of multi-thread
    computing, it is more efficient to consider a bunch of samples whose
    computation can be split to feed several threads. A computation pass on 
@@ -315,7 +315,7 @@ bool tag = ref_e->vq3_tag;
    each thread) correponding to that vertex are merged.
 
    Epoch data types are user defined, they have to fit the
-   vq3::concept::EpochData. Nevertheless, the basic use of vq3 for
+   vq3::spec::EpochData. Nevertheless, the basic use of vq3 for
    defining epochs data consists of using pre-defined building blocks
    that are stacked in order to form the epoch data the user needs
    (this is similar to the decoration of vertex and edge values).
@@ -384,7 +384,7 @@ p.process_something<epoch_data>(nb_threads, ...);
    The purpose of the type stack is to customize the type epoch_data
    used by the processor. Each stack element (epoch_data_0,
    epoch_data_1, ...) provide the functions so that the final
-   epoch_data fits the vq3::concept::EpochData concept. For example,
+   epoch_data fits the vq3::spec::EpochData spec. For example,
    the required method notify_wta_update can be defines several times,
    by several stack elements. All the definitions of notify_wta_update
    will be called successively when overall notify_wta_update is

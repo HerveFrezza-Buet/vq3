@@ -42,7 +42,7 @@
 
 namespace vq3 {
   
-  namespace concept {
+  namespace spec {
 
     /**
      * This stores data collected about a vertex (handling a prototype) during an epoch.
@@ -115,7 +115,7 @@ namespace vq3 {
     namespace data {
 
       /**
-       * Root data type, it fits vq3::concept::EpochData. It only notifies the types.
+       * Root data type, it fits vq3::spec::EpochData. It only notifies the types.
        */
       template<typename SAMPLE_TYPE, typename VERTEX_VALUE_TYPE, typename PROTOTYPE_TYPE>
       struct none {

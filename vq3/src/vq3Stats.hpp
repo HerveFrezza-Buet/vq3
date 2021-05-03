@@ -206,7 +206,7 @@ namespace vq3 {
     inline MeanStd mean_std() {return MeanStd();}
   }
 
-  namespace concept {
+  namespace spec {
     struct OnlineParam {
       OnlineParam();                    //!< the default constructor isrequired.
       OnlineParam(const OnlineParam&);  //!< the copy constructor is required.
@@ -227,7 +227,7 @@ namespace vq3 {
        *
        * \f${\overline x}_{n+1} = (1-\alpha){\overline x}_n + \alpha x_n \f$
        *
-       * The value of \f$\alpha \in [0,1] \f$ is given by ONLINE_PARAM, that must fit vq3::concept::OnlineParam
+       * The value of \f$\alpha \in [0,1] \f$ is given by ONLINE_PARAM, that must fit vq3::spec::OnlineParam
        */
       template<typename VALUE, typename ONLINE_PARAM>
       class Mean {
@@ -291,7 +291,7 @@ namespace vq3 {
        *
        * \f${\mathrm{var}}_{n+1}(x) = (1-\alpha){\mathrm{var}}_n(x) + \alpha (x_n - {\overline x}_{n+1})^2\f$
        *
-       * The value of \f$\alpha \in [0,1] \f$ is given by ONLINE_PARAM, that must fit vq3::concept::OnlineParam
+       * The value of \f$\alpha \in [0,1] \f$ is given by ONLINE_PARAM, that must fit vq3::spec::OnlineParam
        */
       template<typename VALUE, typename ONLINE_PARAM>
       class MeanStd : public Mean<VALUE, ONLINE_PARAM> {
