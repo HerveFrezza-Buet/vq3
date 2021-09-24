@@ -68,8 +68,8 @@ int main(int argc, char* argv[]) {
   g.connect(C, D);
 
   // Let us consider two samples.
-  auto x = demo2d::Point(-.5,  .1);
-  auto y = demo2d::Point(-.5, -.1);
+  auto x = demo2d::Point(-.3,  .1);
+  auto y = demo2d::Point(-.3, -.1);
 
   // They are usual Eucidian points, distance and linear
   // interpolations between them are linear, ignoring the auxiliary

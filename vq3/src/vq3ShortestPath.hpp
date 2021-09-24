@@ -172,7 +172,7 @@ namespace vq3 {
     };
 
     /**
-     * Get an iterator on the past starting from a vertex.
+     * Get an iterator on the path starting from a vertex.
      */
     template<typename REF_VERTEX>
     auto begin(const REF_VERTEX& ref_v) {
