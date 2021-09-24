@@ -31,7 +31,10 @@ using graph = vq3::graph<vertex, void>;
 double edge_cost(const graph::ref_edge& ref_e) {return 1.;}
 
 // This is the distance between a node value and a sample.
-double d2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
+double d2(const sample& p1, const sample& p2) {return demo2d::d2(p1, p2);}
+
+// This is the distance between a node value and a sample.
+double D2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
 
 // This is the linear interpolation between samples, when no graph is used.
 sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -129,9 +132,9 @@ int main(int argc, char* argv[]) {
   // but living in a world where the distances are graph-related (or
   // graph-induced).
   
-  auto traits = vq3::topology::gi::traits<sample>(g, d2, interpolate, shortest_path); // This gathers all the required definitions.
-  auto X      = vq3::topology::gi::value(traits, udata.start);                        // X is start, but topology is no more Eucldian, it is graph-induced.
-  auto Y      = vq3::topology::gi::value(traits, udata.end);                          // The same for Y and end.
+  auto traits = vq3::topology::gi::traits<sample>(g, d2, D2, interpolate, shortest_path); // This gathers all the required definitions.
+  auto X      = vq3::topology::gi::value(traits, udata.start);                            // X is start, but topology is no more Eucldian, it is graph-induced.
+  auto Y      = vq3::topology::gi::value(traits, udata.end);                              // The same for Y and end.
 
   // start == X(), end == Y()   The () operator allows to retrieve the value.
 

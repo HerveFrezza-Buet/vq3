@@ -32,7 +32,12 @@ namespace vq3 {
       /**
        * This function gives the distance between a vertex value and a value (int is fake here). 
        */
-      double d(int vertex_value, const value_type& v) const;
+      double D(int vertex_value, const value_type& v) const;
+
+      /**
+       * This function gives the distance between two values. 
+       */
+      double d(const value_type& v1, const value_type& v2) const;
 
       /**
        * This function interpolates, returning lambda*a + (1-lambda)*b, lambda in [0,1].
@@ -51,18 +56,22 @@ namespace vq3 {
 
       template<typename VALUE,
 	       typename GRAPH,
-	       typename DIST,
+	       typename VAL_DIST,
+	       typename GRAPH_DIST,
 	       typename INTERPOLATE,
 	       typename SHORTEST_PATH>
       struct Traits {
 	using value_type = VALUE;
 	using graph_type = GRAPH;
 	graph_type&                                                                              g;
-	std::function<double (const typename graph_type::vertex_value_type&, const value_type&)> d_func;
+	std::function<double (const value_type&, const value_type&)>                             d_func;
+	std::function<double (const typename graph_type::vertex_value_type&, const value_type&)> D_func;
 	std::function<value_type (const value_type&, const value_type&, double)>                 i_func;
 	std::function<void (GRAPH&, typename GRAPH::ref_vertex, typename GRAPH::ref_vertex)>     sp_func;
 
-	double d(const typename graph_type::vertex_value_type& a, const value_type& b) const  {return d_func(a, b);}
+	double d(const value_type& a, const value_type& b) const  {return d_func(a, b);}
+	
+	double D(const typename graph_type::vertex_value_type& a, const value_type& b) const  {return D_func(a, b);}
 	
 	value_type interpolate(const value_type& a, const value_type& b, double lambda) const {return i_func(a, b, lambda);}
 
@@ -71,10 +80,11 @@ namespace vq3 {
 	}
 
 	Traits(graph_type& g,
-	       const DIST& d,
+	       const VAL_DIST& d,
+	       const GRAPH_DIST& D,
 	       const INTERPOLATE& i,
 	       const SHORTEST_PATH& sp)
-	  : g(g), d_func(d), i_func(i), sp_func(sp) {}
+	  : g(g), d_func(d), D_func(D), i_func(i), sp_func(sp) {}
 	Traits()                         = delete;
 	Traits(const Traits&)            = default;
 	Traits& operator=(const Traits&) = delete;
@@ -82,25 +92,27 @@ namespace vq3 {
 
       template<typename VALUE,
 	       typename GRAPH,
-	       typename DIST,
+	       typename VAL_DIST,
+	       typename GRAPH_DIST,
 	       typename INTERPOLATE,
 	       typename SHORTEST_PATH>
-      auto traits(GRAPH& g, const DIST& d, const INTERPOLATE& i, const SHORTEST_PATH& sp) {
-	return Traits<VALUE, GRAPH, DIST, INTERPOLATE, SHORTEST_PATH>(g, d, i, sp);
+      auto traits(GRAPH& g, const VAL_DIST& d, const GRAPH_DIST& D, const INTERPOLATE& i, const SHORTEST_PATH& sp) {
+	return Traits<VALUE, GRAPH, VAL_DIST, GRAPH_DIST, INTERPOLATE, SHORTEST_PATH>(g, d, D, i, sp);
       }
 
       /**
        * This is intended to be used in non executed code. Typically:
-       * @code{.cpp} using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, interpolate, shortest_path)); @endcode
+       * @code{.cpp} using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, D2, interpolate, shortest_path)); @endcode
        */
       template<typename VALUE,
 	       typename GRAPH,
-	       typename DIST,
+	       typename VAL_DIST,
+	       typename GRAPH_DIST,
 	       typename INTERPOLATE,
 	       typename SHORTEST_PATH>
-      auto traits_val(const DIST& d, const INTERPOLATE& i, const SHORTEST_PATH& sp) {
+      auto traits_val(const VAL_DIST& d, const GRAPH_DIST& D, const INTERPOLATE& i, const SHORTEST_PATH& sp) {
 	GRAPH g;
-	return Traits<VALUE, GRAPH, DIST, INTERPOLATE, SHORTEST_PATH>(g, d, i, sp);
+	return Traits<VALUE, GRAPH, VAL_DIST, GRAPH_DIST, INTERPOLATE, SHORTEST_PATH>(g, d, D, i, sp);
       }
 
       template<typename GIT_TRAITS> class Value;
@@ -134,7 +146,7 @@ namespace vq3 {
 	  if(!closest)
 	    closest = vq3::utils::closest(traits.g, value,
 					  [this](const typename traits_type::graph_type::vertex_value_type& a, const typename traits_type::value_type& b) {
-					    return traits.d(a, b); 
+					    return traits.D(a, b); 
 					  },
 					  dist_to_closest);
 	}
@@ -288,7 +300,8 @@ namespace vq3 {
 	// std::cout << "w  : "  << ((*wA)()).vq3_value << " --> " << ((*wB)()).vq3_value << std::endl
 	// 	  << "xi  : " << ((*xA)()).vq3_value << " --> " << ((*xB)()).vq3_value << std::endl;
 
-	//AAARGL
+	// De we anchor w do wA or wB ? 
+
 	return w.value;
 	
 	auto l1       = w.dist_to_closest;

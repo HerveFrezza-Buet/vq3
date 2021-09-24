@@ -52,8 +52,11 @@ namespace aux {
     return *opt_cost;
   }
 
-  // The distance between a node and a sample.
-  double d2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
+  // This is the distance between a node value and a sample.
+  double d2(const sample& p1, const sample& p2) {return demo2d::d2(p1, p2);}
+
+  // This is the distance between a node value and a sample.
+  double D2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
 
   // The linear interpolation
   sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -70,7 +73,7 @@ namespace aux {
   // This is the traits type for building up values related to the
   // support graph. The function used inside decltype(...) is only
   // usefull (and very convenient) for this "traits" type definition.
-  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, interpolate, shortest_path));
+  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, D2, interpolate, shortest_path));
 }
 
 
@@ -147,8 +150,8 @@ int main(int argc, char* argv[]) {
     chl.process(nb_threads,
                 S.begin(), S.end(),
                 [](const demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                aux::d2,                                          // d2(prototype, sample).
-                aux::edge());                                     // New edge initialization value.
+                aux::D2,                                     // D2(prototype, sample).
+                aux::edge());                                // New edge initialization value.
 
     // We remove some edges afterwards.
     g_aux.foreach_edge([](auto& ref_e) {
@@ -174,7 +177,7 @@ int main(int argc, char* argv[]) {
 
   som::graph g_som;
 
-  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::interpolate, aux::shortest_path);
+  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::D2, aux::interpolate, aux::shortest_path);
   
   vq3::utils::make_grid(g_som, GRID_WIDTH, GRID_HEIGHT,
 			[&random_device, &traits, bbox = density->bbox()](unsigned int w, unsigned int h) {
