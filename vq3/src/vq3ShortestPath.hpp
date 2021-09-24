@@ -153,7 +153,7 @@ namespace vq3 {
 	return std::reinterpret_pointer_cast<edge_type>((*curr)().vq3_shortest_path.to_src);
       }
       
-      auto& operator++() {
+      iterator& operator++() {
 	if(auto& sp = (*curr)().vq3_shortest_path.to_src; sp) {
 	  auto to_src = std::reinterpret_pointer_cast<edge_type>(sp);
 	  auto extr   = to_src->extremities();
@@ -164,9 +164,9 @@ namespace vq3 {
 	return *this;
       }
     
-      auto operator++(int) {
+       iterator operator++(int) {
 	auto res = *this;
-	(*this)++;
+	operator++();
 	return res;
       }
     };
@@ -179,12 +179,30 @@ namespace vq3 {
       return iterator(ref_v);
     }
 
+    
     /**
      * Get a end interator. The graph is provided for type inference only.
      */
     template<typename GRAPH>
-    auto end(const GRAPH& g) {return iterator<typename GRAPH::ref_vertex>();}
+    auto end_by_graph(const GRAPH& g) {return iterator<typename GRAPH::ref_vertex>();}
+    
+    /**
+     * Get a end interator. The vertex is provided for type inference only.
+     */
+    template<typename REF_VERTEX>
+    auto end_by_vertex(const REF_VERTEX& ref_v) {return iterator<REF_VERTEX>();}
+    
+    /**
+     * Get a end interator. The vertex is provided for type inference only.
+     */
+    template<typename REF_VERTEX>
+    auto end() {return iterator<REF_VERTEX>();}
   
+    /**
+     * Get a end interator. The graph is provided for type inference only.
+     */
+    template<typename GRAPH>
+    auto end(const GRAPH& g) {return end_by_graph(g);}
   }
 
  

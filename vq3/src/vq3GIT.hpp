@@ -267,7 +267,28 @@ namespace vq3 {
 	if(xi.closest == w.closest)
 	  return w.traits.interpolate(w.value, xi.value, alpha);
 
-	// AAARGL
+	// The path as at least two vertices...
+
+	// We have to determine the two anchors to the graph, one for
+	// xi and one for w. Using xi.closest and w.closest as anchors
+	// it naive, we well try to do better.
+
+	// Searching for w and xi anchors.
+	auto path_it  = path::begin(w.closest);
+	auto path_end = path::end_by_vertex(w.closest);
+	auto wA = *(path_it++);    // Immediate closest node
+	auto wB = *(path_it++);    // Next node in the path toward xi.
+	auto xA = wB;
+	auto xB = wA;
+	while(path_it != path_end) {
+	  xB = xA;
+	  xA = *(path_it++);
+	}
+	
+	// std::cout << "w  : "  << ((*wA)()).vq3_value << " --> " << ((*wB)()).vq3_value << std::endl
+	// 	  << "xi  : " << ((*xA)()).vq3_value << " --> " << ((*xB)()).vq3_value << std::endl;
+
+	//AAARGL
 	return w.value;
 	
 	auto l1       = w.dist_to_closest;
