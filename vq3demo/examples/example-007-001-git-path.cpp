@@ -16,14 +16,10 @@ using sample = demo2d::Point;
 
 // Let us define the auxiliary graph.
 
-
-
 //                                                         ## Node properties :
 using vlayer_0 = demo2d::Point;                            // The graph nodes are points.
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
 using vertex   = vlayer_1;
-  
-
 
 using graph = vq3::graph<vertex, void>;
 
@@ -48,10 +44,40 @@ void shortest_path(graph& g, graph::ref_vertex start, graph::ref_vertex dest) {
 				  });
 }
 
-// We now are ready to start actual computation.
+// We now are ready to start actual computation....
+
+// ... but first, let us add cv stuff to be able to place our 2
+// samples.
 
 
+void on_mouse( int event, int x, int y, int, void* user_data);
+struct callback_data {
+  demo2d::Point start, end;
 
+private:
+  demo2d::opencv::Frame& frame;
+  bool start_changed;
+  bool end_changed;
+
+  friend void on_mouse( int event, int x, int y, int, void* user_data);
+  
+public:
+  callback_data(demo2d::opencv::Frame& frame)
+    : start({-.5,  .1}),
+      end({-.5, -.1}),
+      frame(frame),
+      start_changed(false), end_changed(false) {}
+  callback_data()                                = delete;
+  callback_data(const callback_data&)            = delete;
+  callback_data& operator=(const callback_data&) = delete;
+  void set_start(const demo2d::Point& pt) {start_changed = true; start = pt;}
+  void set_end(const demo2d::Point& pt)   {end_changed   = true; end   = pt;}
+  bool start_has_changed()                {auto res = start_changed; start_changed = false; return res;}
+  bool end_has_changed()                  {auto res =   end_changed; end_changed   = false; return res;}
+};
+
+
+// Ok, now we start.
 
 int main(int argc, char* argv[]) {
   
@@ -67,24 +93,6 @@ int main(int argc, char* argv[]) {
   g.connect(B, C);
   g.connect(C, D);
 
-  // Let us consider two samples.
-  auto x = demo2d::Point(-.3,  .1);
-  auto y = demo2d::Point(-.3, -.1);
-
-  // They are usual Eucidian points, distance and linear
-  // interpolations between them are linear, ignoring the auxiliary
-  // graph.
-
-
-  // The idea is to set up "mirror" points, which are the same points,
-  // but living in a world where the distances are graph-related (or
-  // graph-induced).
-  
-  auto traits = vq3::topology::gi::traits<sample>(g, d2, interpolate, shortest_path); // This gathers all the required definitions.
-  auto X      = vq3::topology::gi::value(traits, x);                                  // X is x, but topology is no more Eucldian, it is graph-induced.
-  auto Y      = vq3::topology::gi::value(traits, y);                                  // The same for Y and y.
-
-  // x == X(), y == Y()   The () operator allows to retrieve the value.
 
   // Let us set up a display.
   
@@ -93,6 +101,8 @@ int main(int argc, char* argv[]) {
   auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .8*image.size().height, true);
   int slider = 500;
   cv::createTrackbar("walk ratio", "image", &slider, 1000, nullptr);
+  callback_data udata(frame);
+  cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&udata));
 
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
                                                                            [](const vertex& v) {return                      true;},  // always draw
@@ -106,7 +116,24 @@ int main(int argc, char* argv[]) {
   								     [](const vertex& v) {return               v.vq3_value;},  // position
   								     []()                {return cv::Scalar(255, 200, 200);},  // color
   								     []()                {return                         1;}); // thickness
-                    
+
+  
+  // Let us consider two samples, udata.start and udata.end
+  // (they can be changed with the mouse).
+
+  // They are usual Euclidian points, distance and linear
+  // interpolations between them are linear, ignoring the auxiliary
+  // graph.
+
+  // The idea is to set up "mirror" points, which are the same points,
+  // but living in a world where the distances are graph-related (or
+  // graph-induced).
+  
+  auto traits = vq3::topology::gi::traits<sample>(g, d2, interpolate, shortest_path); // This gathers all the required definitions.
+  auto X      = vq3::topology::gi::value(traits, udata.start);                        // X is start, but topology is no more Eucldian, it is graph-induced.
+  auto Y      = vq3::topology::gi::value(traits, udata.end);                          // The same for Y and end.
+
+  // start == X(), end == Y()   The () operator allows to retrieve the value.
 
   // This is the loop.
   
@@ -122,6 +149,9 @@ int main(int argc, char* argv[]) {
   
   int keycode = 0;
   while(keycode != 27) {
+
+    if(udata.start_has_changed()) X = udata.start; // This re-initialize X/Y from another value...
+    if(udata.end_has_changed())   Y = udata.end;   // ... this triggers computation of closest node.
     
     auto T = X;                    // T is another value with graph-induced topology.
     double lambda = slider*.001;   // lambda (in [0, 1]) is an interpolation coefficient.
@@ -137,7 +167,7 @@ int main(int argc, char* argv[]) {
     
     g.foreach_edge(draw_edge);
     g.foreach_vertex(draw_vertex);
-    cv::circle(image, frame(X()), 3, cv::Scalar(0, 0, 200), -1);
+    cv::circle(image, frame(X()), 3, cv::Scalar(0, 200, 0), -1);
     cv::circle(image, frame(Y()), 3, cv::Scalar(0, 0, 200), -1);
       
     cv::imshow("image", image);
@@ -147,3 +177,13 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
+
+void on_mouse( int event, int x, int y, int, void* udata) {
+  if(event != cv::EVENT_LBUTTONDOWN && event != cv::EVENT_RBUTTONDOWN)
+    return;
+  auto& data = *(reinterpret_cast<callback_data*>(udata));
+  if(event == cv::EVENT_LBUTTONDOWN)
+    data.set_start(data.frame(cv::Point(x, y)));
+  else
+    data.set_end(data.frame(cv::Point(x, y)));
+}

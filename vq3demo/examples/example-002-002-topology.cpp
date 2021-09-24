@@ -167,7 +167,7 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   auto& data = *(reinterpret_cast<callback_data*>(user_data));
 
   // Get the coordinates of the clicked point.
-  auto click_pos = data.frame(cv::Point(x,y));
+  auto click_pos = data.frame(cv::Point(x, y));
 
   // Let us clear the graph values.
   data.topology.g.foreach_vertex([](const graph::ref_vertex& ref_v) {(*ref_v)().vq3_value.value = 0;});

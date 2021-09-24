@@ -204,7 +204,9 @@ namespace vq3 {
 	return os;	  
       }
 
-      // w += alpha*(xi - w) : alpha, (w, xi) --> the interpolated value.
+      // Previous implementation...
+      /*
+
       template<typename GIT_TRAITS>
       auto operator*(double alpha, const std::pair<const Value<GIT_TRAITS>&, const Value<GIT_TRAITS>&>& diff) -> typename GIT_TRAITS::value_type {
 	auto& [w, xi] = diff; 
@@ -212,6 +214,61 @@ namespace vq3 {
 	auto l_graph  = (*(w.closest))().vq3_shortest_path.cost;
 	if(l_graph == std::numeric_limits<double>::max())
 	  return w.value;
+	
+	auto l1       = w.dist_to_closest;
+	auto l2       = xi.dist_to_closest;
+	double l      = l1 + l_graph + l2;
+	auto alpha_l  = alpha * l;
+
+	l = l1;
+	if(alpha_l <= l) {
+	  double lambda = 0;
+	  if(l > 0) lambda = alpha_l/l;
+	  return w.traits.interpolate(w.value, (*(w.closest))().vq3_value, lambda);
+	}
+	
+	l += l_graph;
+	if(alpha_l <= l) {
+	  double lambda = 0;
+	  if(l_graph > 0)
+	    lambda = (alpha_l - l1)/l_graph;
+	  if(auto val = vq3::path::travel(w.closest, xi.closest, lambda,
+					  [&w](const typename GIT_TRAITS::graph_type::ref_vertex& a, const typename GIT_TRAITS::graph_type::ref_vertex& b, double lambda){
+					    return w.traits.interpolate((*a)().vq3_value, (*b)().vq3_value, lambda);
+					  }); val)
+	    return *val;
+	  else
+	    return w.value; // Trying to reach a sample in another connected component has no effect.
+	}
+	
+	double lambda = 0;
+	if(l2 > 0)
+	  lambda = (alpha_l - l)/l2;
+	return w.traits.interpolate((*(xi.closest))().vq3_value, xi.value, lambda);
+      }
+
+      */
+
+      
+      // w += alpha*(xi - w) : alpha, (w, xi) --> the interpolated value.
+      template<typename GIT_TRAITS>
+      auto operator*(double alpha, const std::pair<const Value<GIT_TRAITS>&, const Value<GIT_TRAITS>&>& diff) -> typename GIT_TRAITS::value_type {
+	auto& [w, xi] = diff; 
+	
+	auto l_graph  = (*(w.closest))().vq3_shortest_path.cost;
+
+	// If no path exists to reach xi, we do not modify w.
+	if(l_graph == std::numeric_limits<double>::max())
+	  return w.value;
+
+
+	// If both xi and w have the same closest vertex, we move
+	// directly.
+	if(xi.closest == w.closest)
+	  return w.traits.interpolate(w.value, xi.value, alpha);
+
+	// AAARGL
+	return w.value;
 	
 	auto l1       = w.dist_to_closest;
 	auto l2       = xi.dist_to_closest;
