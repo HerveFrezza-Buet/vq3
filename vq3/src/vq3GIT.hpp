@@ -261,11 +261,24 @@ namespace vq3 {
 
       */
 
+
+#define vq3DEBUG_GIT
       
       // w += alpha*(xi - w) : alpha, (w, xi) --> the interpolated value.
+#define vq3_GIT_DLAMBDA .01
       template<typename GIT_TRAITS>
-      auto operator*(double alpha, const std::pair<const Value<GIT_TRAITS>&, const Value<GIT_TRAITS>&>& diff) -> typename GIT_TRAITS::value_type {
-	auto& [w, xi] = diff; 
+      auto operator*(double alpha, const std::pair<const Value<GIT_TRAITS>&, const Value<GIT_TRAITS>&>& diff) -> typename GIT_TRAITS::value_type {	
+	auto& [w, xi] = diff;
+	// Here, internal values (closest, dist_to_closest, ...) are
+	// up to date, since operator- did the update.
+
+#ifdef vq3DEBUG_GIT
+	std::cout << std::endl
+		  << "####" << std::endl
+		  << std::endl
+		  << "w = " << w.value << ", xi = " << xi.value << std::endl
+		  << "w* = " << (*(w.closest))().vq3_value << ", xi* = " << (*(xi.closest))().vq3_value << std::endl;
+#endif
 	
 	auto l_graph  = (*(w.closest))().vq3_shortest_path.cost;
 
@@ -297,10 +310,57 @@ namespace vq3 {
 	  xA = *(path_it++);
 	}
 	
-	// std::cout << "w  : "  << ((*wA)()).vq3_value << " --> " << ((*wB)()).vq3_value << std::endl
-	// 	  << "xi  : " << ((*xA)()).vq3_value << " --> " << ((*xB)()).vq3_value << std::endl;
+#ifdef vq3DEBUG_GIT
+	std::cout << "w  anchors : A = " << ((*wA)()).vq3_value << " --> B = " << ((*wB)()).vq3_value << std::endl
+	 	  << "xi anchors : A = " << ((*xA)()).vq3_value << " --> B = " << ((*xB)()).vq3_value << std::endl;
+#endif
 
-	// De we anchor w do wA or wB ? 
+	// Do we anchor w to wA or wB ?
+	
+#ifdef vq3DEBUG_GIT
+	std::cout << std::endl
+		  << "-- Anchoring w :" << std::endl;
+#endif
+	auto L = w.traits.interpolate((*wA)().vq3_value, (*wB)().vq3_value, vq3_GIT_DLAMBDA);
+#ifdef vq3DEBUG_GIT
+	std::cout << "   L    = " << L << std::endl
+		  << "   |wL| = " << w.traits.d(w.value, L) << std::endl
+		  << "   |wA| = " << w.dist_to_closest << std::endl;
+#endif
+	auto wK = wA;
+	if(w.traits.d(w.value, L) < w.dist_to_closest)
+	  wK = wB;
+	
+#ifdef vq3DEBUG_GIT
+	if(wK == wA) std::cout << "   anchor = A" << std::endl;
+	else         std::cout << "   anchor = B" << std::endl;
+		       
+#endif
+
+	
+	// Do we anchor xi to xA or xB ?
+	
+#ifdef vq3DEBUG_GIT
+	std::cout << std::endl
+		  << "-- Anchoring xi :" << std::endl;
+#endif
+	L = w.traits.interpolate((*xA)().vq3_value, (*xB)().vq3_value, vq3_GIT_DLAMBDA);
+#ifdef vq3DEBUG_GIT
+	std::cout << "   L     = " << L << std::endl
+		  << "   |xiL| = " << w.traits.d(xi.value, L) << std::endl
+		  << "   |xiA| = " << xi.dist_to_closest << std::endl;
+#endif
+	auto xK = xA;
+	if(w.traits.d(xi.value, L) < xi.dist_to_closest)
+	  xK = xB;
+	
+#ifdef vq3DEBUG_GIT
+	if(xK == xA) std::cout << "   anchor = A" << std::endl;
+	else         std::cout << "   anchor = B" << std::endl;
+		       
+#endif
+	  
+	  
 
 	return w.value;
 	
