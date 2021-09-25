@@ -283,14 +283,22 @@ namespace vq3 {
 	auto l_graph  = (*(w.closest))().vq3_shortest_path.cost;
 
 	// If no path exists to reach xi, we do not modify w.
-	if(l_graph == std::numeric_limits<double>::max())
+	if(l_graph == std::numeric_limits<double>::max()) {
+#ifdef vq3DEBUG_GIT
+	  std::cout << "No path" << std::endl;
+#endif
 	  return w.value;
+	}
 
 
 	// If both xi and w have the same closest vertex, we move
 	// directly.
-	if(xi.closest == w.closest)
+	if(xi.closest == w.closest) {
+#ifdef vq3DEBUG_GIT
+	  std::cout << "both xi and w have the same closest vertex." << std::endl;
+#endif
 	  return w.traits.interpolate(w.value, xi.value, alpha);
+	}
 
 	// The path as at least two vertices...
 
@@ -333,8 +341,7 @@ namespace vq3 {
 	
 #ifdef vq3DEBUG_GIT
 	if(wK == wA) std::cout << "   anchor = A" << std::endl;
-	else         std::cout << "   anchor = B" << std::endl;
-		       
+	else         std::cout << "   anchor = B" << std::endl;		       
 #endif
 
 	
@@ -356,10 +363,17 @@ namespace vq3 {
 	
 #ifdef vq3DEBUG_GIT
 	if(xK == xA) std::cout << "   anchor = A" << std::endl;
-	else         std::cout << "   anchor = B" << std::endl;
-		       
+	else         std::cout << "   anchor = B" << std::endl;		       
 #endif
-	  
+
+	// Let us check if the two anchors make a swap(in case of 2-nodes path).
+	if(wK == xA && xK == wA) {
+#ifdef vq3DEBUG_GIT
+	  std::cout << "xi and w anchors are swapped (2-length path)." << std::endl;
+#endif
+	  return w.traits.interpolate(w.value, xi.value, alpha);
+	}
+	
 	  
 
 	return w.value;
