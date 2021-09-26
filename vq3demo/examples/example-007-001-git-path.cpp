@@ -145,6 +145,8 @@ int main(int argc, char* argv[]) {
             << std::endl
             << "##################" << std::endl
             << std::endl
+	    << "left  click sets the starting point." << std::endl
+	    << "right click sets the ending point." << std::endl
             << "Press ESC to quit." << std::endl
             << std::endl
             << "##################" << std::endl

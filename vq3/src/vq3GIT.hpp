@@ -262,7 +262,6 @@ namespace vq3 {
       */
 
 
-#define vq3DEBUG_GIT
       
       // w += alpha*(xi - w) : alpha, (w, xi) --> the interpolated value.
 #define vq3_GIT_DLAMBDA .01
@@ -406,7 +405,7 @@ namespace vq3 {
 	    if(xKisB) lambda *= lp/l_path;
 	  }
 	  
-	  if(auto val = vq3::path::travel(w.closest, xi.closest, lambda,
+	  if(auto val = vq3::path::travel(wK, xi.closest, lambda,
 					  [&w](const typename GIT_TRAITS::graph_type::ref_vertex& a, const typename GIT_TRAITS::graph_type::ref_vertex& b, double lambda){
 					    return w.traits.interpolate((*a)().vq3_value, (*b)().vq3_value, lambda);
 					  }); val)
