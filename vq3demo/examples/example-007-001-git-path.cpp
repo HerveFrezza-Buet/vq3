@@ -21,20 +21,33 @@ using vlayer_0 = demo2d::Point;                            // The graph nodes ar
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
 using vertex   = vlayer_1;
 
-using graph = vq3::graph<vertex, void>;
+//                                                        ## Edge properties :
+using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
+using edge     = elayer_0;
+
+using graph = vq3::graph<vertex, edge>;
 
 
 // Let us define some functions in order to set up dijkstra
 // computation.
 
 // This is the cost of an edge, constant here.
-double edge_cost(const graph::ref_edge& ref_e) {return 1.;}
+double edge_cost(const graph::ref_edge& ref_e) {
+  auto& opt_cost = (*ref_e)().vq3_cost; 
+  if(!opt_cost) { // if cost not calculated yet.
+    auto extr_pair = ref_e->extremities();
+    const auto& pt1 = (*(extr_pair.first))().vq3_value;
+    const auto& pt2 = (*(extr_pair.second))().vq3_value;
+    opt_cost = demo2d::d(pt1, pt2);
+  }
+  return *opt_cost;
+}
 
 // This is the distance between a node value and a sample.
-double d2(const sample& p1, const sample& p2) {return demo2d::d2(p1, p2);}
+double d(const sample& p1, const sample& p2) {return demo2d::d(p1, p2);}
 
 // This is the distance between a node value and a sample.
-double D2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
+double D(const vertex& v, const sample& p) {return demo2d::d(v.vq3_value, p);}
 
 // This is the linear interpolation between samples, when no graph is used.
 sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -87,14 +100,14 @@ int main(int argc, char* argv[]) {
   graph g;
 
   // Let us build a very simple auxiliary graph.
-  auto A = g += demo2d::Point(-.5, -.5);
-  auto B = g += demo2d::Point( .5, -.5);
-  auto C = g += demo2d::Point( .5,  .5);
-  auto D = g += demo2d::Point(-.5,  .5);
+  auto V1 = g += demo2d::Point(-.5, -.5);
+  auto V2 = g += demo2d::Point( .5, -.5);
+  auto V3 = g += demo2d::Point( .5,  .5);
+  auto V4 = g += demo2d::Point(-.5,  .5);
 
-  g.connect(A, B);
-  g.connect(B, C);
-  g.connect(C, D);
+  g.connect(V1, V2);
+  g.connect(V2, V3);
+  g.connect(V3, V4);
 
 
   // Let us set up a display.
@@ -115,10 +128,10 @@ int main(int argc, char* argv[]) {
                                                                            [](const vertex& v) {return                        -1;}); // thickness
 
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
-  								     [](const vertex&, const vertex&) {return         true;},  // always draw
+  								     [](const vertex&, const vertex&, const edge&) {return         true;},  // always draw
   								     [](const vertex& v) {return               v.vq3_value;},  // position
-  								     []()                {return cv::Scalar(255, 200, 200);},  // color
-  								     []()                {return                         1;}); // thickness
+  								     [](const edge&)     {return cv::Scalar(255, 200, 200);},  // color
+  								     [](const edge&)     {return                         1;}); // thickness
 
   
   // Let us consider two samples, udata.start and udata.end
@@ -132,7 +145,7 @@ int main(int argc, char* argv[]) {
   // but living in a world where the distances are graph-related (or
   // graph-induced).
   
-  auto traits = vq3::topology::gi::traits<sample>(g, d2, D2, interpolate, shortest_path); // This gathers all the required definitions.
+  auto traits = vq3::topology::gi::traits<sample>(g, d, D, interpolate, shortest_path);   // This gathers all the required definitions.
   auto X      = vq3::topology::gi::value(traits, udata.start);                            // X is start, but topology is no more Eucldian, it is graph-induced.
   auto Y      = vq3::topology::gi::value(traits, udata.end);                              // The same for Y and end.
 

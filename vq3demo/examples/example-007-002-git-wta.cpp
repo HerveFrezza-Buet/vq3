@@ -25,13 +25,13 @@ namespace aux {
   using sample    = demo2d::Point;
   using prototype = demo2d::Point;
   
-  //                                                         ## Node properties :
+  //                                                         ## Vertex properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
   using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
   using vlayer_2 = vq3::demo::decorator::colored<vlayer_1>;  // We add a color to the vertices.
   using vertex   = vlayer_2;
   
-  //                                                        ## Node properties :
+  //                                                        ## Edge properties :
   using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
   using elayer_1 = vq3::decorator::tagged<elayer_0>;        // We need a tag for CHL.
   using edge     = elayer_1;
@@ -53,10 +53,10 @@ namespace aux {
   }
 
   // This is the distance between a node value and a sample.
-  double d2(const sample& p1, const sample& p2) {return demo2d::d2(p1, p2);}
+  double d(const sample& p1, const sample& p2) {return demo2d::d(p1, p2);}
 
   // This is the distance between a node value and a sample.
-  double D2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
+  double D(const vertex& v, const sample& p) {return demo2d::d(v.vq3_value, p);}
 
   // The linear interpolation
   sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -73,7 +73,7 @@ namespace aux {
   // This is the traits type for building up values related to the
   // support graph. The function used inside decltype(...) is only
   // usefull (and very convenient) for this "traits" type definition.
-  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, D2, interpolate, shortest_path));
+  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d, D, interpolate, shortest_path));
 }
 
 
@@ -98,7 +98,7 @@ using epoch_data_1 = vq3::epoch::data::bmu<epoch_data_0,
 using epoch_data   = epoch_data_1;
 
 
-#define NB_SAMPLES_PER_M2_SUPPORT  1000
+#define NB_SAMPLES_PER_M2_SUPPORT   500
 #define K                            10
 #define CHUNK_SIZE                  100
 #define ALPHA_SLIDER_INIT           100
@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
     chl.process(nb_threads,
                 S.begin(), S.end(),
                 [](const demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                aux::D2,                                     // D2(prototype, sample).
+                aux::D,                                     // D(prototype, sample).
                 aux::edge());                                // New edge initialization value.
     
   }
@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
   /////
   
   kmeans::graph g_kmeans;
-  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::D2, aux::interpolate, aux::shortest_path);
+  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d, aux::D, aux::interpolate, aux::shortest_path);
 
   {
     auto colormap = demo2d::opencv::colormap::random(random_device, .1, 50);
@@ -191,7 +191,7 @@ int main(int argc, char* argv[]) {
   
   // We will need a distance for selecting the closest prototype. It
   // is easily available from the traits instance.
-  auto kmeans_d2 = vq3::topology::gi::distance<kmeans::vertex>(traits,
+  auto kmeans_d = vq3::topology::gi::distance<kmeans::vertex>(traits,
 							       [](const kmeans::vertex& vertex) -> const kmeans::prototype& {return vertex.vq3_value;});
 
   ////
@@ -297,13 +297,13 @@ int main(int argc, char* argv[]) {
 	  auto sample_point = demo2d::sample::get_one_sample(random_device, density);
 	  vq3::online::wta::learn(g_kmeans,
 	  			  [](kmeans::vertex& vertex_value) -> kmeans::prototype& {return vertex_value.vq3_value;},
-	  			  kmeans_d2, vq3::topology::gi::value(traits, sample_point),
+	  			  kmeans_d, vq3::topology::gi::value(traits, sample_point),
 				  slider_alpha*.001); // Our sample is a GIT value.
 	}
 
       // Let us colorize the auxiliary graph according to the color of the closest vertex in the kmeans graph.
-      g_aux.foreach_vertex([&g_kmeans, &kmeans_d2, &traits](auto& ref_v) {
-	  auto closest = vq3::utils::closest(g_kmeans, vq3::topology::gi::value(traits, (*ref_v)().vq3_value), kmeans_d2);
+      g_aux.foreach_vertex([&g_kmeans, &kmeans_d, &traits](auto& ref_v) {
+	  auto closest = vq3::utils::closest(g_kmeans, vq3::topology::gi::value(traits, (*ref_v)().vq3_value), kmeans_d);
 	  (*ref_v)().vq3_color = (*closest)().vq3_color;
 	});
 
@@ -315,7 +315,7 @@ int main(int argc, char* argv[]) {
       							  S.begin(), S.end(),
       							  [](const kmeans::sample& s) -> const kmeans::sample& {return s;},                        // Retrieves the sample from *it
       							  [](kmeans::vertex& vertex_value) -> kmeans::prototype& {return vertex_value.vq3_value;}, // Retrieves the prototype from the vertex value.
-      							  kmeans_d2);
+      							  kmeans_d);
       double average = 0;
       for(auto& data : epoch_results)
       	average += data.vq3_bmu_accum.average();

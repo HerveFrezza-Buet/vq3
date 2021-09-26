@@ -24,7 +24,7 @@ namespace aux { // This contains the definition for the auxiliary graph.
   using sample    = demo2d::Point;
   using prototype = demo2d::Point;
   
-  //                                                         ## Node properties :
+  //                                                         ## Vertex properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
   using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
   using vertex   = vlayer_1;
@@ -51,10 +51,10 @@ namespace aux { // This contains the definition for the auxiliary graph.
   }
 
   // This is the distance between a node value and a sample.
-  double d2(const sample& p1, const sample& p2) {return demo2d::d2(p1, p2);}
+  double d(const sample& p1, const sample& p2) {return demo2d::d(p1, p2);}
 
   // This is the distance between a node value and a sample.
-  double D2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
+  double D(const vertex& v, const sample& p) {return demo2d::d(v.vq3_value, p);}
 
   // The linear interpolation
   sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -71,7 +71,7 @@ namespace aux { // This contains the definition for the auxiliary graph.
   // This is the traits type for building up values related to the
   // support graph. The function used inside decltype(...) is only
   // usefull (and very convenient) for this "traits" type definition.
-  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, D2, interpolate, shortest_path));
+  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d, D, interpolate, shortest_path));
 }
 
 namespace som { // This namespace defines the SOM graph
@@ -96,7 +96,7 @@ void rebuild_support_graph(aux::graph& g_aux,
 // Simulation parameters.
 
 #define SLIDER_INIT               1000
-#define NB_SAMPLES_PER_M2_SUPPORT 5000
+#define NB_SAMPLES_PER_M2_SUPPORT  500
 #define NB_SOM_VERTICES            100 
 #define ALPHA                       .1
 
@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
 
   som::graph g_som;
 
-  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::D2, aux::interpolate, aux::shortest_path);
+  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d, aux::D, aux::interpolate, aux::shortest_path);
 
   // This tosses a random value in the distribution bounding box.
     
@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
   
   // We will need a distance for selecting the closest prototype. It
   // is easily available from the traits instance.
-  auto som_d2 = vq3::topology::gi::distance<som::vertex>(traits,
+  auto som_d = vq3::topology::gi::distance<som::vertex>(traits,
 							 [](const som::vertex& vertex) -> const som::prototype& {return vertex.vq3_value;});
   
 
@@ -268,7 +268,7 @@ int main(int argc, char* argv[]) {
     auto sample_point = demo2d::sample::get_one_sample(random_device, density);
     vq3::online::wtm::learn(topology, 0,
 			    [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
-			    som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+			    som_d, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
 
     
     
@@ -322,7 +322,7 @@ void rebuild_support_graph(aux::graph& g_aux,
     chl.process(nb_threads,
                 S.begin(), S.end(),
                 [](const demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                aux::D2,                                     // D2(prototype, sample).
+                aux::D,                                      // D(prototype, sample).
                 aux::edge());                                // New edge initialization value.
   }
 }

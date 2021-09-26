@@ -25,13 +25,13 @@ namespace aux {
   using sample    = demo2d::Point;
   using prototype = demo2d::Point;
   
-  //                                                         ## Node properties :
+  //                                                         ## Vertex properties :
   using vlayer_0 = prototype;                                // prototypes are 2D points (this is the "user defined" value).
   using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
   using vlayer_2 = vq3::demo::decorator::colored<vlayer_1>;  // We add a color to the vertices.
   using vertex   = vlayer_2;
   
-  //                                                        ## Node properties :
+  //                                                        ## Edge properties :
   using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
   using elayer_1 = vq3::decorator::tagged<elayer_0>;        // We need a tag for CHL.
   using edge     = elayer_1;
@@ -53,10 +53,10 @@ namespace aux {
   }
 
   // This is the distance between a node value and a sample.
-  double d2(const sample& p1, const sample& p2) {return demo2d::d2(p1, p2);}
+  double d(const sample& p1, const sample& p2) {return demo2d::d(p1, p2);}
 
   // This is the distance between a node value and a sample.
-  double D2(const vertex& v, const sample& p) {return demo2d::d2(v.vq3_value, p);}
+  double D(const vertex& v, const sample& p) {return demo2d::d(v.vq3_value, p);}
 
   // The linear interpolation
   sample interpolate(const sample& a, const sample& b, double lambda) {return (1-lambda)*a + lambda*b;}
@@ -73,7 +73,7 @@ namespace aux {
   // This is the traits type for building up values related to the
   // support graph. The function used inside decltype(...) is only
   // usefull (and very convenient) for this "traits" type definition.
-  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, D2, interpolate, shortest_path));
+  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d, D, interpolate, shortest_path));
 }
 
 
@@ -94,9 +94,9 @@ namespace som {
 }
 
 #define SLIDER_INIT                1000
-#define NB_SAMPLES_PER_M2_SUPPORT 20000
+#define NB_SAMPLES_PER_M2_SUPPORT  5000
 #define GRID_WIDTH                   30
-#define GRID_HEIGHT                   5
+#define GRID_HEIGHT                   4
 #define ALPHA                        .1
 #define CHUNK_SIZE                   20
 
@@ -149,9 +149,9 @@ int main(int argc, char* argv[]) {
     auto chl = vq3::epoch::chl::processor(g_aux);
     chl.process(nb_threads,
                 S.begin(), S.end(),
-                [](const demo2d::Point& s) {return s;},      // Gets the sample from *it.
-                aux::D2,                                     // D2(prototype, sample).
-                aux::edge());                                // New edge initialization value.
+                [](const demo2d::Point& s) {return s;},   // Gets the sample from *it.
+                aux::D,                                   // D(prototype, sample).
+                aux::edge());                             // New edge initialization value.
 
     // We remove some edges afterwards.
     g_aux.foreach_edge([](auto& ref_e) {
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
 
   som::graph g_som;
 
-  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d2, aux::D2, aux::interpolate, aux::shortest_path);
+  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d, aux::D, aux::interpolate, aux::shortest_path);
   
   vq3::utils::make_grid(g_som, GRID_WIDTH, GRID_HEIGHT,
 			[&random_device, &traits, bbox = density->bbox()](unsigned int w, unsigned int h) {
@@ -190,7 +190,7 @@ int main(int argc, char* argv[]) {
   
   // We will need a distance for selecting the closest prototype. It
   // is easily available from the traits instance.
-  auto som_d2 = vq3::topology::gi::distance<som::vertex>(traits,
+  auto som_d = vq3::topology::gi::distance<som::vertex>(traits,
 							 [](const som::vertex& vertex) -> const som::prototype& {return vertex.vq3_value;});
 
   
@@ -266,7 +266,7 @@ int main(int argc, char* argv[]) {
       auto sample_point = demo2d::sample::get_one_sample(random_device, density);
       vq3::online::wtm::learn(topology, 0,
 			      [](som::vertex& vertex) -> som::prototype& {return vertex.vq3_value;},
-			      som_d2, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
+			      som_d, vq3::topology::gi::value(traits, sample_point), ALPHA); // Our sample is a GIT value.
     }
     
     
