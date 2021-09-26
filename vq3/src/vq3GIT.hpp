@@ -336,12 +336,12 @@ namespace vq3 {
 		  << "   |wA| = " << w.dist_to_closest << std::endl;
 #endif
 	auto wK = wA;
-	if(w.traits.d(w.value, L) < w.dist_to_closest)
-	  wK = wB;
+	bool wKisB = w.traits.d(w.value, L) < w.dist_to_closest;
+	if(wKisB) wK = wB;
 	
 #ifdef vq3DEBUG_GIT
-	if(wK == wA) std::cout << "   anchor = A" << std::endl;
-	else         std::cout << "   anchor = B" << std::endl;		       
+	if(wKisB) std::cout << "   anchor = B" << std::endl;
+	else      std::cout << "   anchor = A" << std::endl;		       
 #endif
 
 	
@@ -358,12 +358,12 @@ namespace vq3 {
 		  << "   |xiA| = " << xi.dist_to_closest << std::endl;
 #endif
 	auto xK = xA;
-	if(w.traits.d(xi.value, L) < xi.dist_to_closest)
-	  xK = xB;
+	bool xKisB = w.traits.d(xi.value, L) < xi.dist_to_closest;
+	if(xKisB) xK = xB;
 	
 #ifdef vq3DEBUG_GIT
-	if(xK == xA) std::cout << "   anchor = A" << std::endl;
-	else         std::cout << "   anchor = B" << std::endl;		       
+	if(xKisB) std::cout << "   anchor = B" << std::endl;
+	else      std::cout << "   anchor = A" << std::endl;		       
 #endif
 
 	// Let us check if the two anchors make a swap(in case of 2-nodes path).
@@ -373,41 +373,52 @@ namespace vq3 {
 #endif
 	  return w.traits.interpolate(w.value, xi.value, alpha);
 	}
-	
-	  
 
-	return w.value;
+	// Now, we have to compute the different lengths of the path.
 	
-	auto l1       = w.dist_to_closest;
-	auto l2       = xi.dist_to_closest;
-	double l      = l1 + l_graph + l2;
-	auto alpha_l  = alpha * l;
+	double lw = 0;
+	if(wKisB) lw = w.traits.D((*wK)(), w.value);
+	else      lw = w.dist_to_closest;
+	
+	double lx = 0;
+	if(xKisB) lx = w.traits.D((*xK)(), xi.value);
+	else      lx = xi.dist_to_closest;
 
-	l = l1;
+	double l_path = (*wK)().vq3_shortest_path.cost;
+	double lp     = l_path;
+	if(xKisB) lp -= (*xK)().vq3_shortest_path.cost;
+
+	double l = lw + lp + lx;
+	auto alpha_l = alpha * l;
+	
+	l = lw;
 	if(alpha_l <= l) {
 	  double lambda = 0;
 	  if(l > 0) lambda = alpha_l/l;
-	  return w.traits.interpolate(w.value, (*(w.closest))().vq3_value, lambda);
+	  return w.traits.interpolate(w.value, (*wK)().vq3_value, lambda);
 	}
 	
-	l += l_graph;
+	l += lp;
 	if(alpha_l <= l) {
 	  double lambda = 0;
-	  if(l_graph > 0)
-	    lambda = (alpha_l - l1)/l_graph;
+	  if(lp > 0) {
+	    lambda = (alpha_l - lw)/lp;
+	    if(xKisB) lambda *= lp/l_path;
+	  }
+	  
 	  if(auto val = vq3::path::travel(w.closest, xi.closest, lambda,
 					  [&w](const typename GIT_TRAITS::graph_type::ref_vertex& a, const typename GIT_TRAITS::graph_type::ref_vertex& b, double lambda){
 					    return w.traits.interpolate((*a)().vq3_value, (*b)().vq3_value, lambda);
 					  }); val)
 	    return *val;
 	  else
-	    return w.value; // Trying to reach a sample in another connected component has no effect.
+	    return w.value; // This should never happen...
 	}
 	
 	double lambda = 0;
-	if(l2 > 0)
-	  lambda = (alpha_l - l)/l2;
-	return w.traits.interpolate((*(xi.closest))().vq3_value, xi.value, lambda);
+	if(lx > 0)
+	  lambda = (alpha_l - l)/lx;
+	return w.traits.interpolate((*xK)().vq3_value, xi.value, lambda);
       }
 
       template<typename VERTEX_VALUE,
