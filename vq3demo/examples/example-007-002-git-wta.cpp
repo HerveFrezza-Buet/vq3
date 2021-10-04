@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
   ////
 
   auto topology   = vq3::topology::table<int>(g_kmeans);
-  topology.update(); // We do not need a full update since we have no edges. Moreover, a full update wouls have required a "tag" decoration of the vertices.
+  topology.update(); // We do not need a full update since we have no edges. Moreover, a full update would have required a "tag" decoration of the vertices.
   auto distortion = vq3::epoch::wta::processor(topology); 
 
   // This is the dataset used to measure the distortion. We use the quxiliary graph vertices positions.
