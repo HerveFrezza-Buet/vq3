@@ -33,6 +33,7 @@
 #include <type_traits>
 #include <optional>
 #include <string>
+#include <atomic>
 
 namespace vq3 {
   namespace decorator {
@@ -263,7 +264,52 @@ namespace vq3 {
     
     template<typename MOTHER>
     using tagged = Tagged<MOTHER, typename decoration<MOTHER>::value_type>;
+
     
+    /* ############ */
+    /* #          # */
+    /* # CHLCount # */
+    /* #          # */
+    /* ############ */
+    
+    template<typename MOTHER, typename KIND> 
+    struct CHLCount : public MOTHER {
+      using decorated_type = typename MOTHER::decorated_type;
+      std::atomic_size_t vq3_chl_count = 0;
+      CHLCount() = default;
+      CHLCount(const decorated_type& val) : MOTHER(val), vq3_chl_count(0) {}
+      CHLCount& operator=(const decorated_type& val) {this->vq3_value = val;}
+    };
+    
+    // When we decorate a non decorated value.
+    template<typename MOTHER> 
+    struct CHLCount<MOTHER, not_decorated> {
+      using decorated_type = MOTHER;
+      MOTHER vq3_value;
+      std::atomic_size_t vq3_chl_count = 0;
+      CHLCount() = default;
+      CHLCount(const decorated_type& val) : vq3_value(val), vq3_chl_count(0) {}
+      CHLCount& operator=(const decorated_type& val) {vq3_value = val;}
+    };
+    
+    // When we decorate a decorated type with no value.
+    template<typename MOTHER> 
+    struct CHLCount<MOTHER, unvalued_decoration> : public MOTHER {
+      using decorated_type = MOTHER;
+      std::atomic_size_t vq3_chl_count = 0;
+      CHLCount() : MOTHER(), vq3_chl_count(0) {}
+    };
+    
+    // When we decorate void.
+    template<> 
+    struct CHLCount<void, not_decorated> {
+      using decorated_type = void;
+      std::atomic_size_t vq3_chl_count = 0;
+      CHLCount() : vq3_chl_count(0) {}
+    };
+    
+    template<typename MOTHER>
+    using chl_count = CHLCount<MOTHER, typename decoration<MOTHER>::value_type>;
     
     /* ######## */
     /* #      # */

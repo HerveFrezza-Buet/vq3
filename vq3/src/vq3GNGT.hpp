@@ -232,7 +232,7 @@ namespace vq3 {
 	
 	vq3::epoch::wta::Processor<topology_table_type> wta;
 	vq3::epoch::wtm::Processor<topology_table_type> wtm;
-	vq3::epoch::chl::Processor<graph_type>          chl;
+	vq3::epoch::chl::Processor<graph_type, false>   chl;
 
 	std::vector<epoch_bmu> bmu_results;
 
@@ -393,7 +393,7 @@ namespace vq3 {
 	  double alpha = 0.05;
 	  
 	  vq3::epoch::wta::Processor<topology_table_type> wta;
-	  vq3::epoch::chl::Processor<graph_type>          chl;
+	  vq3::epoch::chl::Processor<graph_type, false>   chl;
 
 	  std::vector<epoch_bmu> bmu_results;
 

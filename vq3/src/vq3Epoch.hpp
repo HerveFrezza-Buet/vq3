@@ -422,7 +422,7 @@ namespace vq3 {
     }
 
     namespace chl {
-      template<typename GRAPH>
+      template<typename GRAPH, bool WITH_COUNTS>
       class Processor {
       private:
 
@@ -435,6 +435,8 @@ namespace vq3 {
 
 	struct refpair {
 	  ref_vertex first, second;
+	  std::size_t chl_count = 0;
+	  
 	  refpair()                          = default;
 	  refpair(const refpair&)            = default;
 	  refpair& operator=(const refpair&) = default;
@@ -480,6 +482,8 @@ namespace vq3 {
 		     const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
 		     const DISTANCE& distance,
 		     const edge& value_for_new_edges) {
+	  if constexpr (WITH_COUNTS) g.foreach_edge([](auto ref_e) {(*ref_e)().vq3_chl_count = 0;});		 
+	  
 	  auto nb_vertices = g.nb_vertices();
 	  if(nb_vertices < 2)
 	    return false;
@@ -488,7 +492,8 @@ namespace vq3 {
 	    vq3::utils::collect_vertices(g,vertices.begin());
 	    auto ref_e = g.get_edge(vertices[0], vertices[1]);
 	    if(ref_e == nullptr) {
-	      g.connect(vertices[0], vertices[1], value_for_new_edges);
+	      ref_e = g.connect(vertices[0], vertices[1], value_for_new_edges);
+	      if constexpr (WITH_COUNTS) ++((*ref_e)().vq3_chl_count);
 	      return true;
 	    }
 	    return false;
@@ -509,10 +514,14 @@ namespace vq3 {
 				      auto two = utils::two_closest(g, sample_of(*it), distance);
 				      if(two.first && two.second) {
 					auto ref_e = g.get_edge(two.first, two.second);
-					if(ref_e == nullptr)
-					  res.newedges.emplace(two);
-					else
+					if(ref_e == nullptr) {
+					  auto [it, inserted ] = res.newedges.emplace(two);
+					  if constexpr (WITH_COUNTS) ++(it->chl_count);
+					}
+					else {
+					  if constexpr (WITH_COUNTS) ++((*ref_e)().vq3_chl_count);
 					  res.survivors.emplace(ref_e);
+					}
 				      }
 				    }
 				    return res;
@@ -520,6 +529,22 @@ namespace vq3 {
 	  
 	  std::vector<ref_edge> survivors;
 	  std::vector<refpair>  newedges;
+
+
+
+
+
+
+
+	  
+	  /* ######################
+	     ######################
+
+	     Les std::union, c'est certainement trop coûteux.  en tout
+	     cas, pour les new_edges, il faut que les chl_count des
+	     paires s'additionnent au moment de fusionner.
+
+	  */
 	  
 	  for(auto& f : futures) {
 	    auto d = f.get();
@@ -539,6 +564,20 @@ namespace vq3 {
 	    std::swap(n, newedges);
 
 	  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+	  
 	  
 	  if(nb_threads > 1)
 	    g.garbaging_unlock();
@@ -556,15 +595,20 @@ namespace vq3 {
 	    });
 
 	  // Let us add the new edges.
-	  for(auto& p : newedges)
-	    g.connect(p.first, p.second, value_for_new_edges);
+	  for(auto& p : newedges) {
+	    auto ref_e = g.connect(p.first, p.second, value_for_new_edges);
+	    if constexpr (WITH_COUNTS) (*ref_e)().vq3_chl_count = p.chl_count;
+	  }
 
 	  return newedges.size() != 0 || one_kill;
 	}
       };
     
       template<typename GRAPH>
-      auto processor(GRAPH& g) {return Processor<GRAPH>(g);}
+      auto processor(GRAPH& g) {return Processor<GRAPH, false>(g);}
+      
+      template<typename GRAPH>
+      auto processor_with_counts(GRAPH& g) {return Processor<GRAPH, true>(g);}
     }
     
     namespace wta {
