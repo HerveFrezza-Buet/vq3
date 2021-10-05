@@ -435,7 +435,7 @@ namespace vq3 {
 
 	struct refpair {
 	  ref_vertex first, second;
-	  std::size_t chl_count = 0;
+	  mutable std::size_t chl_count = 0;
 	  
 	  refpair()                          = default;
 	  refpair(const refpair&)            = default;
@@ -464,7 +464,7 @@ namespace vq3 {
 	  data& operator=(data&&)      = default;
 	};
 
-	static auto std_set_union(typename std::vector<ref_edge>::iterator first1, typename std::vector<ref_edge>::iterator last1,
+	static auto std_set_union(typename std::vector<refpair>::iterator first1, typename std::vector<refpair>::iterator last1,
 				  typename std::set<refpair>::iterator first2, typename std::set<refpair>::iterator last2,
 				  std::back_insert_iterator<std::vector<refpair>> d_first,
 				  std::vector<refpair>& dest_container) {

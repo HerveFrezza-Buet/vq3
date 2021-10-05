@@ -19,10 +19,10 @@ using vertex = demo2d::Point;
 using edge   = vq3::decorator::tagged<void>; // We need tags on the edges.
 using graph  = vq3::graph<vertex, edge>; 
 
+
 // Distance
 //
 ////////////////
-
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.

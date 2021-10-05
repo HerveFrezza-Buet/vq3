@@ -111,6 +111,9 @@ namespace vq3 {
 
       /** The default constructor is required */
       Decorator() = default;
+
+      /** The copy constructor is required */
+      Decorator(const Decorator&) = default;
       
       /** This is the expected constructor for a valued decorator */
       Decorator(const decorated_type& val) : MOTHER(val), vq3_the_decoration(false) {}
@@ -133,6 +136,8 @@ namespace vq3 {
 
       /** The default constructor is required */
       Decorator() = default;
+      /** The copy constructor is required */
+      Decorator(const Decorator&) = default;
       /** This is the expected constructor for a valued decorator **/
       Decorator(const decorated_type& val) : vq3_value(val), vq3_the_decoration(false) {}
       /** Affectation from a value has to work */
@@ -163,6 +168,8 @@ namespace vq3 {
       bool vq3_the_decoration = false;
       /** The default constructor must be implemented since no value is present, no affectation is required */
       Decorator() : vq3_the_decoration(false) {}
+      /** The copy constructor is required */
+      Decorator(const Decorator&) = default;
     };
 
     /**
@@ -188,6 +195,7 @@ namespace vq3 {
     struct None : public MOTHER {
       using decorated_type = typename MOTHER::decorated_type;
       None() = default;
+      None(const None&) = default;
       None(const decorated_type& val) : MOTHER(val) {}
       None& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -198,6 +206,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       MOTHER vq3_value;
       None() = default;
+      None(const None&) = default;
       None(const decorated_type& val) : vq3_value(val) {}
       None& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -207,6 +216,7 @@ namespace vq3 {
     struct None<MOTHER, unvalued_decoration> : public MOTHER {
       using decorated_type = MOTHER;
       None() : MOTHER() {}
+      None(const None&) = default;
     };
     
     // When we decorate void.
@@ -214,6 +224,7 @@ namespace vq3 {
     struct None<void, not_decorated> {
       using decorated_type = void;
       None() = default;
+      None(const None&) = default;
     };
     
     template<typename MOTHER>
@@ -231,6 +242,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       bool vq3_tag = false;
       Tagged() = default;
+      Tagged(const Tagged&) = default;
       Tagged(const decorated_type& val) : MOTHER(val), vq3_tag(false) {}
       Tagged& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -242,6 +254,7 @@ namespace vq3 {
       MOTHER vq3_value;
       bool vq3_tag = false;
       Tagged() = default;
+      Tagged(const Tagged&) = default;
       Tagged(const decorated_type& val) : vq3_value(val), vq3_tag(false) {}
       Tagged& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -252,6 +265,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       bool vq3_tag = false;
       Tagged() : MOTHER(), vq3_tag(false) {}
+      Tagged(const Tagged&) = default;
     };
     
     // When we decorate void.
@@ -260,6 +274,7 @@ namespace vq3 {
       using decorated_type = void;
       bool vq3_tag = false;
       Tagged() : vq3_tag(false) {}
+      Tagged(const Tagged&) = default;
     };
     
     template<typename MOTHER>
@@ -277,6 +292,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       std::atomic_size_t vq3_chl_count = 0;
       CHLCount() = default;
+      CHLCount(const CHLCount& other) : MOTHER(other), vq3_chl_count(0) {}
       CHLCount(const decorated_type& val) : MOTHER(val), vq3_chl_count(0) {}
       CHLCount& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -288,6 +304,7 @@ namespace vq3 {
       MOTHER vq3_value;
       std::atomic_size_t vq3_chl_count = 0;
       CHLCount() = default;
+      CHLCount(const CHLCount& other) : MOTHER(other), vq3_chl_count(0) {}
       CHLCount(const decorated_type& val) : vq3_value(val), vq3_chl_count(0) {}
       CHLCount& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -298,6 +315,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       std::atomic_size_t vq3_chl_count = 0;
       CHLCount() : MOTHER(), vq3_chl_count(0) {}
+      CHLCount(const CHLCount& other) : MOTHER(other), vq3_chl_count(0) {}
     };
     
     // When we decorate void.
@@ -306,6 +324,7 @@ namespace vq3 {
       using decorated_type = void;
       std::atomic_size_t vq3_chl_count = 0;
       CHLCount() : vq3_chl_count(0) {}
+      CHLCount(const CHLCount& other) : vq3_chl_count(0) {}
     };
     
     template<typename MOTHER>
@@ -322,6 +341,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       double vq3_cost = 0;
       Cost() = default;
+      Cost(const Cost&) = default;
       Cost(const decorated_type& val) : MOTHER(val), vq3_cost(0) {}
       Cost& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -333,6 +353,7 @@ namespace vq3 {
       MOTHER vq3_value;
       double vq3_cost = 0;
       Cost() = default;
+      Cost(const Cost&) = default;
       Cost(const decorated_type& val) : vq3_value(val), vq3_cost(0) {}
       Cost& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -343,6 +364,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       double vq3_cost = 0;
       Cost() : MOTHER(), vq3_cost(0) {}
+      Cost(const Cost&) = default;
     };
     
     // When we decorate void.
@@ -351,6 +373,7 @@ namespace vq3 {
       using decorated_type = void;
       double vq3_cost = 0;
       Cost() : vq3_cost(0) {}
+      Cost(const Cost&) = default;
     };
     
     template<typename MOTHER>
@@ -368,6 +391,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       std::optional<double> vq3_cost;
       OptionalCost() = default;
+      OptionalCost(const OptionalCost&) = default;
       OptionalCost(const decorated_type& val) : MOTHER(val), vq3_cost(0) {}
       OptionalCost& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -379,6 +403,7 @@ namespace vq3 {
       MOTHER vq3_value;
       std::optional<double> vq3_cost;
       OptionalCost() = default;
+      OptionalCost(const OptionalCost&) = default;
       OptionalCost(const decorated_type& val) : vq3_value(val), vq3_cost() {}
       OptionalCost& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -389,6 +414,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       std::optional<double> vq3_cost;
       OptionalCost() : MOTHER(), vq3_cost() {}
+      OptionalCost(const OptionalCost&) = default;
     };
     
     // When we decorate void.
@@ -397,6 +423,7 @@ namespace vq3 {
       using decorated_type = void;
       std::optional<double> vq3_cost;
       OptionalCost() : vq3_cost() {}
+      OptionalCost(const OptionalCost&) = default;
     };
     
     template<typename MOTHER>
@@ -413,6 +440,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       unsigned int vq3_label = 0;
       Labelled() = default;
+      Labelled(const Labelled&) = default;
       Labelled(const decorated_type& val) : MOTHER(val), vq3_label(0) {}
       Labelled& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -424,6 +452,7 @@ namespace vq3 {
       MOTHER vq3_value;
       unsigned int vq3_label = 0;
       Labelled() = default;
+      Labelled(const Labelled&) = default;
       Labelled(const decorated_type& val) : vq3_value(val), vq3_label(0) {}
       Labelled& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -434,6 +463,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       unsigned int vq3_label = 0;
       Labelled() : MOTHER(), vq3_label(0) {}
+      Labelled(const Labelled&) = default;
     };
     
     // When we decorate void.
@@ -442,6 +472,7 @@ namespace vq3 {
       using decorated_type = void;
       unsigned int vq3_label = 0;
       Labelled() : vq3_label(0) {}
+      Labelled(const Labelled&) = default;
     };
     
     template<typename MOTHER>
@@ -459,6 +490,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       bool vq3_efficient = true;
       Efficiency() = default;
+      Efficiency(const Efficiency&) = default;
       Efficiency(const decorated_type& val) : MOTHER(val), vq3_efficient(true) {}
       Efficiency& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -470,6 +502,7 @@ namespace vq3 {
       MOTHER vq3_value;
       bool vq3_efficient = true;
       Efficiency() = default;
+      Efficiency(const Efficiency&) = default;
       Efficiency(const decorated_type& val) : vq3_value(val), vq3_efficient(true) {}
       Efficiency& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -480,6 +513,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       bool vq3_efficient = true;
       Efficiency() : MOTHER(), vq3_efficient(true) {}
+      Efficiency(const Efficiency&) = default;
     };
     
     // When we decorate void.
@@ -488,6 +522,7 @@ namespace vq3 {
       using decorated_type = void;
       bool vq3_efficient = true;
       Efficiency() : vq3_efficient(true) {}
+      Efficiency(const Efficiency&) = default;
     };
     
     template<typename MOTHER>
@@ -506,6 +541,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       std::string vq3_text;
       Text() = default;
+      Text(const Text&) = default;
       Text(const decorated_type& val) : MOTHER(val), vq3_text() {}
       Text& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -517,6 +553,7 @@ namespace vq3 {
       MOTHER vq3_value;
       std::string vq3_text;
       Text() = default;
+      Text(const Text&) = default;
       Text(const decorated_type& val) : vq3_value(val), vq3_text() {}
       Text& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -527,6 +564,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       std::string vq3_text;
       Text() : MOTHER(), vq3_text() {}
+      Text(const Text&) = default;
     };
     
     // When we decorate void.
@@ -535,6 +573,7 @@ namespace vq3 {
       using decorated_type = void;
       std::string vq3_text;
       Text() : vq3_text() {}
+      Text(const Text&) = default;
     };
     
     template<typename MOTHER>
@@ -552,6 +591,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       vq3::utils::accum<INCREMENTABLE, double> vq3_sum;
       Sum() = default;
+      Sum(const Sum&) = default;
       Sum(const decorated_type& val) : MOTHER(val), vq3_sum() {}
       Sum& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -563,6 +603,7 @@ namespace vq3 {
       MOTHER vq3_value;
       vq3::utils::accum<INCREMENTABLE, double> vq3_sum;
       Sum() = default;
+      Sum(const Sum&) = default;
       Sum(const decorated_type& val) : vq3_value(val), vq3_sum() {}
       Sum& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -573,6 +614,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       vq3::utils::accum<INCREMENTABLE, double> vq3_sum;
       Sum() : MOTHER(), vq3_sum() {}
+      Sum(const Sum&) = default;
     };
     
     // When we decorate void.
@@ -581,6 +623,7 @@ namespace vq3 {
       using decorated_type = void;
       vq3::utils::accum<INCREMENTABLE, double> vq3_sum;
       Sum() : vq3_sum() {}
+      Sum(const Sum&) = default;
     };
     
     template<typename MOTHER, typename INCREMENTABLE>
@@ -598,6 +641,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       std::pair<unsigned int, unsigned int> vq3_gridpos = {0, 0};
       GridPos() = default;
+      GridPos(const GridPos&) = default;
       GridPos(const decorated_type& val) : MOTHER(val), vq3_gridpos({0, 0}) {}
       GridPos& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -609,6 +653,7 @@ namespace vq3 {
       MOTHER vq3_value;
       std::pair<unsigned int, unsigned int> vq3_gridpos = {0, 0};
       GridPos() = default;
+      GridPos(const GridPos&) = default;
       GridPos(const decorated_type& val) : vq3_value(val), vq3_gridpos({0, 0}) {}
       GridPos& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -619,6 +664,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       std::pair<unsigned int, unsigned int> vq3_gridpos = {0, 0};
       GridPos() : MOTHER(), vq3_gridpos({0, 0}) {}
+      GridPos(const GridPos&) = default;
     };
     
     // When we decorate void.
@@ -627,6 +673,7 @@ namespace vq3 {
       using decorated_type = void;
       std::pair<unsigned int, unsigned int> vq3_gridpos = {0, 0};
       GridPos() : vq3_gridpos({0, 0}) {}
+      GridPos(const GridPos&) = default;
     };
     
     template<typename MOTHER>
@@ -648,6 +695,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       vq3::utils::savitzky_golay::constant_timestep::estimator<VALUE, SAVITZKY_GOLAY_ORDER, SAVITZKY_GOLAY_WINDOW_SIZE, SAVITZKY_GOLAY_DEGREE> vq3_smoother;
       Smoother() = default;
+      Smoother(const Smoother&) = default;
       Smoother(const decorated_type& val) : MOTHER(val), vq3_smoother() {}
       Smoother& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -659,6 +707,7 @@ namespace vq3 {
       MOTHER vq3_value;
       vq3::utils::savitzky_golay::constant_timestep::estimator<VALUE, SAVITZKY_GOLAY_ORDER, SAVITZKY_GOLAY_WINDOW_SIZE, SAVITZKY_GOLAY_DEGREE> vq3_smoother;
       Smoother() = default;
+      Smoother(const Smoother&) = default;
       Smoother(const decorated_type& val) : vq3_value(val), vq3_smoother() {}
       Smoother& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -669,6 +718,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       vq3::utils::savitzky_golay::constant_timestep::estimator<VALUE, SAVITZKY_GOLAY_ORDER, SAVITZKY_GOLAY_WINDOW_SIZE, SAVITZKY_GOLAY_DEGREE> vq3_smoother;
       Smoother() : MOTHER(), vq3_smoother() {}
+      Smoother(const Smoother&) = default;
     };
     
     // When we decorate void.
@@ -677,6 +727,7 @@ namespace vq3 {
       using decorated_type = void;
       vq3::utils::savitzky_golay::constant_timestep::estimator<VALUE, SAVITZKY_GOLAY_ORDER, SAVITZKY_GOLAY_WINDOW_SIZE, SAVITZKY_GOLAY_DEGREE> vq3_smoother;
       Smoother() : vq3_smoother() {}
+      Smoother(const Smoother&) = default;
     };
     
     template<typename MOTHER, typename VALUE, unsigned int SAVITZKY_GOLAY_ORDER, unsigned int SAVITZKY_GOLAY_WINDOW_SIZE, unsigned int SAVITZKY_GOLAY_DEGREE>
@@ -694,6 +745,7 @@ namespace vq3 {
       using decorated_type = typename MOTHER::decorated_type;
       CUSTOM_TYPE vq3_custom;
       Custom() = default;
+      Custom(const Custom&) = default;
       Custom(const decorated_type& val) : MOTHER(val), vq3_custom() {}
       Custom& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
@@ -705,6 +757,7 @@ namespace vq3 {
       MOTHER vq3_value;
       CUSTOM_TYPE vq3_custom;
       Custom() = default;
+      Custom(const Custom&) = default;
       Custom(const decorated_type& val) : vq3_value(val), vq3_custom() {}
       Custom& operator=(const decorated_type& val) {vq3_value = val;}
     };
@@ -715,6 +768,7 @@ namespace vq3 {
       using decorated_type = MOTHER;
       CUSTOM_TYPE vq3_custom;
       Custom() : MOTHER(), vq3_custom() {}
+      Custom(const Custom&) = default;
     };
     
     // When we decorate void.
@@ -723,6 +777,7 @@ namespace vq3 {
       using decorated_type = void;
       CUSTOM_TYPE vq3_custom;
       Custom() : vq3_custom() {}
+      Custom(const Custom&) = default;
     };
     
     template<typename MOTHER, typename CUSTOM_TYPE>
@@ -743,6 +798,7 @@ namespace vq3 {
 	using decorated_type = typename MOTHER::decorated_type;
 	vq3::stats::online::MeanStd<VALUE, ONLINE_PARAM> vq3_online_mean_std;
 	MeanStd() = default;
+	MeanStd(const MeanStd&) = default;
 	MeanStd(const decorated_type& val) : MOTHER(val), vq3_online_mean_std() {}
 	MeanStd& operator=(const decorated_type& val) {this->vq3_value = val;}
       };
@@ -754,6 +810,7 @@ namespace vq3 {
 	MOTHER vq3_value;
 	vq3::stats::online::MeanStd<VALUE, ONLINE_PARAM> vq3_online_mean_std;
 	MeanStd() = default;
+	MeanStd(const MeanStd&) = default;
 	MeanStd(const decorated_type& val) : vq3_value(val), vq3_online_mean_std() {}
 	MeanStd& operator=(const decorated_type& val) {vq3_value = val;}
       };
@@ -764,6 +821,7 @@ namespace vq3 {
 	using decorated_type = MOTHER;
 	vq3::stats::online::MeanStd<VALUE, ONLINE_PARAM> vq3_online_mean_std;
 	MeanStd() : MOTHER(), vq3_online_mean_std() {}
+	MeanStd(const MeanStd&) = default;
       };
     
       // When we decorate void.
@@ -772,6 +830,7 @@ namespace vq3 {
 	using decorated_type = void;
 	vq3::stats::online::MeanStd<VALUE, ONLINE_PARAM> vq3_online_mean_std;
 	MeanStd() : vq3_online_mean_std() {}
+	MeanStd(const MeanStd&) = default;
       };
     
       template<typename MOTHER, typename VALUE, typename ONLINE_PARAM>
