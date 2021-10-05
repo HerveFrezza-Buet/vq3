@@ -463,6 +463,36 @@ namespace vq3 {
 	  data(data&&)                 = default;
 	  data& operator=(data&&)      = default;
 	};
+
+	static auto std_set_union(typename std::vector<ref_edge>::iterator first1, typename std::vector<ref_edge>::iterator last1,
+				  typename std::set<refpair>::iterator first2, typename std::set<refpair>::iterator last2,
+				  std::back_insert_iterator<std::vector<refpair>> d_first,
+				  std::vector<refpair>& dest_container) {
+	  if constexpr (WITH_COUNTS) {
+	      // Slightly modidfied from std::set_union possible implementation given by cppreference.com
+	      for (; first1 != last1; ++d_first) {
+		if (first2 == last2)
+		  return std::copy(first1, last1, d_first);
+		if (*first2 < *first1) {
+		  *d_first = *first2++;
+		} else {
+		  // Here *first2 >= *first1
+		  *d_first = *first1;
+		  if (!(*first1 < *first2)) {// if *first2 <= *first1 (Ideed, *first2 == *first1)
+		    // Modification of STL code here
+		    dest_container.rbegin()->chl_count += first2->chl_count;
+		    ++first2;
+		  }
+		  ++first1;
+		}
+	      }
+	      return std::copy(first2, last2, d_first);
+	    }
+	  else
+	    return d_first; // This code is never used...
+	}
+			      
+			      
 	  
       public:
       
@@ -529,56 +559,34 @@ namespace vq3 {
 	  
 	  std::vector<ref_edge> survivors;
 	  std::vector<refpair>  newedges;
-
-
-
-
-
-
-
 	  
-	  /* ######################
-	     ######################
-
-	     Les std::union, c'est certainement trop coûteux.  en tout
-	     cas, pour les new_edges, il faut que les chl_count des
-	     paires s'additionnent au moment de fusionner.
-
-	  */
-	  
+	  std::vector<ref_edge> s;
+	  std::vector<refpair>  n;
 	  for(auto& f : futures) {
 	    auto d = f.get();
 
-	    std::vector<ref_edge> s;
+	    s.clear();
 	    auto outs = std::back_inserter(s);
 	    std::set_union(survivors.begin(),   survivors.end(),
 			   d.survivors.begin(), d.survivors.end(),
 			   outs);
-	    
-	    std::vector<refpair>  n;
+
+	    n.clear();
 	    auto outn = std::back_inserter(n);
-	    std::set_union(newedges.begin(),   newedges.end(),
-			   d.newedges.begin(), d.newedges.end(),
-			   outn);
+	    if constexpr (WITH_COUNTS) 
+	      std_set_union(newedges.begin(),   newedges.end(),
+			    d.newedges.begin(), d.newedges.end(),
+			    outn, n);
+	    else
+	      std::set_union(newedges.begin(),   newedges.end(),
+			     d.newedges.begin(), d.newedges.end(),
+			     outn);
+
+	    
 	    std::swap(s, survivors);
 	    std::swap(n, newedges);
-
 	  }
 
-
-
-
-
-
-
-
-
-
-
-
-
-	  
-	  
 	  if(nb_threads > 1)
 	    g.garbaging_unlock();
 

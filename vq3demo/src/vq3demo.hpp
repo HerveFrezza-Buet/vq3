@@ -55,8 +55,8 @@
    @example example-002-007-path.cpp
    @example example-002-008-shortest-debug.cpp
    @example example-003-001-chl.cpp
-   @example example-003-002-wta.cpp
-   @example example-003-003-lbg.cpp
+   @example example-003-003-wta.cpp
+   @example example-003-004-lbg.cpp
    @example example-004-000-online.cpp
    @example example-004-001-som.cpp
    @example example-004-002-som.cpp
