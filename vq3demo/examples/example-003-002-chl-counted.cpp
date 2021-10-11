@@ -33,7 +33,7 @@ using graph  = vq3::graph<vertex, edge>;
 double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v, p);}
 
 auto color_of_count(std::size_t counts, std::size_t max) {
-  unsigned char level = (unsigned char)(255*(1-counts/double(max)+.5));
+  unsigned char level = (unsigned char)(255*(1-counts/double(max))+.5);
   return cv::Scalar(255, level, level);
 }
 
@@ -42,16 +42,17 @@ auto color_of_count(std::size_t counts, std::size_t max) {
 ////////////////
 
 #define NB_VERTICES_PER_M2     50
-#define NB_SAMPLES_PER_M2   10000
+#define NB_SAMPLES_PER_M2   50000
 
 
 int main(int argc, char* argv[]) {
-  if(argc != 2) {
-    std::cout << "Usage : " << argv[0] << " nb_threads" << std::endl;
+  if(argc != 3) {
+    std::cout << "Usage : " << argv[0] << " nb_threads [random | triangles | grid]" << std::endl;
     return 0;
   }
 
   unsigned int nb_threads = std::atoi(argv[1]);
+  std::string graph_kind = argv[2];
   
   std::random_device rd;  
   std::mt19937 random_device(rd());
@@ -71,19 +72,17 @@ int main(int argc, char* argv[]) {
 									 [](const demo2d::Point& pt) {return                         1;},
 									 [](const demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
 									 [](const demo2d::Point& pt) {return                        -1;});
-  std::size_t max_count = 0;
-  auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
-								       [](const vertex& v1, const vertex& v2, const edge& e) {return                                       true;},  // always draw
-								       [](const vertex& v)                                   {return                                          v;},  // position
-								       [&max_count](const edge&   e)                         {return color_of_count(e.vq3_chl_count, max_count);},  // color
-								       [](const edge&   e)                                   {return                                          3;}); // thickness
-  auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
-									   [](const vertex& v) {return                true;},  // always draw
-									   [](const vertex& v) {return                   v;},  // position
-									   [](const vertex& v) {return                   3;},  // radius
-									   [](const vertex& v) {return cv::Scalar(0, 0, 0);},  // color
-									   [](const vertex& v) {return                  -1;}); // thickness
-
+  std::size_t max_count  = 0;
+  auto draw_edge         = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
+									     [](const vertex& v1, const vertex& v2, const edge& e) {return                                       true;},  // always draw
+									     [](const vertex& v)                                   {return                                          v;},  // position
+									     [&max_count](const edge&   e)                         {return color_of_count(e.vq3_chl_count, max_count);},  // color
+									     [](const edge&   e)                                   {return                                          3;}); // thickness
+  auto draw_edge_contour = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
+									     [](const vertex& v1, const vertex& v2, const edge& e) {return                 true;},  // always draw
+									     [](const vertex& v)                                   {return                    v;},  // position
+									     [&max_count](const edge&   e)                         {return cv::Scalar(0, 0 , 0);},  // color
+									     [](const edge&   e)                                   {return                    5;}); // thickness
   
   // Initializations
   //
@@ -94,8 +93,22 @@ int main(int argc, char* argv[]) {
   auto background = demo2d::sample::rectangle(side, side, intensity);
 
   graph g;
-  auto v_sampler = demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
-  for(auto v : demo2d::sample::sample_set(random_device, v_sampler, background)) g += v;
+  if(graph_kind == "random") {
+    auto v_sampler = demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
+    for(auto v : demo2d::sample::sample_set(random_device, v_sampler, background)) g += v;
+  }
+  else if(graph_kind == "triangles") {
+    auto v_sampler = demo2d::sample::base_sampler::triangles(random_device, NB_VERTICES_PER_M2);
+    for(auto v : demo2d::sample::sample_set(random_device, v_sampler, background)) g += v;
+  }
+  else if(graph_kind == "grid") {
+    auto v_sampler = demo2d::sample::base_sampler::grid(random_device, NB_VERTICES_PER_M2);
+    for(auto v : demo2d::sample::sample_set(random_device, v_sampler, background)) g += v;
+  }
+  else {
+    std::cout << "Graph kind must be in {random, triangles, grid}, \"" << graph_kind << "\" provided." << std::endl;
+    ::exit(0);
+  }
 
   
   auto samples = demo2d::sample::custom(demo2d::sample::BBox(-1, -1, 2, 2), [](const demo2d::Point& p) {return .5*(p.x + 1.0);});
@@ -132,8 +145,8 @@ int main(int argc, char* argv[]) {
   
   image = cv::Scalar(255, 255, 255);
   std::copy(S.begin(), S.end(), dd);
+  g.foreach_edge(draw_edge_contour); 
   g.foreach_edge(draw_edge); 
-  g.foreach_vertex(draw_vertex);
   cv::imshow("image", image);
   cv::waitKey();
     
