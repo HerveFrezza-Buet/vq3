@@ -37,6 +37,26 @@ auto color_of_count(std::size_t counts, std::size_t max) {
   return cv::Scalar(255, level, level);
 }
 
+struct callback_data {
+private:
+  
+  mutable bool new_pointer;
+  const demo2d::opencv::Frame& frame;
+
+public:
+  
+  demo2d::Point pointer;
+  callback_data(const demo2d::opencv::Frame& frame) : new_pointer(false), frame(frame), pointer() {}
+
+  void click(int x, int y) {pointer  = frame(cv::Point(x,y)); new_pointer = true;             }
+  operator bool() const    {auto res = new_pointer;           new_pointer = false; return res;}
+};
+
+void on_mouse( int event, int x, int y, int, void* user_data) {
+  auto& data = *(reinterpret_cast<callback_data*>(user_data));
+  if(event == cv::EVENT_LBUTTONDOWN) data.click(x, y);
+}
+
 // Main
 //
 ////////////////
@@ -46,13 +66,14 @@ auto color_of_count(std::size_t counts, std::size_t max) {
 
 
 int main(int argc, char* argv[]) {
-  if(argc != 3) {
-    std::cout << "Usage : " << argv[0] << " nb_threads [random | triangles | grid]" << std::endl;
+  if(argc != 4) {
+    std::cout << "Usage : " << argv[0] << " nb_threads <random | triangles | grid> <uniform | gradient>" << std::endl;
     return 0;
   }
 
   unsigned int nb_threads = std::atoi(argv[1]);
-  std::string graph_kind = argv[2];
+  std::string graph_kind  = argv[2];
+  std::string dist_kind   = argv[3];
   
   std::random_device rd;  
   std::mt19937 random_device(rd());
@@ -66,6 +87,8 @@ int main(int argc, char* argv[]) {
   cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
   auto image       = cv::Mat(800, 800, CV_8UC3, cv::Scalar(255,255,255));
   auto frame       = demo2d::opencv::direct_orthonormal_frame(image.size(), .48*image.size().width, true);
+  callback_data cb {frame};
+  cv::setMouseCallback("image", on_mouse, reinterpret_cast<void*>(&cb));
   auto dd          = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
 									 [](const demo2d::Point& pt) {return                      true;},
 									 [](const demo2d::Point& pt) {return                        pt;},
@@ -110,8 +133,9 @@ int main(int argc, char* argv[]) {
     ::exit(0);
   }
 
-  
-  auto samples = demo2d::sample::custom(demo2d::sample::BBox(-1, -1, 2, 2), [](const demo2d::Point& p) {return .5*(p.x + 1.0);});
+  auto samples = background;
+  if(dist_kind == "gradient")
+    samples = demo2d::sample::custom(demo2d::sample::BBox(-1, -1, 2, 2), [](const demo2d::Point& p) {return .5*(p.x + 1.0);});
   std::vector<demo2d::Point> S;
   auto s_sampler = demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
   auto S_ = demo2d::sample::sample_set(random_device, s_sampler, samples);
@@ -141,14 +165,33 @@ int main(int argc, char* argv[]) {
   // Display
   //
   //////////
+  
+  std::cout << std::endl
+	    << std::endl
+	    << "##################" << std::endl
+	    << std::endl
+	    << "left-click near the edges." << std::endl
+	    << "press ESC to quit." << std::endl
+	    << std::endl
+	    << "##################" << std::endl
+	    << std::endl
+	    << std::endl;
     
   
-  image = cv::Scalar(255, 255, 255);
-  std::copy(S.begin(), S.end(), dd);
-  g.foreach_edge(draw_edge_contour); 
-  g.foreach_edge(draw_edge); 
-  cv::imshow("image", image);
-  cv::waitKey();
+  int keycode = 0;
+  while(keycode != 27) {     
+    image = cv::Scalar(255, 255, 255);
+
+    if(cb) {
+      std::cout << cb.pointer << std::endl;
+    }
+    
+    std::copy(S.begin(), S.end(), dd);
+    g.foreach_edge(draw_edge_contour); 
+    g.foreach_edge(draw_edge); 
+    cv::imshow("image", image);
+    keycode = cv::waitKey(100) & 0xFF;
+  }
     
   return 0;
 }
