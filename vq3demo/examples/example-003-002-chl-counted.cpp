@@ -2,9 +2,11 @@
 #include <vq3demo.hpp>
 #include <opencv2/opencv.hpp>
 
+#include <optional>
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <limits>
 
 // This example shows how to perform multi-threaded competitive
 // Hebbian learning... with the addition ouf counting features.
@@ -45,16 +47,18 @@ private:
 
 public:
   
-  demo2d::Point pointer;
+  std::optional<demo2d::Point> pointer;
   callback_data(const demo2d::opencv::Frame& frame) : new_pointer(false), frame(frame), pointer() {}
 
-  void click(int x, int y) {pointer  = frame(cv::Point(x,y)); new_pointer = true;             }
-  operator bool() const    {auto res = new_pointer;           new_pointer = false; return res;}
+  void unclick()           {if(pointer) {pointer = std::nullopt; new_pointer = true;}            }
+  void click(int x, int y) {pointer  = frame(cv::Point(x,y));    new_pointer = true;             }
+  operator bool() const    {auto res = new_pointer;              new_pointer = false; return res;}
 };
 
 void on_mouse( int event, int x, int y, int, void* user_data) {
   auto& data = *(reinterpret_cast<callback_data*>(user_data));
   if(event == cv::EVENT_LBUTTONDOWN) data.click(x, y);
+  if(event == cv::EVENT_RBUTTONDOWN) data.unclick();
 }
 
 // Main
@@ -64,6 +68,10 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
 #define NB_VERTICES_PER_M2     50
 #define NB_SAMPLES_PER_M2   50000
 
+graph::ref_edge select_edge(graph& g, const demo2d::Point location);
+void select_samples(graph& g, const std::vector<demo2d::Point>& S,
+		    graph::ref_edge selected_edge,
+		    std::vector<demo2d::Point>& selected_samples);
 
 int main(int argc, char* argv[]) {
   if(argc != 4) {
@@ -77,7 +85,8 @@ int main(int argc, char* argv[]) {
   
   std::random_device rd;  
   std::mt19937 random_device(rd());
-
+  
+  graph::ref_edge selected_edge = nullptr;
 
   // Image settings
   //
@@ -95,6 +104,13 @@ int main(int argc, char* argv[]) {
 									 [](const demo2d::Point& pt) {return                         1;},
 									 [](const demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
 									 [](const demo2d::Point& pt) {return                        -1;});
+  
+  auto dd_selected = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
+							       [](const demo2d::Point& pt) {return                  true;},
+							       [](const demo2d::Point& pt) {return                    pt;},
+							       [](const demo2d::Point& pt) {return                     2;},
+							       [](const demo2d::Point& pt) {return cv::Scalar(0, 0, 200);},
+							       [](const demo2d::Point& pt) {return                    -1;});
   std::size_t max_count  = 0;
   auto draw_edge         = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 									     [](const vertex& v1, const vertex& v2, const edge& e) {return                                       true;},  // always draw
@@ -106,6 +122,11 @@ int main(int argc, char* argv[]) {
 									     [](const vertex& v)                                   {return                    v;},  // position
 									     [&max_count](const edge&   e)                         {return cv::Scalar(0, 0 , 0);},  // color
 									     [](const edge&   e)                                   {return                    5;}); // thickness
+  auto draw_edge_selected_contour = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
+										      [](const vertex& v1, const vertex& v2, const edge& e) {return                 true;},  // always draw
+										      [](const vertex& v)                                   {return                    v;},  // position
+										      [&max_count](const edge&   e)                         {return cv::Scalar(0, 0 , 0);},  // color
+										      [](const edge&   e)                                   {return                    9;}); // thickness
   
   // Initializations
   //
@@ -171,6 +192,7 @@ int main(int argc, char* argv[]) {
 	    << "##################" << std::endl
 	    << std::endl
 	    << "left-click near the edges." << std::endl
+	    << "right-click to cancel." << std::endl
 	    << "press ESC to quit." << std::endl
 	    << std::endl
 	    << "##################" << std::endl
@@ -179,15 +201,25 @@ int main(int argc, char* argv[]) {
     
   
   int keycode = 0;
+  std::vector<demo2d::Point> selected_samples;
   while(keycode != 27) {     
     image = cv::Scalar(255, 255, 255);
 
     if(cb) {
-      std::cout << cb.pointer << std::endl;
+      if(cb.pointer) {
+	selected_edge = select_edge(g, *(cb.pointer));
+	select_samples(g, S, selected_edge, selected_samples);
+      }
+      else {
+	selected_edge = nullptr;
+	selected_samples.clear();
+      }
     }
     
     std::copy(S.begin(), S.end(), dd);
-    g.foreach_edge(draw_edge_contour); 
+    std::copy(selected_samples.begin(), selected_samples.end(), dd_selected);
+    g.foreach_edge(draw_edge_contour);
+    if(selected_edge) draw_edge_selected_contour(selected_edge);
     g.foreach_edge(draw_edge); 
     cv::imshow("image", image);
     keycode = cv::waitKey(100) & 0xFF;
@@ -196,3 +228,26 @@ int main(int argc, char* argv[]) {
   return 0;
 }
   
+graph::ref_edge select_edge(graph& g, const demo2d::Point location) {
+  graph::ref_edge res;
+  double min_dist = std::numeric_limits<double>::max();
+
+  g.foreach_edge([&res, &min_dist, &location](auto ref_e) {
+		   auto [A, B] = ref_e->extremities();
+		   if(auto d = demo2d::d2(location, {(*A)(), (*B)()}); d < min_dist) {
+		     min_dist = d;
+		     res = ref_e;
+		   }
+		 });
+  return res;
+}
+
+void select_samples(graph& g,
+		    const std::vector<demo2d::Point>& S,
+		    graph::ref_edge selected_edge,
+		    std::vector<demo2d::Point>& selected_samples) {
+  selected_samples.clear();
+  for(auto& M : S)
+    if(auto [ref_A, ref_B] = vq3::utils::two_closest(g, M, d2); g.get_edge(ref_A, ref_B) == selected_edge)
+      selected_samples.push_back(M);
+}
