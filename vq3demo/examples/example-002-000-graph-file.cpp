@@ -11,6 +11,8 @@ using vertex = demo2d::Point;
 using edge   = double;
 using graph  = vq3::graph<vertex, edge>;
 
+double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v, p);}
+
 /* 
    Warning :
 
@@ -38,7 +40,7 @@ int main(int argc, char* argv[]) {
 
   auto random_value = std::uniform_real_distribution<double>(0., 1.);
   for(unsigned int i=0; i < NB_EDGES; ++i) {
-    auto [ref_v1, ref_v2] = vq3::utils::two_closest(g1, bbox.uniform(rd), demo2d::d2);
+    auto [ref_v1, ref_v2] = vq3::utils::two_closest(g1, bbox.uniform(rd), d2);
     g1.connect(ref_v1, ref_v2, random_value(random_device));
   }
 

@@ -139,11 +139,11 @@ namespace vq3 {
     void collect_edges(GRAPH& g, const OUTPUT_IT& outit) {
       auto out = outit;
       g.foreach_edge([&out](const typename GRAPH::ref_edge& ref_e) {
-	  auto extr = ref_e->extremities();
-	  if(invalid_extremities(extr))
-	    ref_e->kill();
-	  else
-	    *(out++) = ref_e;});
+		       auto extr = ref_e->extremities();
+		       if(invalid_extremities(extr))
+			 ref_e->kill();
+		       else
+			 *(out++) = ref_e;});
     }
 
     /**
@@ -176,12 +176,12 @@ namespace vq3 {
       double dist = std::numeric_limits<double>::max();
       execute_vq3_closest_init_if_available<DISTANCE>()(distance);
       g.foreach_vertex([&dist, &res, &sample, &distance](const typename GRAPH::ref_vertex& ref_v) {
-	  if(double d = distance((*ref_v)(), sample); d < dist) {
-	    dist = d;
-	    res  = ref_v;
-	  }
+			 if(double d = distance((*ref_v)(), sample); d < dist) {
+			   dist = d;
+			   res  = ref_v;
+			 }
 
-	});
+		       });
       closest_distance_value = dist;
       return res;
     }
@@ -214,18 +214,18 @@ namespace vq3 {
       double dist2 = std::numeric_limits<double>::max();
       execute_vq3_closest_init_if_available<DISTANCE>()(distance);
       g.foreach_vertex([&dist1, &dist2, &res, &sample, &distance](const typename GRAPH::ref_vertex& ref_v) {
-	  double d = distance((*ref_v)(), sample);
-	  if(d < dist1) {
-	    dist2      = dist1;
-	    res.second = res.first;
-	    dist1      = d;
-	    res.first  = ref_v;
-	  }
-	  else if(d < dist2) {
-	    dist2      = d;
-	    res.second = ref_v;
-	  }
-	});
+			 double d = distance((*ref_v)(), sample);
+			 if(d < dist1) {
+			   dist2      = dist1;
+			   res.second = res.first;
+			   dist1      = d;
+			   res.first  = ref_v;
+			 }
+			 else if(d < dist2) {
+			   dist2      = d;
+			   res.second = ref_v;
+			 }
+		       });
       closest_distance_values = {dist1, dist2};
       return res;
     }
@@ -242,6 +242,45 @@ namespace vq3 {
     typename std::pair<typename GRAPH::ref_vertex, typename GRAPH::ref_vertex> two_closest(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance) {
       std::pair<double, double> dists;
       return two_closest(g, sample, distance, dists);
+    }
+    
+    /**
+     * Finds the closest edge.
+     * @param g the graph.
+     * @param sample We want the edge closest to this sample.
+     * @param distance computes the distance as distance(vertex_value_A, vertex_value_B, sample). If distance.vq3_closest_init() exists, it is called before considering the vertices.
+     * @param closest_distance_value returns by reference the closest distance value.
+     * @return The closest edge reference. It can be nullptr if the graph has no edges.
+     */
+    template<typename GRAPH, typename SAMPLE, typename DISTANCE>
+    typename GRAPH::ref_edge closest_edge(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance, double& closest_distance_value) {
+      typename GRAPH::ref_edge res = nullptr;
+      double dist = std::numeric_limits<double>::max();
+      execute_vq3_closest_init_if_available<DISTANCE>()(distance);
+      g.foreach_edge([&dist, &res, &sample, &distance](const typename GRAPH::ref_edge& ref_e) {
+		       auto extr = ref_e->extremities();
+		       if(invalid_extremities(extr))
+			 ref_e->kill();
+		       else if(double d = distance((*(extr.first))(), (*(extr.second))(), sample); d < dist) {
+			 dist = d;
+			 res  = ref_e;
+		       }
+		     });
+      closest_distance_value = dist;
+      return res;
+    }
+    
+    /**
+     * Finds the closest edge.
+     * @param g the graph.
+     * @param sample We want the edge closest to this sample.
+     * @param distance computes the distance as distance(vertex_value_A, vertex_value_B, sample). If distance.vq3_closest_init() exists, it is called before considering the vertices.
+     * @param closest_distance_value returns by reference the closest distance value.
+     */
+    template<typename GRAPH, typename SAMPLE, typename DISTANCE>
+    typename GRAPH::ref_edge closest_edge(GRAPH& g, const SAMPLE& sample, const DISTANCE& distance) {
+      double dist;
+      return closest_edge(g, sample, distance, dist);
     }
 
     /**
@@ -357,12 +396,12 @@ namespace vq3 {
     template<typename GRAPH>
     void clear_edge_tags(GRAPH& g, bool value) {
       g.foreach_edge([value](const typename GRAPH::ref_edge& ref_e) {
-	  auto extr = ref_e->extremities();
-	  if(invalid_extremities(extr))
-	    ref_e->kill();
-	  else
-	    (*ref_e)().vq3_tag = value;
-	});
+		       auto extr = ref_e->extremities();
+		       if(invalid_extremities(extr))
+			 ref_e->kill();
+		       else
+			 (*ref_e)().vq3_tag = value;
+		     });
     }
 
     /**
@@ -389,12 +428,12 @@ namespace vq3 {
     template<typename GRAPH>
     void clear_edge_labels(GRAPH& g, unsigned int value) {
       g.foreach_edge([value](const typename GRAPH::ref_edge& ref_e) {
-	  auto extr = ref_e->extremities();
-	  if(invalid_extremities(extr))
-	    ref_e->kill();
-	  else
-	    (*ref_e)().vq3_label = value;
-	});
+		       auto extr = ref_e->extremities();
+		       if(invalid_extremities(extr))
+			 ref_e->kill();
+		       else
+			 (*ref_e)().vq3_label = value;
+		     });
     }
 
     /**
@@ -420,12 +459,12 @@ namespace vq3 {
     template<typename GRAPH>
     void clear_edge_efficiencies(GRAPH& g, bool value) {
       g.foreach_edge([value](const typename GRAPH::ref_edge& ref_e) {
-	  auto extr = ref_e->extremities();
-	  if(invalid_extremities(extr))
-	    ref_e->kill();
-	  else
-	    (*ref_e)().vq3_efficient = value;
-	});
+		       auto extr = ref_e->extremities();
+		       if(invalid_extremities(extr))
+			 ref_e->kill();
+		       else
+			 (*ref_e)().vq3_efficient = value;
+		     });
     }
 
     /**
@@ -468,9 +507,9 @@ namespace vq3 {
     template<typename REF_VERTEX, typename EDGE_FUN>
     void foreach_efficient_edge(const REF_VERTEX& ref_v, const EDGE_FUN& fun) {
       ref_v->foreach_edge([fun](const typename REF_VERTEX::element_type::ref_edge_type& ref_e) {
-	  if((*ref_e)().vq3_efficient)
-	    fun(ref_e);
-	});
+			    if((*ref_e)().vq3_efficient)
+			      fun(ref_e);
+			  });
     }
 
 
@@ -727,7 +766,7 @@ namespace vq3 {
 	};
 
 	
-	  template<> struct sg_norm<2, 21, 2> {double value; sg_norm(double step) {value = 1/(33649*step*step);}};
+	template<> struct sg_norm<2, 21, 2> {double value; sg_norm(double step) {value = 1/(33649*step*step);}};
 	template<typename VALUE> struct sg_compute<VALUE, 2, 21, 2> {
 	  VALUE value;
 	  template<typename ITER>
@@ -821,7 +860,7 @@ namespace vq3 {
 	  template<unsigned int O>
 	  void __set_timestep(double step) {
 	    if constexpr (O == 0) 
-	      hcoef[0] = sg_norm<0, WINDOW_SIZE, DEGREE>(step).value;
+			   hcoef[0] = sg_norm<0, WINDOW_SIZE, DEGREE>(step).value;
 	    else {
 	      hcoef[O] = sg_norm<O, WINDOW_SIZE, DEGREE>(step).value;
 	      __set_timestep<O-1>(step);
