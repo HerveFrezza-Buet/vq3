@@ -574,9 +574,9 @@ namespace vq3 {
 	    n.clear();
 	    auto outn = std::back_inserter(n);
 	    if constexpr (WITH_COUNTS) 
-	      std_set_union(newedges.begin(),   newedges.end(),
-			    d.newedges.begin(), d.newedges.end(),
-			    outn, n);
+			   std_set_union(newedges.begin(),   newedges.end(),
+					 d.newedges.begin(), d.newedges.end(),
+					 outn, n);
 	    else
 	      std::set_union(newedges.begin(),   newedges.end(),
 			     d.newedges.begin(), d.newedges.end(),
@@ -596,11 +596,11 @@ namespace vq3 {
 	  utils::clear_edge_tags(g, true);
 	  for(auto& ref_e : survivors) (*ref_e)().vq3_tag = false;
 	  g.foreach_edge([&one_kill](const ref_edge& ref_e) {
-	      if((*ref_e)().vq3_tag) {
-		ref_e->kill();
-		one_kill = true;
-	      }
-	    });
+			   if((*ref_e)().vq3_tag) {
+			     ref_e->kill();
+			     one_kill = true;
+			   }
+			 });
 
 	  // Let us add the new edges.
 	  for(auto& p : newedges) {
@@ -674,6 +674,70 @@ namespace vq3 {
 	auto processor(GRAPH& g) {return Processor<GRAPH>(g);}
       
       }
+
+      namespace edges {
+	
+	template<typename GRAPH>
+	class Processor {
+	private:
+	  
+	  using graph_type = GRAPH;
+	  using ref_edge = typename graph_type::ref_edge;
+	  graph_type& g;
+	  
+	public:
+	  
+	  Processor(graph_type& g) : g(g) {}
+	  Processor()                            = delete;
+	  Processor(const Processor&)            = default;
+	  Processor(Processor&&)                 = default;
+	  Processor& operator=(const Processor&) = default;
+	  Processor& operator=(Processor&&)      = default;
+	  
+	  /**
+	   * This processes a count for each edge. If a given samples is to be 
+	   * counted (i.e. matters(ref_edge, sample) is true) for a edge, the counter of that edge 
+	   * is incremented. Counters are not initialized by the function.
+	   */
+	  template<typename ITERATOR, typename SAMPLE_OF, typename MATTERS>
+	  void process(unsigned int nb_threads,
+		       const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
+		       const MATTERS& matters) {
+	    
+	    auto iters = utils::split(samples_begin, samples_end, nb_threads);
+	    std::vector<std::thread> threads;
+
+	    if(nb_threads > 1)
+	      g.garbaging_lock();
+	    
+	    for(auto& [begin, end] : iters)
+	      threads.emplace_back([begin, end, this, &sample_of, &matters](){
+				     for(auto it = begin; it != end; ++it) 
+				       g.foreach_edge([&sample_of, &matters, it](auto ref_e) {
+							auto extr_pair = ref_e->extremities();           
+							if(vq3::invalid_extremities(extr_pair)) {
+							  ref_e->kill(); // Ok, garbaging is locked.
+							  return;
+							}
+							if(matters(ref_e, sample_of(*it))) (*ref_e)().vq3_counter++;
+						      });
+				   });
+
+	    for(auto& t : threads) t.join();
+	    
+	    if(nb_threads > 1)
+	      g.garbaging_unlock();
+	  }
+	};
+	
+	template<typename GRAPH>
+	auto processor(GRAPH& g) {return Processor<GRAPH>(g);}
+      
+      }
+
+
+
+      
     }
     
     namespace wta {

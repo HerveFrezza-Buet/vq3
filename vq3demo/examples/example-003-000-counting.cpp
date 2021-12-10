@@ -26,24 +26,31 @@ using edge   = vq3::decorator::counter<void>;
 using graph  = vq3::graph<vertex, edge>;
 
 #define NB_SAMPLES_PER_M2   1000
-#define RADIUS                .5
+#define V_RADIUS              .5
+#define E_RADIUS              .1
 
 void print_counts(graph::ref_vertex ref_O,
 		  graph::ref_vertex ref_A,
 		  graph::ref_vertex ref_B,
 		  graph::ref_vertex ref_C,
-		  graph::ref_vertex ref_D) {
+		  graph::ref_vertex ref_D,
+		  graph::ref_edge   ref_OA,
+		  graph::ref_edge   ref_AB) {
   std::cout << std::setw(5) << 'O'
 	    << std::setw(5) << 'A'
 	    << std::setw(5) << 'B'
 	    << std::setw(5) << 'C'
 	    << std::setw(5) << 'D'
+	    << std::setw(5) << "OA"
+	    << std::setw(5) << "AB"
 	    << std::endl;
   std::cout << std::setw(5) << (*ref_O)().vq3_counter
 	    << std::setw(5) << (*ref_A)().vq3_counter
 	    << std::setw(5) << (*ref_B)().vq3_counter
 	    << std::setw(5) << (*ref_C)().vq3_counter
 	    << std::setw(5) << (*ref_D)().vq3_counter
+	    << std::setw(5) << (*ref_OA)().vq3_counter
+	    << std::setw(5) << (*ref_AB)().vq3_counter
 	    << std::endl;
   std::cout << std::endl;
 }
@@ -76,6 +83,15 @@ int main(int argc, char* argv[]) {
   auto B = (g += demo2d::Point( .8,  .8));
   auto C = (g += demo2d::Point( .8, -.8));
   auto D = (g += demo2d::Point(-.8, -.8));
+
+  auto AB = g.connect(A, B);
+  auto BC = g.connect(B, C);
+  auto CD = g.connect(C, D);
+  auto DA = g.connect(D, A);
+  auto OA = g.connect(O, A);
+  auto OB = g.connect(O, B);
+  auto OC = g.connect(O, C);
+  auto OD = g.connect(O, D);
   
   auto dd = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
 						      [](const demo2d::Point& pt) {return                      true;},  // always draw
@@ -92,14 +108,15 @@ int main(int argc, char* argv[]) {
 									   [](const vertex& v) {return                  -1;}); // thickness
   
   auto draw_area = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
-									 [](const vertex& v)                {return                true;},  // always draw
-									 [](const vertex& v)                {return         v.vq3_value;},  // position
-									 [r=frame(RADIUS)](const vertex& v) {return                   r;},  // radius
-									 [](const vertex& v)                {return cv::Scalar(0, 0, 0);},  // color
-									 [](const vertex& v)                {return                   1;}); // thickness
+									 [](const vertex& v)                  {return                true;},  // always draw
+									 [](const vertex& v)                  {return         v.vq3_value;},  // position
+									 [r=frame(V_RADIUS)](const vertex& v) {return                   r;},  // radius
+									 [](const vertex& v)                  {return cv::Scalar(0, 0, 0);},  // color
+									 [](const vertex& v)                  {return                   1;}); // thickness
 
   // Counting processors
   auto v_counter = vq3::epoch::count::vertices::processor(g);
+  auto e_counter = vq3::epoch::count::edges::processor(g);
   
   // Display
   //
@@ -129,10 +146,17 @@ int main(int argc, char* argv[]) {
 		      S.begin(), S.end(),
 		      [](auto& content) {return content;}, // sample_of(*it) --> sample
 		      [](auto& ref_v, const demo2d::Point& sample) { // do the sample matter for that vertex ?
-			return demo2d::d2((*ref_v)().vq3_value, sample) < RADIUS * RADIUS;
+			return demo2d::d2((*ref_v)().vq3_value, sample) < V_RADIUS * V_RADIUS;
+		      });
+    v_counter.process(nb_threads,
+		      S.begin(), S.end(),
+		      [](auto& content) {return content;}, // sample_of(*it) --> sample
+		      [](auto& ref_e, const demo2d::Point& sample) { // do the sample matter for that vertex ?
+			auto [ref_a, ref_b] = ref_e->extremities(); // Extremities are OK, this has been checked by the processor before calling that lambda.
+			return demo2d::d2(sample, {(*ref_a)().vq3_value, (*ref_a)().vq3_value}) < E_RADIUS * E_RADIUS;
 		      });
 
-    print_counts(O, A, B, C, D);
+    print_counts(O, A, B, C, D, OA, AB);
     
     std::copy(S.begin(), S.end(), dd);
     g.foreach_vertex(draw_vertex);
