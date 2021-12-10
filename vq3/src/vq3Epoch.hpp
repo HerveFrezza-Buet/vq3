@@ -669,6 +669,10 @@ namespace vq3 {
 	      g.garbaging_unlock();
 	  }
 	};
+	
+	template<typename GRAPH>
+	auto processor(GRAPH& g) {return Processor<GRAPH>(g);}
+      
       }
     }
     
