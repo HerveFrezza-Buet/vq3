@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
   auto draw_edge         = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 									     [](const vertex& v1, const vertex& v2, const edge& e) {return                                       true;},  // always draw
 									     [](const vertex& v)                                   {return                                          v;},  // position
-									     [&max_count](const edge&   e)                         {return color_of_count(e.vq3_chl_count, max_count);},  // color
+									     [&max_count](const edge&   e)                         {return color_of_count(e.vq3_counter, max_count);},  // color
 									     [](const edge&   e)                                   {return                                          3;}); // thickness
   auto draw_edge_contour = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 									     [](const vertex& v1, const vertex& v2, const edge& e) {return                 true;},  // always draw
@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
 		   auto extr = ref_e->extremities();
 		   if(vq3::invalid_extremities(extr))
 		     ref_e->kill();
-		   else if(std::size_t c = (*ref_e)().vq3_chl_count; c > max_count)
+		   else if(std::size_t c = (*ref_e)().vq3_counter; c > max_count)
 		     max_count = c;
 		 });
     
