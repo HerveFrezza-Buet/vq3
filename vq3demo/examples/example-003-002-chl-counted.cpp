@@ -19,8 +19,8 @@
 
 using vertex = demo2d::Point;
 
-using elayer_0 = vq3::decorator::tagged<void>;        // We need tags on the edges.
-using elayer_1 = vq3::decorator::chl_count<elayer_0>; // We add an atomic counter on the edges.
+using elayer_0 = vq3::decorator::tagged<void>;      // We need tags on the edges.
+using elayer_1 = vq3::decorator::counter<elayer_0>; // We add an atomic counter on the edges.
 using edge     = elayer_1;
 
 using graph  = vq3::graph<vertex, edge>;

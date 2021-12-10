@@ -512,7 +512,7 @@ namespace vq3 {
 		     const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
 		     const DISTANCE& distance,
 		     const edge& value_for_new_edges) {
-	  if constexpr (WITH_COUNTS) g.foreach_edge([](auto ref_e) {(*ref_e)().vq3_chl_count = 0;});		 
+	  if constexpr (WITH_COUNTS) g.foreach_edge([](auto ref_e) {(*ref_e)().vq3_counter = 0;});		 
 	  
 	  auto nb_vertices = g.nb_vertices();
 	  if(nb_vertices < 2)
@@ -523,7 +523,7 @@ namespace vq3 {
 	    auto ref_e = g.get_edge(vertices[0], vertices[1]);
 	    if(ref_e == nullptr) {
 	      ref_e = g.connect(vertices[0], vertices[1], value_for_new_edges);
-	      if constexpr (WITH_COUNTS) ++((*ref_e)().vq3_chl_count);
+	      if constexpr (WITH_COUNTS) ++((*ref_e)().vq3_counter);
 	      return true;
 	    }
 	    return false;
@@ -549,7 +549,7 @@ namespace vq3 {
 					  if constexpr (WITH_COUNTS) ++(it->chl_count);
 					}
 					else {
-					  if constexpr (WITH_COUNTS) ++((*ref_e)().vq3_chl_count);
+					  if constexpr (WITH_COUNTS) ++((*ref_e)().vq3_counter);
 					  res.survivors.emplace(ref_e);
 					}
 				      }
@@ -605,7 +605,7 @@ namespace vq3 {
 	  // Let us add the new edges.
 	  for(auto& p : newedges) {
 	    auto ref_e = g.connect(p.first, p.second, value_for_new_edges);
-	    if constexpr (WITH_COUNTS) (*ref_e)().vq3_chl_count = p.chl_count;
+	    if constexpr (WITH_COUNTS) (*ref_e)().vq3_counter = p.chl_count;
 	  }
 
 	  return newedges.size() != 0 || one_kill;
@@ -617,6 +617,59 @@ namespace vq3 {
       
       template<typename GRAPH>
       auto processor_with_counts(GRAPH& g) {return Processor<GRAPH, true>(g);}
+    }
+
+    namespace count {
+      namespace vertices {
+	
+	template<typename GRAPH>
+	class Processor {
+	private:
+	  
+	  using graph_type = GRAPH;
+	  using ref_vertex = typename graph_type::ref_vertex;
+	  graph_type& g;
+	  
+	public:
+	  
+	  Processor(graph_type& g) : g(g) {}
+	  Processor()                            = delete;
+	  Processor(const Processor&)            = default;
+	  Processor(Processor&&)                 = default;
+	  Processor& operator=(const Processor&) = default;
+	  Processor& operator=(Processor&&)      = default;
+	  
+	  /**
+	   * This processes a count for each vertex. If a given samples is to be 
+	   * counted (i.e. matters(ref_vertex, sample) is true) for a vertex, the counter of that vertex 
+	   * is incremented. Counters are not initialized by the function.
+	   */
+	  template<typename ITERATOR, typename SAMPLE_OF, typename MATTERS>
+	  void process(unsigned int nb_threads,
+		       const ITERATOR& samples_begin, const ITERATOR& samples_end, const SAMPLE_OF& sample_of,
+		       const MATTERS& matters) {
+	    
+	    auto iters = utils::split(samples_begin, samples_end, nb_threads);
+	    std::vector<std::thread> threads;
+
+	    if(nb_threads > 1)
+	      g.garbaging_lock();
+	    
+	    for(auto& [begin, end] : iters)
+	      threads.emplace_back([begin, end, this, &sample_of, &matters](){
+				     for(auto it = begin; it != end; ++it) 
+				       g.foreach_vertex([&sample_of, &matters, it](auto ref_v) {
+							  if(matters(ref_v, sample_of(*it))) (*ref_v)().vq3_counter++;
+							});
+				   });
+
+	    for(auto& t : threads) t.join();
+	    
+	    if(nb_threads > 1)
+	      g.garbaging_unlock();
+	  }
+	};
+      }
     }
     
     namespace wta {

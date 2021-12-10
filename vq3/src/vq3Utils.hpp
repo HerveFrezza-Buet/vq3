@@ -413,6 +413,37 @@ namespace vq3 {
       clear_edge_tags(g, value);
     }
 
+    /**
+     * Set a value to each vertex counter.
+     */
+    template<typename GRAPH>
+    void clear_vertex_counters(GRAPH& g, std::size_t value) {
+      g.foreach_vertex([value](const typename GRAPH::ref_vertex& ref_v) {(*ref_v)().vq3_counter = value;});
+    }
+
+    /**
+     * Set a value to each edge counter.
+     */
+    template<typename GRAPH>
+    void clear_edge_counters(GRAPH& g, std::size_t value) {
+      g.foreach_edge([value](const typename GRAPH::ref_edge& ref_e) {
+		       auto extr = ref_e->extremities();
+		       if(invalid_extremities(extr))
+			 ref_e->kill();
+		       else
+			 (*ref_e)().vq3_counter = value;
+		     });
+    }
+
+    /**
+     * Sets a value to each edge and vertice counter.
+     */
+    template<typename GRAPH>
+    void clear_all_counters(GRAPH& g, std::size_t value) {
+      clear_vertex_counters(g, value);
+      clear_edge_counters(g, value);
+    }
+
 
     /**
      * Set a value to each vertex label.

@@ -281,54 +281,56 @@ namespace vq3 {
     using tagged = Tagged<MOTHER, typename decoration<MOTHER>::value_type>;
 
     
-    /* ############ */
-    /* #          # */
-    /* # CHLCount # */
-    /* #          # */
-    /* ############ */
+    /* ########### */
+    /* #         # */
+    /* # Counter # */
+    /* #         # */
+    /* ########### */
     
     template<typename MOTHER, typename KIND> 
-    struct CHLCount : public MOTHER {
+    struct Counter : public MOTHER {
       using decorated_type = typename MOTHER::decorated_type;
-      std::atomic_size_t vq3_chl_count = 0;
-      CHLCount() = default;
-      CHLCount(const CHLCount& other) : MOTHER(other), vq3_chl_count(0) {}
-      CHLCount(const decorated_type& val) : MOTHER(val), vq3_chl_count(0) {}
-      CHLCount& operator=(const decorated_type& val) {this->vq3_value = val;}
+      std::atomic_size_t vq3_counter = 0;
+      Counter() = default;
+      Counter(const Counter& other) : MOTHER(other), vq3_counter(0) {}
+      Counter(const decorated_type& val) : MOTHER(val), vq3_counter(0) {}
+      Counter& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
     
     // When we decorate a non decorated value.
     template<typename MOTHER> 
-    struct CHLCount<MOTHER, not_decorated> {
+    struct Counter<MOTHER, not_decorated> {
       using decorated_type = MOTHER;
       MOTHER vq3_value;
-      std::atomic_size_t vq3_chl_count = 0;
-      CHLCount() = default;
-      CHLCount(const CHLCount& other) : MOTHER(other), vq3_chl_count(0) {}
-      CHLCount(const decorated_type& val) : vq3_value(val), vq3_chl_count(0) {}
-      CHLCount& operator=(const decorated_type& val) {vq3_value = val;}
+      std::atomic_size_t vq3_counter = 0;
+      Counter() = default;
+      // The default definition for copy constructor fails with the
+      // deleted copy contructor of atomic.
+      Counter(const Counter& other) : vq3_value(other.vq3_value), vq3_counter(0){}
+      Counter(const decorated_type& val) : vq3_value(val), vq3_counter(0) {}
+      Counter& operator=(const decorated_type& val) {vq3_value = val;}
     };
     
     // When we decorate a decorated type with no value.
     template<typename MOTHER> 
-    struct CHLCount<MOTHER, unvalued_decoration> : public MOTHER {
+    struct Counter<MOTHER, unvalued_decoration> : public MOTHER {
       using decorated_type = MOTHER;
-      std::atomic_size_t vq3_chl_count = 0;
-      CHLCount() : MOTHER(), vq3_chl_count(0) {}
-      CHLCount(const CHLCount& other) : MOTHER(other), vq3_chl_count(0) {}
+      std::atomic_size_t vq3_counter = 0;
+      Counter() : MOTHER(), vq3_counter(0) {}
+      Counter(const Counter& other) : MOTHER(other), vq3_counter(0) {}
     };
     
     // When we decorate void.
     template<> 
-    struct CHLCount<void, not_decorated> {
+    struct Counter<void, not_decorated> {
       using decorated_type = void;
-      std::atomic_size_t vq3_chl_count = 0;
-      CHLCount() : vq3_chl_count(0) {}
-      CHLCount(const CHLCount& other) : vq3_chl_count(0) {}
+      std::atomic_size_t vq3_counter = 0;
+      Counter() : vq3_counter(0) {}
+      Counter(const Counter& other) : vq3_counter(0) {}
     };
     
     template<typename MOTHER>
-    using chl_count = CHLCount<MOTHER, typename decoration<MOTHER>::value_type>;
+    using counter = Counter<MOTHER, typename decoration<MOTHER>::value_type>;
     
     /* ######## */
     /* #      # */

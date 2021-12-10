@@ -54,6 +54,7 @@
    @example example-002-006-astar.cpp
    @example example-002-007-path.cpp
    @example example-002-008-shortest-debug.cpp
+   @example example-003-000-counting.cpp
    @example example-003-001-chl.cpp
    @example example-003-002-chl-counted.cpp
    @example example-003-003-wta.cpp
