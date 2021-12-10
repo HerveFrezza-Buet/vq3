@@ -25,7 +25,7 @@ using vertex = vq3::decorator::counter<demo2d::Point>;
 using edge   = vq3::decorator::counter<void>;
 using graph  = vq3::graph<vertex, edge>;
 
-#define NB_SAMPLES_PER_M2   1000
+#define NB_SAMPLES_PER_M2   5000
 #define V_RADIUS              .5
 #define E_RADIUS              .1
 
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
 
   
   graph g;
-  auto O = (g += demo2d::Point(  0,   0));
+  auto O = (g += demo2d::Point(-.5,  .5));
   auto A = (g += demo2d::Point(-.8,  .8));
   auto B = (g += demo2d::Point( .8,  .8));
   auto C = (g += demo2d::Point( .8, -.8));
@@ -148,12 +148,12 @@ int main(int argc, char* argv[]) {
 		      [](auto& ref_v, const demo2d::Point& sample) { // do the sample matter for that vertex ?
 			return demo2d::d2((*ref_v)().vq3_value, sample) < V_RADIUS * V_RADIUS;
 		      });
-    v_counter.process(nb_threads,
+    e_counter.process(nb_threads,
 		      S.begin(), S.end(),
 		      [](auto& content) {return content;}, // sample_of(*it) --> sample
 		      [](auto& ref_e, const demo2d::Point& sample) { // do the sample matter for that vertex ?
 			auto [ref_a, ref_b] = ref_e->extremities(); // Extremities are OK, this has been checked by the processor before calling that lambda.
-			return demo2d::d2(sample, {(*ref_a)().vq3_value, (*ref_a)().vq3_value}) < E_RADIUS * E_RADIUS;
+			return demo2d::d2(sample, {(*ref_a)().vq3_value, (*ref_b)().vq3_value}) < E_RADIUS * E_RADIUS;
 		      });
 
     print_counts(O, A, B, C, D, OA, AB);
