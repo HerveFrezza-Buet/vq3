@@ -35,9 +35,9 @@ namespace vq3 {
   namespace path {
 
     enum class status : char {
-      unprocessed, //!< not processed yet.
-      processing,  //!< considered, but best path not found yet.
-      done         //!< best path found.
+			      unprocessed, //!< not processed yet.
+			      processing,  //!< considered, but best path not found yet.
+			      done         //!< best path found.
     };
     
     /**
@@ -164,7 +164,7 @@ namespace vq3 {
 	return *this;
       }
     
-       iterator operator++(int) {
+      iterator operator++(int) {
 	auto res = *this;
 	operator++();
 	return res;
@@ -258,8 +258,57 @@ namespace vq3 {
       // User-friendly decorator  
       template<typename MOTHER>
       using shortest = Shortest<MOTHER, typename decoration<MOTHER>::value_type>;
-    }
 
+    
+      /* ########## */
+      /* #        # */
+      /* # Length # */
+      /* #        # */
+      /* ########## */
+    
+      template<typename MOTHER, typename LENGTH_TYPE, typename KIND> 
+      struct Length : public MOTHER {
+	using decorated_type = typename MOTHER::decorated_type;
+	LENGTH_TYPE vq3_length;
+	Length() = default;
+	Length(const Length&) = default;
+	Length(const decorated_type& val) : MOTHER(val), vq3_length() {}
+	Length& operator=(const decorated_type& val) {this->vq3_value = val;}
+      };
+    
+      // When we decorate a non decorated value.
+      template<typename MOTHER, typename LENGTH_TYPE> 
+      struct Length<MOTHER, LENGTH_TYPE, not_decorated> {
+	using decorated_type = MOTHER;
+	MOTHER vq3_value;
+	LENGTH_TYPE vq3_length;
+	Length() = default;
+	Length(const Length&) = default;
+	Length(const decorated_type& val) : vq3_value(val), vq3_length() {}
+	Length& operator=(const decorated_type& val) {vq3_value = val;}
+      };
+    
+      // When we decorate a decorated type with no value.
+      template<typename MOTHER, typename LENGTH_TYPE> 
+      struct Length<MOTHER, LENGTH_TYPE, unvalued_decoration> : public MOTHER {
+	using decorated_type = MOTHER;
+	LENGTH_TYPE vq3_length;
+	Length() : MOTHER(), vq3_length() {}
+	Length(const Length&) = default;
+      };
+    
+      // When we decorate void.
+      template<typename LENGTH_TYPE> 
+      struct Length<void, LENGTH_TYPE, not_decorated> {
+	using decorated_type = void;
+	LENGTH_TYPE vq3_length;
+	Length() : vq3_length() {}
+	Length(const Length&) = default;
+      };
+    
+      template<typename MOTHER, typename LENGTH_TYPE>
+      using length = Length<MOTHER, LENGTH_TYPE, typename decoration<MOTHER>::value_type>;
+    }
     
   }
 
@@ -320,30 +369,30 @@ namespace vq3 {
 	  }
 
 	  if constexpr(USE_HCOST) {
-	    if(pos3 == 0) {                       // min(sp2, 0) = sp2
-	      if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
-		sp1_ptr->qpos = pos2;
-		sp2_ptr->qpos = pos1;
-		std::iter_swap(it1, it2);
-		return pos2;
+	      if(pos3 == 0) {                       // min(sp2, 0) = sp2
+		if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
+		  sp1_ptr->qpos = pos2;
+		  sp2_ptr->qpos = pos1;
+		  std::iter_swap(it1, it2);
+		  return pos2;
+		}
+		else
+		  return 0;                        //  else, no swap. done.
 	      }
-	      else
-		return 0;                        //  else, no swap. done.
-	    }
 
-	    if(sp2_ptr->hcost < sp3_ptr->hcost) {   // min(sp2, sp3) = sp2
-	      if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
-		sp1_ptr->qpos = pos2;
-		sp2_ptr->qpos = pos1;
-		std::iter_swap(it1, it2);
-		return pos2;
+	      if(sp2_ptr->hcost < sp3_ptr->hcost) {   // min(sp2, sp3) = sp2
+		if(sp1_ptr->hcost > sp2_ptr->hcost) { //   if sp1 > min, we swap 1 and 2
+		  sp1_ptr->qpos = pos2;
+		  sp2_ptr->qpos = pos1;
+		  std::iter_swap(it1, it2);
+		  return pos2;
+		}
+		else
+		  return 0;                         //  else, no swap. done.
 	      }
-	      else
-		return 0;                         //  else, no swap. done.
-	    }
 
-	    // min(sp2, sp3) = sp3
-	    if(sp1_ptr->hcost > sp3_ptr->hcost) { //   if sp1 > min, we swap 1 and 3
+	      // min(sp2, sp3) = sp3
+	      if(sp1_ptr->hcost > sp3_ptr->hcost) { //   if sp1 > min, we swap 1 and 3
 		sp1_ptr->qpos = pos3;
 		sp3_ptr->qpos = pos1;
 		std::iter_swap(it1, it3);
@@ -377,13 +426,13 @@ namespace vq3 {
 
 	    // min(sp2, sp3) = sp3
 	    if(sp1_ptr->cost > sp3_ptr->cost) { //   if sp1 > min, we swap 1 and 3
-		sp1_ptr->qpos = pos3;
-		sp3_ptr->qpos = pos1;
-		std::iter_swap(it1, it3);
-		return pos3;
-	      }
-	      else
-		return 0;  
+	      sp1_ptr->qpos = pos3;
+	      sp3_ptr->qpos = pos1;
+	      std::iter_swap(it1, it3);
+	      return pos3;
+	    }
+	    else
+	      return 0;  
 	  }
 	}
       
@@ -488,44 +537,44 @@ namespace vq3 {
 	if(curr == start) break;
 	
 	curr->foreach_edge([curr, &g, &edge_cost, &curr_path_info](typename GRAPH::ref_edge ref_e) {
-	    auto extr_pair = ref_e->extremities();           
-	    if(vq3::invalid_extremities(extr_pair)) {	    
-	      ref_e->kill();
-	      return;
-	    }
+			     auto extr_pair = ref_e->extremities();           
+			     if(vq3::invalid_extremities(extr_pair)) {	    
+			       ref_e->kill();
+			       return;
+			     }
 
-	    if constexpr(EDGE_EFFICIENCY) {
-		if(!(*ref_e)().vq3_efficient)
-		  return;
-	      }
+			     if constexpr(EDGE_EFFICIENCY) {
+				 if(!(*ref_e)().vq3_efficient)
+				   return;
+			       }
 			  
-	    double cost           = edge_cost(ref_e);
-	    auto& other           = vq3::other_extremity(extr_pair, curr);
-	    auto& other_path_info = (*other)().vq3_shortest_path;
+			     double cost           = edge_cost(ref_e);
+			     auto& other           = vq3::other_extremity(extr_pair, curr);
+			     auto& other_path_info = (*other)().vq3_shortest_path;
 
-	    if constexpr(VERTEX_EFFICIENCY) {
-		if(!(*other)().vq3_efficient) {
-		  other_path_info.ended();
-		  return;
-		}
-	      }
+			     if constexpr(VERTEX_EFFICIENCY) {
+				 if(!(*other)().vq3_efficient) {
+				   other_path_info.ended();
+				   return;
+				 }
+			       }
 	    
-	    switch(other_path_info.state) {
-	    case status::done :
-	      break;
-	    case status::unprocessed :
-	      other_path_info.set(cost + curr_path_info.cost, ref_e);
-	      priority_queue::push<false>(g.heap, other);
-	      break;
-	    case status::processing :
-	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
-		other_path_info.set(cost_candidate, ref_e);
-		priority_queue::notify_decrease<false>(g.heap, other_path_info.qpos);
-	      }
-	      break;
+			     switch(other_path_info.state) {
+			     case status::done :
+			       break;
+			     case status::unprocessed :
+			       other_path_info.set(cost + curr_path_info.cost, ref_e);
+			       priority_queue::push<false>(g.heap, other);
+			       break;
+			     case status::processing :
+			       if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
+				 other_path_info.set(cost_candidate, ref_e);
+				 priority_queue::notify_decrease<false>(g.heap, other_path_info.qpos);
+			       }
+			       break;
 	      
-	    }
-	  });
+			     }
+			   });
       }
     }
 
@@ -574,44 +623,44 @@ namespace vq3 {
 	if(curr == start) break;
 	
 	curr->foreach_edge([curr, &g, &edge_cost, &curr_path_info](typename GRAPH::ref_edge ref_e) {
-	    auto extr_pair = ref_e->extremities();           
-	    if(vq3::invalid_extremities(extr_pair)) {	    
-	      ref_e->kill();
-	      return;
-	    }
+			     auto extr_pair = ref_e->extremities();           
+			     if(vq3::invalid_extremities(extr_pair)) {	    
+			       ref_e->kill();
+			       return;
+			     }
 
-	    if constexpr(EDGE_EFFICIENCY) {
-		if(!(*ref_e)().vq3_efficient)
-		  return;
-	      }
+			     if constexpr(EDGE_EFFICIENCY) {
+				 if(!(*ref_e)().vq3_efficient)
+				   return;
+			       }
 			  
-	    double cost           = edge_cost(ref_e);
-	    auto& other           = vq3::other_extremity(extr_pair, curr);
-	    auto& other_path_info = (*other)().vq3_shortest_path;
+			     double cost           = edge_cost(ref_e);
+			     auto& other           = vq3::other_extremity(extr_pair, curr);
+			     auto& other_path_info = (*other)().vq3_shortest_path;
 
-	    if constexpr(VERTEX_EFFICIENCY) {
-		if(!(*other)().vq3_efficient) {
-		  other_path_info.ended();
-		  return;
-		}
-	      }
+			     if constexpr(VERTEX_EFFICIENCY) {
+				 if(!(*other)().vq3_efficient) {
+				   other_path_info.ended();
+				   return;
+				 }
+			       }
 	    
-	    switch(other_path_info.state) {
-	    case status::done :
-	      break;
-	    case status::unprocessed :
-	      other_path_info.set(cost + curr_path_info.cost, ref_e);
-	      priority_queue::push<false>(g.heap, other);
-	      break;
-	    case status::processing :
-	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
-		other_path_info.set(cost_candidate, ref_e);
-		priority_queue::notify_decrease<false>(g.heap, other_path_info.qpos);
-	      }
-	      break;
+			     switch(other_path_info.state) {
+			     case status::done :
+			       break;
+			     case status::unprocessed :
+			       other_path_info.set(cost + curr_path_info.cost, ref_e);
+			       priority_queue::push<false>(g.heap, other);
+			       break;
+			     case status::processing :
+			       if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
+				 other_path_info.set(cost_candidate, ref_e);
+				 priority_queue::notify_decrease<false>(g.heap, other_path_info.qpos);
+			       }
+			       break;
 	      
-	    }
-	  });
+			     }
+			   });
       }
     }
 
@@ -661,43 +710,43 @@ namespace vq3 {
 	if(curr == start) break;
 	
 	curr->foreach_edge([curr, &edge_cost, &to_start_estimation, &g, &curr_path_info](typename GRAPH::ref_edge ref_e) {
-	    auto extr_pair = ref_e->extremities();           
-	    if(vq3::invalid_extremities(extr_pair)) {
-	      ref_e->kill();
-	      return;
-	    }
+			     auto extr_pair = ref_e->extremities();           
+			     if(vq3::invalid_extremities(extr_pair)) {
+			       ref_e->kill();
+			       return;
+			     }
 
-	    if constexpr(EDGE_EFFICIENCY) {
-		if(!(*ref_e)().vq3_efficient)
-		  return;
-	      }
+			     if constexpr(EDGE_EFFICIENCY) {
+				 if(!(*ref_e)().vq3_efficient)
+				   return;
+			       }
 			  
-	    double cost           = edge_cost(ref_e);
-	    auto& other           = vq3::other_extremity(extr_pair, curr);
-	    auto& other_path_info = (*other)().vq3_shortest_path;
+			     double cost           = edge_cost(ref_e);
+			     auto& other           = vq3::other_extremity(extr_pair, curr);
+			     auto& other_path_info = (*other)().vq3_shortest_path;
 
-	    if constexpr(VERTEX_EFFICIENCY) {
-		if(!(*other)().vq3_efficient) {
-		  other_path_info.ended();
-		  return;
-		}
-	      }
+			     if constexpr(VERTEX_EFFICIENCY) {
+				 if(!(*other)().vq3_efficient) {
+				   other_path_info.ended();
+				   return;
+				 }
+			       }
 	    
-	    switch(other_path_info.state) {
-	    case status::done :
-	      break;
-	    case status::unprocessed :
-	      other_path_info.set(cost + curr_path_info.cost, to_start_estimation(other), ref_e);
-	      priority_queue::push<true>(g.heap, other);
-	      break;
-	    case status::processing :
-	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
-		other_path_info.set_estimated(cost_candidate, ref_e);
-		priority_queue::notify_decrease<true>(g.heap, other_path_info.qpos);
-	      }
-	      break;
-	    }
-	  });
+			     switch(other_path_info.state) {
+			     case status::done :
+			       break;
+			     case status::unprocessed :
+			       other_path_info.set(cost + curr_path_info.cost, to_start_estimation(other), ref_e);
+			       priority_queue::push<true>(g.heap, other);
+			       break;
+			     case status::processing :
+			       if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
+				 other_path_info.set_estimated(cost_candidate, ref_e);
+				 priority_queue::notify_decrease<true>(g.heap, other_path_info.qpos);
+			       }
+			       break;
+			     }
+			   });
       }
     }
 
@@ -750,43 +799,43 @@ namespace vq3 {
 	if(curr == start) break;
 	
 	curr->foreach_edge([curr, &edge_cost, &to_start_estimation, &g, &curr_path_info](typename GRAPH::ref_edge ref_e) {
-	    auto extr_pair = ref_e->extremities();           
-	    if(vq3::invalid_extremities(extr_pair)) {
-	      ref_e->kill();
-	      return;
-	    }
+			     auto extr_pair = ref_e->extremities();           
+			     if(vq3::invalid_extremities(extr_pair)) {
+			       ref_e->kill();
+			       return;
+			     }
 
-	    if constexpr(EDGE_EFFICIENCY) {
-		if(!(*ref_e)().vq3_efficient)
-		  return;
-	      }
+			     if constexpr(EDGE_EFFICIENCY) {
+				 if(!(*ref_e)().vq3_efficient)
+				   return;
+			       }
 			  
-	    double cost           = edge_cost(ref_e);
-	    auto& other           = vq3::other_extremity(extr_pair, curr);
-	    auto& other_path_info = (*other)().vq3_shortest_path;
+			     double cost           = edge_cost(ref_e);
+			     auto& other           = vq3::other_extremity(extr_pair, curr);
+			     auto& other_path_info = (*other)().vq3_shortest_path;
 
-	    if constexpr(VERTEX_EFFICIENCY) {
-		if(!(*other)().vq3_efficient) {
-		  other_path_info.ended();
-		  return;
-		}
-	      }
+			     if constexpr(VERTEX_EFFICIENCY) {
+				 if(!(*other)().vq3_efficient) {
+				   other_path_info.ended();
+				   return;
+				 }
+			       }
 	    
-	    switch(other_path_info.state) {
-	    case status::done :
-	      break;
-	    case status::unprocessed :
-	      other_path_info.set(cost + curr_path_info.cost, to_start_estimation(other), ref_e);
-	      priority_queue::push<true>(g.heap, other);
-	      break;
-	    case status::processing :
-	      if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
-		other_path_info.set_estimated(cost_candidate, ref_e);
-		priority_queue::notify_decrease<true>(g.heap, other_path_info.qpos);
-	      }
-	      break;
-	    }
-	  });
+			     switch(other_path_info.state) {
+			     case status::done :
+			       break;
+			     case status::unprocessed :
+			       other_path_info.set(cost + curr_path_info.cost, to_start_estimation(other), ref_e);
+			       priority_queue::push<true>(g.heap, other);
+			       break;
+			     case status::processing :
+			       if(double cost_candidate = cost + curr_path_info.cost; cost_candidate < other_path_info.cost) {
+				 other_path_info.set_estimated(cost_candidate, ref_e);
+				 priority_queue::notify_decrease<true>(g.heap, other_path_info.qpos);
+			       }
+			       break;
+			     }
+			   });
       }
     }
 
@@ -800,13 +849,13 @@ namespace vq3 {
 	 algorithms, accumulation of costs is already computed.
       */
       template<typename REF_VERTEX>
-      void compute_cumulated_costs(REF_VERTEX start, REF_VERTEX dest) const {}
+      void compute_cumulated_costs(REF_VERTEX start, REF_VERTEX dest) {}
 	
       /**
        * This return the cumulated cost at this vertex.
        */
       template<typename REF_VERTEX>
-      double cumulated_cost_of(REF_VERTEX ref) const {return (*ref)().vq3_shortest_path.cost;}
+      double cumulated_cost_of(REF_VERTEX ref) {return (*ref)().vq3_shortest_path.cost;}
     }
 
     
@@ -839,7 +888,7 @@ namespace vq3 {
       if(l == 0)
 	return interpolate(dest, nullptr, 0);
 
-      compute_cumulated_costs(start, end);
+      compute_cumulated_costs(start, dest);
 
       auto prev_cost    = cumulated_cost_of(start);
       auto to_dest_cost = l * prev_cost;

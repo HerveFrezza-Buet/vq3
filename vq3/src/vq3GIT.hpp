@@ -52,12 +52,12 @@ namespace vq3 {
       /**
        * Int is fake here, see vq3::path::travel_defaults::Traits.
        */
-      void compute_cumulated_costs(int start, int dest) const {}
+      void compute_cumulated_costs(int start, int dest) const;
 	
       /**
        * Int is fake here, see vq3::path::travel_defaults::Traits.
        */
-      double cumulated_cost_of(int ref_vertex) const {}
+      double cumulated_cost_of(int ref_vertex) const;
     };
   }
   
@@ -133,7 +133,9 @@ namespace vq3 {
 	       typename VAL_DIST,
 	       typename GRAPH_DIST,
 	       typename INTERPOLATE,
-	       typename SHORTEST_PATH>
+	       typename SHORTEST_PATH,
+	       typename COMPUTE_ACCUM,
+	       typename ACCUM_OF>
       auto traits_val(const VAL_DIST& d,
 		      const GRAPH_DIST& D,
 		      const INTERPOLATE& i,

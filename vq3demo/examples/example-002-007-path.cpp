@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include <iterator>
+#include <stack>
 
 
 // This example shows the use of path walking.
@@ -16,12 +17,13 @@
 
 // Vertex values have to be instrumented with shortest path
 // computation structure.
-//                                                         ## Node properties :
-using vlayer_0 = demo2d::Point;                            // prototypes are 2D points (this is the "user defined" value).
-using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
-using vlayer_2 = vq3::decorator::tagged<vlayer_1>;         // We will tag extermities of the shortest path for display.
-using vlayer_3 = vq3::decorator::efficiency<vlayer_2>;     // We consider only efficient edges for paths.
-using vertex   = vlayer_3;
+//                                                               ## Node properties :
+using vlayer_0 = demo2d::Point;                                  // prototypes are 2D points (this is the "user defined" value).
+using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>;       // This holds informations built by dijkstra.
+using vlayer_2 = vq3::decorator::path::length<vlayer_1, double>; // This holds accumulation along paths travels (needed if non-default behavior is needed).
+using vlayer_3 = vq3::decorator::tagged<vlayer_2>;               // We will tag extermities of the shortest path for display.
+using vlayer_4 = vq3::decorator::efficiency<vlayer_3>;           // We consider only efficient edges for paths.
+using vertex   = vlayer_4;
 
 // Here, each edge hosts its cost value.  It is the optional 
 // value here, so that it is not recomputed once it has been
@@ -57,6 +59,46 @@ double edge_cost(const graph::ref_edge& ref_e) {
   return *opt_cost;
 }
 
+// This is how we interpolate between 2 vertices.
+auto vertex_interpolation(const graph::ref_vertex& start, const graph::ref_vertex& dest, double lambda) {
+  if(start == nullptr) return (*dest )().vq3_value;
+  if(dest  == nullptr) return (*start)().vq3_value;
+  auto& start_value = (*start)().vq3_value;
+  auto& dest_value  = (*dest )().vq3_value;
+  return (1 - lambda) * start_value + lambda * dest_value;
+}
+
+// We will travel along some shortest paths. Default behavior is that
+// the length of edges, consider in the travel interpolation, is the
+// cost of the edges ised in shortest path implementation. In this
+// case, non need to define anything more, and the
+// vq3::decorator::path::length layer of our node could be
+// removed. Let us implement a non default behavoir here. Let us
+// consider that the length of each edge is 1. So traveling half of
+// the edge (0.5) would lead to a position such as there is the same
+// number of edges for reaching both path extremities, not the same
+// path length. Two custom functions are needed.
+
+void compute_cumulated_costs(graph::ref_vertex start, graph::ref_vertex dest) {
+  // We can iterate from start to dest, but accumulation is to be made
+  // from dest to start.. this is why we stack the vertices.
+  std::stack<graph::ref_vertex> visited;
+  auto it  = vq3::path::begin(start);
+  auto end = vq3::path::end<graph::ref_vertex>();
+  while(it != end) visited.push(*it++);
+  double length = 0;
+  while(!visited.empty()) {
+    (*(visited.top()))().vq3_length = length++;
+    visited.pop();
+  }
+}
+	
+double cumulated_cost_of(graph::ref_vertex ref_v) {
+  // We only ave to return the lengths we have accumulated at that
+  // vertex. Here, we have used the vq3::decorator::path::length
+  // decoration to hold that value.
+  return (*ref_v)().vq3_length;
+}
 				  
 
 // Callback
@@ -131,7 +173,7 @@ int main(int argc, char* argv[]) {
   vq3::utils::clear_vertex_efficiencies(g, true);
   
   cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
-  auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
+  auto image = cv::Mat(800, 800, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = demo2d::opencv::direct_orthonormal_frame(image.size(), .9*image.size().height, true);  
   callback_data user_data(g, frame);
 
@@ -202,21 +244,25 @@ int main(int argc, char* argv[]) {
     g.foreach_vertex(draw_vertex);
 
     // Let us compute and draw the walking position on the path.
+    // Let us use default functions for dealing with accumulations.
     auto position = vq3::path::travel(user_data.start, user_data.dest,
 				      slider*.001,
-				      [](const graph::ref_vertex& start,
-					 const graph::ref_vertex& dest,
-					 double lambda) {
-					// This is interpolation.
-					if(start == nullptr) return (*dest )().vq3_value;
-					if(dest  == nullptr) return (*start)().vq3_value;
-					auto& start_value = (*start)().vq3_value;
-					auto& dest_value  = (*dest )().vq3_value;
-					return (1 - lambda) * start_value + lambda * dest_value;
-				      });
+				      vertex_interpolation,
+				      vq3::path::travel_defaults::compute_cumulated_costs<graph::ref_vertex>,
+				      vq3::path::travel_defaults::cumulated_cost_of<graph::ref_vertex>);
     if(position) // position is an optional
-      cv::circle(image, frame(*position), 5, cv::Scalar(000, 200, 200), -1);
-    
+      cv::circle(image, frame(*position), 7, cv::Scalar(000, 200, 200), -1); // Filled circle.
+
+    // Now, we can do the same, but using custom measurement of path
+    // length for interpolation. Here, we consider each edge haveing a
+    // length of 1.
+    position = vq3::path::travel(user_data.start, user_data.dest,
+				 slider*.001,
+				 vertex_interpolation,
+				 compute_cumulated_costs, // We use our functions rather...
+				 cumulated_cost_of);      // ... than the default ones.
+    if(position) 
+      cv::circle(image, frame(*position), 7, cv::Scalar(000, 200, 200),  3); // Outlined circle.
     
     cv::imshow("image", image);
     keycode = cv::waitKey(50) & 0xFF;
