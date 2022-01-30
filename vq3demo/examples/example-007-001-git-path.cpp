@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <vq3.hpp>
 #include <vq3demo.hpp>
+#include <optional>
 
 /*
   git means "Graph Induced Topology". It constists in using an
@@ -21,8 +22,8 @@ using vlayer_0 = demo2d::Point;                            // The graph nodes ar
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
 using vertex   = vlayer_1;
 
-//                                                        ## Edge properties :
-using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
+//                                                                  ## Edge properties :
+using elayer_0 = vq3::decorator::cost<void, std::optional<double>>; // Edge cost.
 using edge     = elayer_0;
 
 using graph = vq3::graph<vertex, edge>;

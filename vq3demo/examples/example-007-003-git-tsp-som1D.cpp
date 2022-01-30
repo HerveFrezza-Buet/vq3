@@ -1,6 +1,7 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <optional>
 
 #include <opencv2/opencv.hpp>
 #include <vq3.hpp>
@@ -29,9 +30,9 @@ namespace aux { // This contains the definition for the auxiliary graph.
   using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
   using vertex   = vlayer_1;
   
-  //                                                        ## Edge properties :
-  using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
-  using elayer_1 = vq3::decorator::tagged<elayer_0>;        // We need a tag for CHL.
+  //                                                                  ## Edge properties :
+  using elayer_0 = vq3::decorator::cost<void, std::optional<double>>; // Edge cost.
+  using elayer_1 = vq3::decorator::tagged<elayer_0>;                  // We need a tag for CHL.
   using edge     = elayer_1;
   
   

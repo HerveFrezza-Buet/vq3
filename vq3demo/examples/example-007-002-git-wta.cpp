@@ -1,6 +1,7 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <optional>
 
 #include <opencv2/opencv.hpp>
 #include <vq3.hpp>
@@ -31,9 +32,9 @@ namespace aux {
   using vlayer_2 = vq3::demo::decorator::colored<vlayer_1>;  // We add a color to the vertices.
   using vertex   = vlayer_2;
   
-  //                                                        ## Edge properties :
-  using elayer_0 = vq3::decorator::optional_cost<void>;     // Edge cost.
-  using elayer_1 = vq3::decorator::tagged<elayer_0>;        // We need a tag for CHL.
+  //                                                                  ## Edge properties :
+  using elayer_0 = vq3::decorator::cost<void, std::optional<double>>; // Edge cost.
+  using elayer_1 = vq3::decorator::tagged<elayer_0>;                  // We need a tag for CHL.
   using edge     = elayer_1;
   
   
