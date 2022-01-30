@@ -791,6 +791,23 @@ namespace vq3 {
     }
 
 
+    namespace travel_defaults {
+      /**
+	 Costs are accumulated from dest (where accumulation is 0) to
+	 start (where it is maximal). This function is supposed to
+	 store at each vertex the accumulation value. The default
+	 function, here, does nothing since with shortest path
+	 algorithms, accumulation of costs is already computed.
+      */
+      template<typename REF_VERTEX>
+      void compute_cumulated_costs(REF_VERTEX start, REF_VERTEX dest) const {}
+	
+      /**
+       * This return the cumulated cost at this vertex.
+       */
+      template<typename REF_VERTEX>
+      double cumulated_cost_of(REF_VERTEX ref) const {return (*ref)().vq3_shortest_path.cost;}
+    }
 
     
 
@@ -802,10 +819,14 @@ namespace vq3 {
      * @param start, dest The extremities of the path
      * @param lambda 0 means start, 1 means dest, inbetween value leads to an interpolation.
      * @param interpolate A function such as interpolate(ref_v1, ref_v2, lambda) returnes something inbetween ref_v1 (lambda = 0) and ref_v2 (lambda = 1). If ref_v1 is nullptr, the result corresponds to ref_v2, whatever lambda. The same stands is ref_v2 is nullptr.
+     * @param compute_cumulated_costs See vq3::path::travel_defaults::compute_cumulated_costs.
+     * @param cumulated_cost_of See vq3::path::travel_defaults::cumulated_cost_of.
      * @return An interpolated value. It is optional, since the path may not extist.
      */
-    template<typename REF_VERTEX, typename INTERPOLATE>
-    auto travel(const REF_VERTEX& start, const REF_VERTEX& dest, double lambda, const INTERPOLATE& interpolate) -> std::optional<decltype(interpolate(start, nullptr, 0))> {
+    template<typename REF_VERTEX, typename INTERPOLATE,
+	     typename COMPUTE_ACCUM, typename ACCUM_OF>
+    auto travel(REF_VERTEX start, REF_VERTEX dest, double lambda, const INTERPOLATE& interpolate,
+		const COMPUTE_ACCUM& compute_cumulated_costs, const ACCUM_OF& cumulated_cost_of) -> std::optional<decltype(interpolate(start, nullptr, 0))> {
       if(start == dest)
 	return interpolate(start, nullptr, 0);
 
@@ -818,17 +839,19 @@ namespace vq3 {
       if(l == 0)
 	return interpolate(dest, nullptr, 0);
 
-      auto prev_cost    = (*start)().vq3_shortest_path.cost;
+      compute_cumulated_costs(start, end);
+
+      auto prev_cost    = cumulated_cost_of(start);
       auto to_dest_cost = l * prev_cost;
       REF_VERTEX prev   = start;
       auto it           = begin(start);
       auto cur          = *(++it);
-      auto cur_cost     = (*cur)().vq3_shortest_path.cost;
+      auto cur_cost     = cumulated_cost_of(cur);
       while(cur_cost > to_dest_cost) {
 	prev      = cur;
 	prev_cost = cur_cost;
 	cur       = *(++it);
-	cur_cost  = (*cur)().vq3_shortest_path.cost;
+	cur_cost  = cumulated_cost_of(cur);
       }
       
       double lbd = .5;

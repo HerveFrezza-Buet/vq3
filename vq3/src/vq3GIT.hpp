@@ -48,6 +48,16 @@ namespace vq3 {
        * This computes the shortest path from a to b. Int is fake here, it should be graph_type::ref_vertex. If a is nullptr, all distances to b are computed at each vertex.
        */ 
       void shortest_path(int a,  int b) const;
+
+      /**
+       * Int is fake here, see vq3::path::travel_defaults::Traits.
+       */
+      void compute_cumulated_costs(int start, int dest) const {}
+	
+      /**
+       * Int is fake here, see vq3::path::travel_defaults::Traits.
+       */
+      double cumulated_cost_of(int ref_vertex) const {}
     };
   }
   
@@ -59,7 +69,9 @@ namespace vq3 {
 	       typename VAL_DIST,
 	       typename GRAPH_DIST,
 	       typename INTERPOLATE,
-	       typename SHORTEST_PATH>
+	       typename SHORTEST_PATH,
+	       typename COMPUTE_ACCUM,
+	       typename ACCUM_OF>
       struct Traits {
 	using value_type = VALUE;
 	using graph_type = GRAPH;
@@ -68,6 +80,8 @@ namespace vq3 {
 	std::function<double (const typename graph_type::vertex_value_type&, const value_type&)> D_func;
 	std::function<value_type (const value_type&, const value_type&, double)>                 i_func;
 	std::function<void (GRAPH&, typename GRAPH::ref_vertex, typename GRAPH::ref_vertex)>     sp_func;
+	std::function<void (typename GRAPH::ref_vertex, typename GRAPH::ref_vertex)>             ca_func;
+	std::function<double (typename GRAPH::ref_vertex)>                                       ao_func;
 
 	double d(const value_type& a, const value_type& b) const  {return d_func(a, b);}
 	
@@ -83,8 +97,10 @@ namespace vq3 {
 	       const VAL_DIST& d,
 	       const GRAPH_DIST& D,
 	       const INTERPOLATE& i,
-	       const SHORTEST_PATH& sp)
-	  : g(g), d_func(d), D_func(D), i_func(i), sp_func(sp) {}
+	       const SHORTEST_PATH& sp,
+	       const COMPUTE_ACCUM& ca,
+	       const ACCUM_OF& ao)
+	  : g(g), d_func(d), D_func(D), i_func(i), sp_func(sp), ca_func(ca), ao_func(ao) {}
 	Traits()                         = delete;
 	Traits(const Traits&)            = default;
 	Traits& operator=(const Traits&) = delete;
@@ -95,14 +111,22 @@ namespace vq3 {
 	       typename VAL_DIST,
 	       typename GRAPH_DIST,
 	       typename INTERPOLATE,
-	       typename SHORTEST_PATH>
-      auto traits(GRAPH& g, const VAL_DIST& d, const GRAPH_DIST& D, const INTERPOLATE& i, const SHORTEST_PATH& sp) {
-	return Traits<VALUE, GRAPH, VAL_DIST, GRAPH_DIST, INTERPOLATE, SHORTEST_PATH>(g, d, D, i, sp);
+	       typename SHORTEST_PATH,
+	       typename COMPUTE_ACCUM,
+	       typename ACCUM_OF>
+      auto traits(GRAPH& g,
+		  const VAL_DIST& d,
+		  const GRAPH_DIST& D,
+		  const INTERPOLATE& i,
+		  const SHORTEST_PATH& sp,
+		  const COMPUTE_ACCUM& ca,
+		  const ACCUM_OF& ao) {
+	return Traits<VALUE, GRAPH, VAL_DIST, GRAPH_DIST, INTERPOLATE, SHORTEST_PATH, COMPUTE_ACCUM, ACCUM_OF>(g, d, D, i, sp, ca, ao);
       }
 
       /**
        * This is intended to be used in non executed code. Typically:
-       * @code{.cpp} using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, D2, interpolate, shortest_path)); @endcode
+       * @code{.cpp} using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d2, D2, interpolate, shortest_path, compute_accum, accum_of)); @endcode
        */
       template<typename VALUE,
 	       typename GRAPH,
@@ -110,9 +134,14 @@ namespace vq3 {
 	       typename GRAPH_DIST,
 	       typename INTERPOLATE,
 	       typename SHORTEST_PATH>
-      auto traits_val(const VAL_DIST& d, const GRAPH_DIST& D, const INTERPOLATE& i, const SHORTEST_PATH& sp) {
+      auto traits_val(const VAL_DIST& d,
+		      const GRAPH_DIST& D,
+		      const INTERPOLATE& i,
+		      const SHORTEST_PATH& sp,
+		      const COMPUTE_ACCUM& ca,
+		      const ACCUM_OF& ao) {
 	GRAPH g;
-	return Traits<VALUE, GRAPH, VAL_DIST, GRAPH_DIST, INTERPOLATE, SHORTEST_PATH>(g, d, D, i, sp);
+	return Traits<VALUE, GRAPH, VAL_DIST, GRAPH_DIST, INTERPOLATE, SHORTEST_PATH, COMPUTE_ACCUM, ACCUM_OF>(g, d, D, i, sp, ca, ao);
       }
 
       template<typename GIT_TRAITS> class Value;
@@ -361,7 +390,8 @@ namespace vq3 {
 	  if(auto val = vq3::path::travel(wK, xi.closest, lambda,
 					  [&w](const typename GIT_TRAITS::graph_type::ref_vertex& a, const typename GIT_TRAITS::graph_type::ref_vertex& b, double lambda){
 					    return w.traits.interpolate((*a)().vq3_value, (*b)().vq3_value, lambda);
-					  }); val)
+					  },
+					  w.traits.ca_func, w.traits.ao_func); val)
 	    return *val;
 	  else
 	    return w.value; // This should never happen...
