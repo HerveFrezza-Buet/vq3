@@ -1,6 +1,7 @@
 #include <vq3.hpp>
 #include <vq3demo.hpp>
 #include <opencv2/opencv.hpp>
+#include <optional>
 #include <algorithm>
 #include <vector>
 #include <iterator>
@@ -21,14 +22,15 @@ using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informa
 using vlayer_2 = vq3::decorator::tagged<vlayer_1>;         // We will tag extermities of the shortest path for display.
 using vertex   = vlayer_2;
 
-// Here, each edge hosts its cost value.  It is the optional value
-// (not mandatory) so that it is not recomputed once it has been
+// Here, each edge hosts its cost value.  It is the optional 
+// value here, so that it is not recomputed once it has been
 // calculated first.
-//                                                        ## Node properties :
-using elayer_0 = vq3::decorator::efficiency<void>;        // We consider only efficient edges for paths.
-using elayer_1 = vq3::decorator::optional_cost<elayer_0>; // Edge cost.
-using elayer_2 = vq3::decorator::tagged<elayer_1>;        // We will tag edges belonging to a shortest path for display.
-using edge     = elayer_2;
+//                                                           ## Node properties :
+using cost_type = std::optional<double>;                     // The edge cost is a double, that may not be computed yet.
+using elayer_0  = vq3::decorator::efficiency<void>;          // We consider only efficient edges for paths.
+using elayer_1  = vq3::decorator::cost<elayer_0, cost_type>; // Edge cost.
+using elayer_2  = vq3::decorator::tagged<elayer_1>;          // We will tag edges belonging to a shortest path for display.
+using edge      = elayer_2;
 
 
 using graph   = vq3::graph<vertex, edge>;

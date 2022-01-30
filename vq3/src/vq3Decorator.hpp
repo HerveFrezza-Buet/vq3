@@ -31,7 +31,6 @@
 
 #include <iostream>
 #include <type_traits>
-#include <optional>
 #include <string>
 #include <atomic>
 
@@ -338,98 +337,49 @@ namespace vq3 {
     /* #      # */
     /* ######## */
     
-    template<typename MOTHER, typename KIND> 
+    template<typename MOTHER, typename COST_TYPE, typename KIND> 
     struct Cost : public MOTHER {
       using decorated_type = typename MOTHER::decorated_type;
-      double vq3_cost = 0;
+      COST_TYPE vq3_cost;
       Cost() = default;
       Cost(const Cost&) = default;
-      Cost(const decorated_type& val) : MOTHER(val), vq3_cost(0) {}
+      Cost(const decorated_type& val) : MOTHER(val), vq3_cost() {}
       Cost& operator=(const decorated_type& val) {this->vq3_value = val;}
     };
     
     // When we decorate a non decorated value.
-    template<typename MOTHER> 
-    struct Cost<MOTHER, not_decorated> {
+    template<typename MOTHER, typename COST_TYPE> 
+    struct Cost<MOTHER, COST_TYPE, not_decorated> {
       using decorated_type = MOTHER;
       MOTHER vq3_value;
-      double vq3_cost = 0;
+      COST_TYPE vq3_cost;
       Cost() = default;
       Cost(const Cost&) = default;
-      Cost(const decorated_type& val) : vq3_value(val), vq3_cost(0) {}
+      Cost(const decorated_type& val) : vq3_value(val), vq3_cost() {}
       Cost& operator=(const decorated_type& val) {vq3_value = val;}
     };
     
     // When we decorate a decorated type with no value.
-    template<typename MOTHER> 
-    struct Cost<MOTHER, unvalued_decoration> : public MOTHER {
+    template<typename MOTHER, typename COST_TYPE> 
+    struct Cost<MOTHER, COST_TYPE, unvalued_decoration> : public MOTHER {
       using decorated_type = MOTHER;
-      double vq3_cost = 0;
-      Cost() : MOTHER(), vq3_cost(0) {}
+      COST_TYPE vq3_cost;
+      Cost() : MOTHER(), vq3_cost() {}
       Cost(const Cost&) = default;
     };
     
     // When we decorate void.
-    template<> 
-    struct Cost<void, not_decorated> {
+    template<typename COST_TYPE> 
+    struct Cost<void, COST_TYPE, not_decorated> {
       using decorated_type = void;
-      double vq3_cost = 0;
-      Cost() : vq3_cost(0) {}
+      COST_TYPE vq3_cost;
+      Cost() : vq3_cost() {}
       Cost(const Cost&) = default;
     };
     
-    template<typename MOTHER>
-    using cost = Cost<MOTHER, typename decoration<MOTHER>::value_type>;
-    
-    
-    /* ################# */
-    /* #               # */
-    /* # Optional cost # */
-    /* #               # */
-    /* ################# */
-    
-    template<typename MOTHER, typename KIND> 
-    struct OptionalCost : public MOTHER {
-      using decorated_type = typename MOTHER::decorated_type;
-      std::optional<double> vq3_cost;
-      OptionalCost() = default;
-      OptionalCost(const OptionalCost&) = default;
-      OptionalCost(const decorated_type& val) : MOTHER(val), vq3_cost(0) {}
-      OptionalCost& operator=(const decorated_type& val) {this->vq3_value = val;}
-    };
-    
-    // When we decorate a non decorated value.
-    template<typename MOTHER> 
-    struct OptionalCost<MOTHER, not_decorated> {
-      using decorated_type = MOTHER;
-      MOTHER vq3_value;
-      std::optional<double> vq3_cost;
-      OptionalCost() = default;
-      OptionalCost(const OptionalCost&) = default;
-      OptionalCost(const decorated_type& val) : vq3_value(val), vq3_cost() {}
-      OptionalCost& operator=(const decorated_type& val) {vq3_value = val;}
-    };
-    
-    // When we decorate a decorated type with no value.
-    template<typename MOTHER> 
-    struct OptionalCost<MOTHER, unvalued_decoration> : public MOTHER {
-      using decorated_type = MOTHER;
-      std::optional<double> vq3_cost;
-      OptionalCost() : MOTHER(), vq3_cost() {}
-      OptionalCost(const OptionalCost&) = default;
-    };
-    
-    // When we decorate void.
-    template<> 
-    struct OptionalCost<void, not_decorated> {
-      using decorated_type = void;
-      std::optional<double> vq3_cost;
-      OptionalCost() : vq3_cost() {}
-      OptionalCost(const OptionalCost&) = default;
-    };
-    
-    template<typename MOTHER>
-    using optional_cost = OptionalCost<MOTHER, typename decoration<MOTHER>::value_type>;
+    template<typename MOTHER, typename COST_TYPE>
+    using cost = Cost<MOTHER, COST_TYPE, typename decoration<MOTHER>::value_type>;
+  
     
     /* ############ */
     /* #          # */

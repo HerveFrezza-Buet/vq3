@@ -69,9 +69,6 @@ using graph   = vq3::graph<vertex, edge>;
 // compare actual vertex values with points.
 double d2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
-
-
-
 // Main
 //
 //////////////
@@ -174,7 +171,7 @@ int main(int argc, char* argv[]) {
 
   // Let us apply dijkstra and a* to the graphs, with similar nodes.
   auto source_locus             = demo2d::Point(0,   1);
-  auto destination_locus        = demo2d::Point(-.3, -.3);
+  auto destination_locus        = demo2d::Point(-.1, -.3);
   auto source_1                 = vq3::utils::closest(g1, source_locus - shift, d2);
   auto source_2                 = vq3::utils::closest(g2, source_locus + shift, d2);
   auto destination_1            = vq3::utils::closest(g1, destination_locus - shift, d2);
