@@ -146,7 +146,9 @@ int main(int argc, char* argv[]) {
   // but living in a world where the distances are graph-related (or
   // graph-induced).
   
-  auto traits = vq3::topology::gi::traits<sample>(g, d, D, interpolate, shortest_path);   // This gathers all the required definitions.
+  auto traits = vq3::topology::gi::traits<sample>(g, d, D, interpolate, shortest_path, // This gathers all the required definitions.
+						  vq3::path::travel_defaults::compute_cumulated_costs<graph::ref_vertex>,
+						  vq3::path::travel_defaults::cumulated_cost_of<graph::ref_vertex>);
   auto X      = vq3::topology::gi::value(traits, udata.start);                            // X is start, but topology is no more Eucldian, it is graph-induced.
   auto Y      = vq3::topology::gi::value(traits, udata.end);                              // The same for Y and end.
 

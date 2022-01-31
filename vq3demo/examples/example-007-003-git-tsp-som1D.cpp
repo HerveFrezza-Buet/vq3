@@ -72,7 +72,9 @@ namespace aux { // This contains the definition for the auxiliary graph.
   // This is the traits type for building up values related to the
   // support graph. The function used inside decltype(...) is only
   // usefull (and very convenient) for this "traits" type definition.
-  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d, D, interpolate, shortest_path));
+  using traits = decltype(vq3::topology::gi::traits_val<sample, graph>(d, D, interpolate, shortest_path,
+								       vq3::path::travel_defaults::compute_cumulated_costs<graph::ref_vertex>,
+								       vq3::path::travel_defaults::cumulated_cost_of<graph::ref_vertex>));
 }
 
 namespace som { // This namespace defines the SOM graph
@@ -179,7 +181,9 @@ int main(int argc, char* argv[]) {
 
   som::graph g_som;
 
-  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d, aux::D, aux::interpolate, aux::shortest_path);
+  auto traits = vq3::topology::gi::traits<aux::sample>(g_aux, aux::d, aux::D, aux::interpolate, aux::shortest_path,
+						       vq3::path::travel_defaults::compute_cumulated_costs<aux::graph::ref_vertex>,
+						       vq3::path::travel_defaults::cumulated_cost_of<aux::graph::ref_vertex>);
 
   // This tosses a random value in the distribution bounding box.
     
