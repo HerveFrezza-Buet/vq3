@@ -271,14 +271,6 @@ namespace vq3 {
 		  << "w* = " << (*(w.closest))().vq3_value << ", xi* = " << (*(xi.closest))().vq3_value << std::endl;
 #endif
 
-	// If no path exists to reach xi, we do not modify w.
-	if((*(w.closest))().vq3_shortest_path.to_src == nullptr) {
-#ifdef vq3DEBUG_GIT
-	  std::cout << "No path" << std::endl;
-#endif
-	  return w.value;
-	}
-
 
 	// If both xi and w have the same closest vertex, we move
 	// directly.
@@ -289,6 +281,16 @@ namespace vq3 {
 	  return w.traits.interpolate(w.value, xi.value, alpha);
 	}
 
+	// If no path exists to reach xi, we do not modify w.
+	if((*(w.closest))().vq3_shortest_path.to_src == nullptr) {
+	  // Ok, since we know that there are two nodes. So no parent
+	  // means no path.
+#ifdef vq3DEBUG_GIT
+	  std::cout << "No path" << std::endl;
+#endif
+	  return w.value;
+	}
+	
 	// The path as at least two vertices...
 
 	// We have to determine the two anchors to the graph, one for

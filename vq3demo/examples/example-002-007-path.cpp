@@ -20,7 +20,7 @@
 //                                                               ## Node properties :
 using vlayer_0 = demo2d::Point;                                  // prototypes are 2D points (this is the "user defined" value).
 using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>;       // This holds informations built by dijkstra.
-using vlayer_2 = vq3::decorator::path::length<vlayer_1, double>; // This holds accumulation along paths travels (needed if non-default behavior is needed).
+using vlayer_2 = vq3::decorator::path::length<vlayer_1, double>; // This holds accumulation along paths travels (needed if non-default behavior is implemented).
 using vlayer_3 = vq3::decorator::tagged<vlayer_2>;               // We will tag extermities of the shortest path for display.
 using vlayer_4 = vq3::decorator::efficiency<vlayer_3>;           // We consider only efficient edges for paths.
 using vertex   = vlayer_4;

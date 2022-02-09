@@ -17,16 +17,17 @@ using sample = demo2d::Point;
 
 // Let us define the auxiliary graph.
 
-//                                                         ## Node properties :
-using vlayer_0 = demo2d::Point;                            // The graph nodes are points.
-using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>; // This holds informations built by dijkstra.
-using vertex   = vlayer_1;
+//                                                               ## Node properties :
+using vlayer_0 = demo2d::Point;                                  // The graph nodes are points.
+using vlayer_1 = vq3::decorator::path::shortest<vlayer_0>;       // This holds informations built by dijkstra.
+using vlayer_2 = vq3::decorator::path::length<vlayer_1, double>; // This holds accumulation along paths travels (needed if non-default behavior is implemented).
+using vertex   = vlayer_2;
 
 //                                                                  ## Edge properties :
 using elayer_0 = vq3::decorator::cost<void, std::optional<double>>; // Edge cost.
 using edge     = elayer_0;
 
-using graph = vq3::graph<vertex, edge>;
+using graph  = vq3::graph<vertex,  edge>;
 
 
 // Let us define some functions in order to set up dijkstra
@@ -60,6 +61,36 @@ void shortest_path(graph& g, graph::ref_vertex start, graph::ref_vertex dest) {
 				    return demo2d::d((*start)().vq3_value, (*ref_v)().vq3_value); 
 				  });
 }
+
+// We will implement 2 ways of traveling. The first (the default one),
+// is proportional to the cost of edges, which is their length here
+// (see edge_cost). The second will consider all lengths with a value
+// 1, even if the shortest path is calculated with edge_cost (see
+// shortest_path). To implement this interpolation of paths, we will
+// need to use non default compute_cumulated_costs and
+// cumulated_cost_of functions. These are implemented hereafter.
+
+void compute_cumulated_costs(graph::ref_vertex start, graph::ref_vertex dest) {
+  // We can iterate from start to dest, but accumulation is to be made
+  // from dest to start.. this is why we stack the vertices.
+  std::stack<graph::ref_vertex> visited;
+  auto it  = vq3::path::begin(start);
+  auto end = vq3::path::end<graph::ref_vertex>();
+  while(it != end) visited.push(*it++);
+  double length = 0;
+  while(!visited.empty()) {
+    (*(visited.top()))().vq3_length = length++;
+    visited.pop();
+  }
+}
+	
+double cumulated_cost_of(graph::ref_vertex ref_v) {
+  // We only ave to return the lengths we have accumulated at that
+  // vertex. Here, we have used the vq3::decorator::path::length
+  // decoration to hold that value.
+  return (*ref_v)().vq3_length;
+}
+
 
 // We now are ready to start actual computation....
 
@@ -96,19 +127,31 @@ public:
 
 // Ok, now we start.
 
-int main(int argc, char* argv[]) {
-  
-  graph g;
-
+void build(graph& g) {
   // Let us build a very simple auxiliary graph.
-  auto V1 = g += demo2d::Point(-.5, -.5);
-  auto V2 = g += demo2d::Point( .5, -.5);
-  auto V3 = g += demo2d::Point( .5,  .5);
-  auto V4 = g += demo2d::Point(-.5,  .5);
+  auto V1 = g += demo2d::Point(-.5, -.50);
+  auto V2 = g += demo2d::Point( .5, -.50);
+  auto V3 = g += demo2d::Point( .5, -.25);
+  auto V4 = g += demo2d::Point( .5,  .00);
+  auto V5 = g += demo2d::Point( .5,  .25);
+  auto V6 = g += demo2d::Point( .5,  .50);
+  auto V7 = g += demo2d::Point(-.5,  .5);
 
   g.connect(V1, V2);
   g.connect(V2, V3);
   g.connect(V3, V4);
+  g.connect(V4, V5);
+  g.connect(V5, V6);
+  g.connect(V6, V7);
+}
+
+int main(int argc, char* argv[]) {
+  
+  graph g;
+  graph g_;
+
+  build(g );
+  build(g_);
 
 
   // Let us set up a display.
@@ -149,10 +192,16 @@ int main(int argc, char* argv[]) {
   auto traits = vq3::topology::gi::traits<sample>(g, d, D, interpolate, shortest_path, // This gathers all the required definitions.
 						  vq3::path::travel_defaults::compute_cumulated_costs<graph::ref_vertex>,
 						  vq3::path::travel_defaults::cumulated_cost_of<graph::ref_vertex>);
-  auto X      = vq3::topology::gi::value(traits, udata.start);                            // X is start, but topology is no more Eucldian, it is graph-induced.
-  auto Y      = vq3::topology::gi::value(traits, udata.end);                              // The same for Y and end.
-
+  auto X       = vq3::topology::gi::value(traits, udata.start);                            // X is start, but topology is no more Eucldian, it is graph-induced.
+  auto Y       = vq3::topology::gi::value(traits, udata.end);                              // The same for Y and end.
   // start == X(), end == Y()   The () operator allows to retrieve the value.
+  
+  // Let us do the same, for non default interpolation. We index by _ the related names.
+  auto traits_ = vq3::topology::gi::traits<sample>(g_, d, D, interpolate, shortest_path, 
+						  compute_cumulated_costs,
+						  cumulated_cost_of);
+  auto X_      = vq3::topology::gi::value(traits_, udata.start);                        
+  auto Y_      = vq3::topology::gi::value(traits_, udata.end);                           
 
   // This is the loop.
   
@@ -170,13 +219,19 @@ int main(int argc, char* argv[]) {
   
   int keycode = 0;
   while(keycode != 27) {
-
-    if(udata.start_has_changed()) X = udata.start; // This re-initialize X/Y from another value...
-    if(udata.end_has_changed())   Y = udata.end;   // ... this triggers computation of closest node.
+    // This re-initialize X/Y from another value...
+    // ... this triggers computation of closest node.
+    if(udata.start_has_changed()) {X = udata.start; X_ = udata.start;}
+    if(udata.end_has_changed())   {Y = udata.end;   Y_ = udata.end;  }
+    
+    double lambda = slider*.001;   // lambda (in [0, 1]) is an interpolation coefficient.
     
     auto T = X;                    // T is another value with graph-induced topology.
-    double lambda = slider*.001;   // lambda (in [0, 1]) is an interpolation coefficient.
     T += lambda*(Y - T);           // T <- (1 - lambda) * T + lambda * Y
+
+    // // We do the same for *_ stuff.
+    auto T_ = X_;             
+    T_ += lambda*(Y_ - T_);       
 
     // T is updated as in usual Kohonen rule. When lambda varies from
     // 0 to 1 (use the slider), T goes from X (initial T value) to Y,
@@ -184,7 +239,8 @@ int main(int argc, char* argv[]) {
     // follows the graph, rather than following a straight line.
     
     image = cv::Scalar(255, 255, 255);
-    cv::circle(image, frame(T()), 11, cv::Scalar(0, 200, 200), -1); 
+    cv::circle(image, frame(T() ), 11, cv::Scalar(0, 200, 200), -1); // Filled
+    cv::circle(image, frame(T_()), 11, cv::Scalar(0, 175, 175),  3); // Outlined
     
     g.foreach_edge(draw_edge);
     g.foreach_vertex(draw_vertex);
