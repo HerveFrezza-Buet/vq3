@@ -93,6 +93,14 @@ namespace vq3 {
 	  sp_func(g, a, b);
 	}
 
+	void compute_cumulated_costs(typename GRAPH::ref_vertex a, typename GRAPH::ref_vertex b) const {
+	  return ca_func(a, b);
+	}
+
+	double cumulated_cost_of(typename GRAPH::ref_vertex a) const {
+	  return ao_func(a);
+	}
+
 	Traits(graph_type& g,
 	       const VAL_DIST& d,
 	       const GRAPH_DIST& D,
@@ -262,11 +270,9 @@ namespace vq3 {
 		  << "w = " << w.value << ", xi = " << xi.value << std::endl
 		  << "w* = " << (*(w.closest))().vq3_value << ", xi* = " << (*(xi.closest))().vq3_value << std::endl;
 #endif
-	
-	auto l_graph  = (*(w.closest))().vq3_shortest_path.cost;
 
 	// If no path exists to reach xi, we do not modify w.
-	if(l_graph == std::numeric_limits<double>::max()) {
+	if((*(w.closest))().vq3_shortest_path.to_src == nullptr) {
 #ifdef vq3DEBUG_GIT
 	  std::cout << "No path" << std::endl;
 #endif
@@ -366,12 +372,14 @@ namespace vq3 {
 	double lx = 0;
 	if(xKisB) lx = w.traits.D((*xK)(), xi.value);
 	else      lx = xi.dist_to_closest;
+	
+	w.traits.compute_cumulated_costs(wK, xK);
+	double l_path = w.traits.cumulated_cost_of(wK) -  w.traits.cumulated_cost_of(xK);
+	// Cumulated costs are computed here. We pass an empty
+	// function to travel since it si done.
 
-	double l_path = (*wK)().vq3_shortest_path.cost;
-	double lp     = l_path;
-	if(xKisB) lp -= (*xK)().vq3_shortest_path.cost;
 
-	double l = lw + lp + lx;
+	double l = lw + l_path + lx;
 	auto alpha_l = alpha * l;
 	
 	l = lw;
@@ -381,27 +389,28 @@ namespace vq3 {
 	  return w.traits.interpolate(w.value, (*wK)().vq3_value, lambda);
 	}
 	
-	l += lp;
+	l += l_path;
 	if(alpha_l <= l) {
 	  double lambda = 0;
-	  if(lp > 0) {
-	    lambda = (alpha_l - lw)/lp;
-	    if(xKisB) lambda *= lp/l_path;
-	  }
+	  if(l_path > 0) lambda = (alpha_l - lw)/l_path;
 	  
-	  if(auto val = vq3::path::travel(wK, xi.closest, lambda,
+	  if(auto val = vq3::path::travel(wK, xK, lambda,
 					  [&w](const typename GIT_TRAITS::graph_type::ref_vertex& a, const typename GIT_TRAITS::graph_type::ref_vertex& b, double lambda){
 					    return w.traits.interpolate((*a)().vq3_value, (*b)().vq3_value, lambda);
 					  },
-					  w.traits.ca_func, w.traits.ao_func); val)
+					  [](auto, auto) {}, // Accumulated cost is already computed.
+					  w.traits.ao_func);
+	     val)
 	    return *val;
 	  else
 	    return w.value; // This should never happen...
 	}
-	
+
+	double ll = l;
+	l += lx;
 	double lambda = 0;
 	if(lx > 0)
-	  lambda = (alpha_l - l)/lx;
+	  lambda = (alpha_l - ll)/lx;
 	return w.traits.interpolate((*xK)().vq3_value, xi.value, lambda);
       }
 

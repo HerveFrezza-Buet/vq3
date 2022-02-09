@@ -842,7 +842,7 @@ namespace vq3 {
 
     namespace travel_defaults {
       /**
-	 Costs are accumulated from dest (where accumulation is 0) to
+	 Costs are accumulated from dest (where accumulation is lower) to
 	 start (where it is maximal). This function is supposed to
 	 store at each vertex the accumulation value. The default
 	 function, here, does nothing since with shortest path
@@ -863,8 +863,11 @@ namespace vq3 {
     /**
      * Computes a position along the path. Some shortest path
      * algorithm allowing to compute the path from start to dest has
-     * to have been performed beforehand. The vertex dest is the one with
-     * a 0 cummulated cost.
+     * to have been performed beforehand. The vertex dest is the one
+     * with a 0 cummulated cost. The function also for a section of
+     * some shortest path, i.e. dest may not be the 0 cumulated cost
+     * node, beut a previous node in the path. The only requirement is
+     * that start comes before dest.
      * @param start, dest The extremities of the path
      * @param lambda 0 means start, 1 means dest, inbetween value leads to an interpolation.
      * @param interpolate A function such as interpolate(ref_v1, ref_v2, lambda) returnes something inbetween ref_v1 (lambda = 0) and ref_v2 (lambda = 1). If ref_v1 is nullptr, the result corresponds to ref_v2, whatever lambda. The same stands is ref_v2 is nullptr.
@@ -880,7 +883,7 @@ namespace vq3 {
 	return interpolate(start, nullptr, 0);
 
       if((*start)().vq3_shortest_path.state == status::unprocessed)
-	return std::optional<decltype(interpolate(start, nullptr, 0))>();
+	return std::nullopt;
       
       double l = 1.0 - std::max(0.0, std::min(lambda, 1.0));
       if(l == 1)
@@ -889,18 +892,19 @@ namespace vq3 {
 	return interpolate(dest, nullptr, 0);
 
       compute_cumulated_costs(start, dest);
+      auto dest_cost = cumulated_cost_of(dest);
 
-      auto prev_cost    = cumulated_cost_of(start);
+      auto prev_cost    = cumulated_cost_of(start) - dest_cost;
       auto to_dest_cost = l * prev_cost;
       REF_VERTEX prev   = start;
       auto it           = begin(start);
       auto cur          = *(++it);
-      auto cur_cost     = cumulated_cost_of(cur);
+      auto cur_cost     = cumulated_cost_of(cur) - dest_cost;
       while(cur_cost > to_dest_cost) {
 	prev      = cur;
 	prev_cost = cur_cost;
 	cur       = *(++it);
-	cur_cost  = cumulated_cost_of(cur);
+	cur_cost  = cumulated_cost_of(cur) - dest_cost;
       }
       
       double lbd = .5;
