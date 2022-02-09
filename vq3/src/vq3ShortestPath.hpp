@@ -106,15 +106,15 @@ namespace vq3 {
 
     inline std::ostream& operator<<(std::ostream& os, const Info& i) {
       if(i.cost == std::numeric_limits<double>::max())
-	os << "{Inf, ";
+	os << "{cost = Inf, ";
       else
-	os << '{' << i.cost << ", ";
+	os << "{cost  = " << i.cost << ", status = ";
       switch(i.state) {
       case status::done : os << "done"; break;
       case status::processing : os << "processing"; break;
       case status::unprocessed : os << "unprocessed"; break;
       }
-      os << '}';
+      os << ", to_src = " << i.to_src << "}";
       return os;
     }
 

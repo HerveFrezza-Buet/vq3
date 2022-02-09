@@ -75,7 +75,7 @@ void compute_cumulated_costs(graph::ref_vertex start, graph::ref_vertex dest) {
   // from dest to start.. this is why we stack the vertices.
   std::stack<graph::ref_vertex> visited;
   auto it  = vq3::path::begin(start);
-  auto end = vq3::path::end<graph::ref_vertex>();
+  auto end = vq3::path::begin(dest); ++end;
   while(it != end) visited.push(*it++);
   double length = 0;
   while(!visited.empty()) {
