@@ -17,7 +17,7 @@ First, get the files.
 git clone https://github.com/HerveFrezza-Buet/vq3
 ``` 
 
-Then, you can install the two packages as follows. The commands below concern the installation of the vq3 package, the installation of vq3demo is similar. 
+Then, you can install the two packages as follows. The commands below concern the installation of the vq3 package, the installation of vq3demo is similar. You need to have opencv and demo2d installed to build vq3demo. The demo2d package is also available on my github.
 
 ```
 mkdir -p vq3/build
