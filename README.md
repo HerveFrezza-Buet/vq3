@@ -28,3 +28,9 @@ cd ../..
 ```
 
 The documentation is in /usr/share/doc/vq3
+
+# Demos
+
+You can run the examples of the vq3demo package. Some demos realized by vq3demo are also visible on <a href="https://frezza.pages.centralesupelec.fr/hfb-com/vq/vq3.html">my web pages</a>.
+
+
