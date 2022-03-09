@@ -6,7 +6,7 @@ SET(PACKAGE_LICENSE "GPL")
 SET(PROJECT_DESCRIPTION_SUMMARY "Fast VQ")
 
 SET(CMAKE_BUILD_TYPE Release)
-SET(PROJECT_CFLAGS "-std=c++17")
+SET(PROJECT_CFLAGS "-std=c++20")
 
  
 ###################################
