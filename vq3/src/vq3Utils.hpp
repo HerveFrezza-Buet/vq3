@@ -29,6 +29,7 @@
 #include <limits>
 #include <utility>
 #include <vector>
+#include <optional>
 #include <list>
 #include <map>
 #include <stack>
