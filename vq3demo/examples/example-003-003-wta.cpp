@@ -50,30 +50,31 @@ double dist2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v, p);}
 //
 ////////////////
 
-#define NB_SAMPLES          20000
-#define NB_VERTICES           200  // The k of k-means...
-#define MAX_DIST2           1e-10  // If a prototypes changes less that this squared distance, it is considered as constant.
+unsigned int NB_SAMPLES; 
+unsigned int NB_VERTICES;   // The k of k-means...
+#define MAX_DIST2   1e-10  // If a prototypes changes less that this squared distance, it is considered as constant.
 
 
 int main(int argc, char* argv[]) {
   if(argc < 3) {
-    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> nb_threads [i1 | [i2 | ...] ]" << std::endl
+    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> <rectangle|multidim|multidensity> nb_threads [i1 | [i2 | ...] ]" << std::endl
 	      << "    i1 i2 ... : Successive steps where a snaphot is taken. if i1=-1, a snapshot is taken at each step." << std::endl
 	      << "                If snapshots are asked, the last step is recordered systematically." << std::endl;
     return 0;
   }
 
   bool uniform = std::string(argv[1]) == std::string("uniform");
-  unsigned int nb_threads = std::atoi(argv[2]);
+  std::string distrib {argv[2]};
+  unsigned int nb_threads = std::atoi(argv[3]);
 
   std::set<unsigned int> snapshots;
   bool snap_all = false;
 
-  if(argc > 3) {
-    int i = std::atoi(argv[3]);
+  if(argc > 4) {
+    int i = std::atoi(argv[4]);
     if(i < 0) snap_all = true;
     else 
-      for(int arg = 3; arg < argc; ++arg)  
+      for(int arg = 4; arg < argc; ++arg)  
 	snapshots.insert((unsigned int)(std::atoi(argv[arg])));
   }
   
@@ -136,9 +137,46 @@ int main(int argc, char* argv[]) {
   double w3        = .1;
   double h3        = .1;
   auto source      = demo2d::sample::rectangle(w3, h3, i) + p1;
-  
 
-  auto density = rect || bar || crown;
+  auto multidim = rect || bar || crown;
+
+  auto bb = multidim->bbox();
+  auto min_pt = bb.bottom_left();
+  auto max_pt = bb.top_right();
+  auto rectangle = demo2d::sample::rectangle(min_pt, max_pt, i);
+
+  auto f = [](auto pt) {
+    if (pt.x < 0) return -pt.x;
+    if (pt.x < .8) return 1.0;
+    return .2;
+  };
+
+  auto multidensity = demo2d::sample::custom(bb, f);
+  
+  
+  demo2d::sample::density density;
+  
+  
+  if(distrib == "multidim") {
+    density     = multidim;
+    NB_SAMPLES  =    20000;
+    NB_VERTICES =      200;
+  }
+  else if(distrib == "rectangle") {
+    density     = rectangle;
+    NB_SAMPLES  =    50000;
+    NB_VERTICES =      300;
+  }
+  else if(distrib == "multidensity") {
+    density     = multidensity;
+    NB_SAMPLES  =    50000;
+    NB_VERTICES =      300;
+  } 
+  else {
+    std::cout << distrib << " is not a valid distribution name" << std::endl;
+    ::exit(0);
+  }
+    
   
   // Some initializations
   //
