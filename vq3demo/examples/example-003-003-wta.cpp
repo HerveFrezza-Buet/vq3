@@ -56,7 +56,7 @@ unsigned int NB_VERTICES;   // The k of k-means...
 
 
 int main(int argc, char* argv[]) {
-  if(argc < 3) {
+  if(argc < 4) {
     std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> <rectangle|multidim|multidensity> nb_threads [i1 | [i2 | ...] ]" << std::endl
 	      << "    i1 i2 ... : Successive steps where a snaphot is taken. if i1=-1, a snapshot is taken at each step." << std::endl
 	      << "                If snapshots are asked, the last step is recordered systematically." << std::endl;
