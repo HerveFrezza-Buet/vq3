@@ -56,25 +56,31 @@ unsigned int NB_VERTICES;   // The k of k-means...
 
 
 int main(int argc, char* argv[]) {
-  if(argc < 4) {
-    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> <rectangle|multidim|multidensity> nb_threads [i1 | [i2 | ...] ]" << std::endl
+  if(argc < 5) {
+    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> <rectangle|multidim|multidensity> <constant|resample> nb_threads [i1 | [i2 | ...] ]" << std::endl
 	      << "    i1 i2 ... : Successive steps where a snaphot is taken. if i1=-1, a snapshot is taken at each step." << std::endl
-	      << "                If snapshots are asked, the last step is recordered systematically." << std::endl;
+	      << "                If snapshots are asked, the last step is recordered systematically." << std::endl
+	      << "    uniform|unbalanced : the initialization of prototypes." << std::endl
+	      << "    rectangle, .... : The shape of the distribution." << std::endl
+	      << "    constant|resample : do we re-sample the dataset at each Lloyd iteration ?" << std::endl
+	      << std::endl;
+      
     return 0;
   }
 
   bool uniform = std::string(argv[1]) == std::string("uniform");
   std::string distrib {argv[2]};
-  unsigned int nb_threads = std::atoi(argv[3]);
+  bool resample = std::string(argv[3]) == std::string("resample");
+  unsigned int nb_threads = std::atoi(argv[4]);
 
   std::set<unsigned int> snapshots;
   bool snap_all = false;
 
-  if(argc > 4) {
-    int i = std::atoi(argv[4]);
+  if(argc > 5) {
+    int i = std::atoi(argv[5]);
     if(i < 0) snap_all = true;
     else 
-      for(int arg = 4; arg < argc; ++arg)  
+      for(int arg = 5; arg < argc; ++arg)  
 	snapshots.insert((unsigned int)(std::atoi(argv[arg])));
   }
   
@@ -221,7 +227,13 @@ int main(int argc, char* argv[]) {
     std::cerr << "cannot write \"" << data_filename << "\"." << std::endl;
     return 1;
   }
-  
+
+  if(resample)
+    std::cout << std::endl
+	      << "We are in resample mode, so press ESC" << std::endl
+	      << "to interrupt when you consider the convergence" << std::endl
+	      << "is achieved." << std::endl
+	      << std::endl;
   
   // This is the loop
   //
@@ -243,6 +255,12 @@ int main(int argc, char* argv[]) {
 
     // Vertex update
     ++step;
+
+    if(resample) {
+      S.clear();
+      for(unsigned int i = 0; i < NB_SAMPLES; ++i)
+	*out++ = demo2d::sample::get_one_sample(random_device, density);
+    }
     
     auto t_start = std::chrono::high_resolution_clock::now();
     auto epoch_result = wta.process<epoch_data>(nb_threads,
@@ -285,8 +303,7 @@ int main(int argc, char* argv[]) {
       cv::imwrite(filename(step), image);
     
     cv::imshow("image", image);
-    cv::waitKey(10);
-    
+    if((cv::waitKey(1) & 0xFF) == 27) stop = true;
   }
 
   
