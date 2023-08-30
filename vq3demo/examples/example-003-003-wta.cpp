@@ -49,8 +49,8 @@ double dist2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v, p);}
 // Main
 //
 ////////////////
-#define NB_SAMPLES_PER_M2 2.5e4 // for hexagrid
-#define NB_SAMPLES_COEF 2e4
+#define NB_SAMPLES_COEF 1e4
+#define NB_SAMPLES_PER_M2 NB_SAMPLES_COEF*1.6 // for hexagrid
 unsigned int NB_SAMPLES; 
 unsigned int NB_VERTICES;   // The k of k-means...
 #define MAX_DIST2   1e-10  // If a prototypes changes less that this squared distance, it is considered as constant.
