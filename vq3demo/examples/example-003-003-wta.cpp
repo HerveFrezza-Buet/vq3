@@ -49,7 +49,8 @@ double dist2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v, p);}
 // Main
 //
 ////////////////
-
+#define NB_SAMPLES_PER_M2 2.5e4 // for hexagrid
+#define NB_SAMPLES_COEF 2e4
 unsigned int NB_SAMPLES; 
 unsigned int NB_VERTICES;   // The k of k-means...
 #define MAX_DIST2   1e-10  // If a prototypes changes less that this squared distance, it is considered as constant.
@@ -57,12 +58,15 @@ unsigned int NB_VERTICES;   // The k of k-means...
 
 int main(int argc, char* argv[]) {
   if(argc < 5) {
-    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> <rectangle|multidim|multidensity> <constant|resample> nb_threads [i1 | [i2 | ...] ]" << std::endl
+    std::cout << "Usage : " << argv[0] << " <uniform|unbalanced> <rectangle|multidim|multidensity> <uniform|hexagonal|resample> nb_threads [i1 | [i2 | ...] ]" << std::endl
 	      << "    i1 i2 ... : Successive steps where a snaphot is taken. if i1=-1, a snapshot is taken at each step." << std::endl
 	      << "                If snapshots are asked, the last step is recordered systematically." << std::endl
 	      << "    uniform|unbalanced : the initialization of prototypes." << std::endl
 	      << "    rectangle, .... : The shape of the distribution." << std::endl
-	      << "    constant|resample : do we re-sample the dataset at each Lloyd iteration ?" << std::endl
+	      << "    uniform|hexagrid|resample : " << std::endl
+	      << "      - uniform : samples are taken uniformly." << std::endl
+	      << "      - hexagonal: samples are taken in an hewagonal mesh." << std::endl
+	      << "      - resample: uniform re-sample of the dataset at each Lloyd iteration." << std::endl
 	      << std::endl;
       
     return 0;
@@ -71,6 +75,7 @@ int main(int argc, char* argv[]) {
   bool uniform = std::string(argv[1]) == std::string("uniform");
   std::string distrib {argv[2]};
   bool resample = std::string(argv[3]) == std::string("resample");
+  bool hexagrid = std::string(argv[3]) == std::string("hexagonal");
   unsigned int nb_threads = std::atoi(argv[4]);
 
   std::set<unsigned int> snapshots;
@@ -165,18 +170,18 @@ int main(int argc, char* argv[]) {
   
   if(distrib == "multidim") {
     density     = multidim;
-    NB_SAMPLES  =    20000;
-    NB_VERTICES =      200;
+    NB_SAMPLES  = 2*NB_SAMPLES_COEF;
+    NB_VERTICES = 200;
   }
   else if(distrib == "rectangle") {
     density     = rectangle;
-    NB_SAMPLES  =    50000;
-    NB_VERTICES =      300;
+    NB_SAMPLES  = 5*NB_SAMPLES_COEF;
+    NB_VERTICES = 300;
   }
   else if(distrib == "multidensity") {
     density     = multidensity;
-    NB_SAMPLES  =    50000;
-    NB_VERTICES =      300;
+    NB_SAMPLES  = 5*NB_SAMPLES_COEF;
+    NB_VERTICES = 300;
   } 
   else {
     std::cout << distrib << " is not a valid distribution name" << std::endl;
@@ -192,8 +197,19 @@ int main(int argc, char* argv[]) {
   // to both use and display them.
   std::vector<demo2d::Point> S;
   auto out = std::back_inserter(S);
-  for(unsigned int i = 0; i < NB_SAMPLES; ++i)
-    *out++ = demo2d::sample::get_one_sample(random_device, density);
+
+  if(hexagrid) {
+    auto sampler = demo2d::sample::base_sampler::triangles(random_device, NB_SAMPLES_PER_M2);
+    auto SS = demo2d::sample::sample_set(random_device, sampler, density);
+    std::copy(SS.begin(), SS.end(), out);
+  }
+  else
+    for(unsigned int i = 0; i < NB_SAMPLES; ++i)
+      *out++ = demo2d::sample::get_one_sample(random_device, density);
+
+  std::cout << std::endl
+	    << "Using " << S.size() << " samples." << std::endl
+	    << std::endl;
   
   // Let us generate the graph as random unconnected vertices, taken from the distribution.
   
