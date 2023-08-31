@@ -8,6 +8,7 @@
 #include <chrono>
 #include <set>
 #include <cmath>
+#include <limits>
 
 
 // This example shows how to perform winner-take-all. We will
@@ -21,7 +22,10 @@
 ///////////////
 using sample    = demo2d::Point;
 using prototype = demo2d::Point;
-using vertex    = prototype;
+
+using vlayer_0  = prototype;
+using vlayer_1  = vq3::demo::decorator::colored<vlayer_0>; 
+using vertex    = vlayer_1;
 using graph     = vq3::graph<vertex, void>; 
 
 // This defines the data used during the epochs in order to collect
@@ -43,7 +47,7 @@ using topology_key_type = int;
 
 // This is the distance used by closest-like algorithms. We need to
 // compare actual vertex values with points.
-double dist2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v, p);}
+double dist2(const vertex& v, const demo2d::Point& p) {return demo2d::d2(v.vq3_value, p);}
 
 
 // Main
@@ -114,14 +118,14 @@ int main(int argc, char* argv[]) {
 									 [](const demo2d::Point& pt) {return                        -1;});
   auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
 								       [](const vertex& v1, const vertex& v2) {return true;},  // always draw
-								       [](const vertex& v)   {return                     v;},  // position
+								       [](const vertex& v)   {return           v.vq3_value;},  // position
 								       []()                  {return cv::Scalar(255, 0, 0);},  // color
 								       []()                  {return                     3;}); // thickness
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                true;},  // always draw
-									   [](const vertex& v) {return                   v;},  // position
-									   [](const vertex& v) {return                   3;},  // radius
-									   [](const vertex& v) {return cv::Scalar(0, 0, 0);},  // color
+									   [](const vertex& v) {return         v.vq3_value;},  // position
+									   [](const vertex& v) {return                   5;},  // radius
+									   [](const vertex& v) {return         v.vq3_color;},  // color
 									   [](const vertex& v) {return                  -1;}); // thickness
   
   // Distribution settings
@@ -200,6 +204,7 @@ int main(int argc, char* argv[]) {
   vq3::demo2d::opencv::histogram histo {{-1.5, -1.}, {1.5, -.2}};
   histo.frame_margin = .1;
   histo.title        = "local distortions";
+  demo2d::opencv::colormap::jet cm;
   
   // We need to register the input samples in a vector since we want
   // to both use and display them.
@@ -289,21 +294,38 @@ int main(int argc, char* argv[]) {
     auto t_start = std::chrono::high_resolution_clock::now();
     auto epoch_result = wta.process<epoch_data>(nb_threads,
 						S.begin(), S.end(), 
-						[](const demo2d::Point& s) {return s;}, // Gets the sample from *it.
-						[](vertex& v) -> vertex& {return v;},   // Gets the prototype ***reference*** from the vertex value.
-						dist2);                                 // dist2(prototype, sample).
+						[](const demo2d::Point& s) {return s;},           // Gets the sample from *it.
+						[](vertex& v) -> prototype& {return v.vq3_value;},// Gets the prototype ***reference*** from the vertex value.
+						dist2);                                           // dist2(prototype, sample).
     auto t_end = std::chrono::high_resolution_clock::now();
 
+    auto mean = vq3::stats::mean_std();
     auto hout = histo.output_iterator();
+    auto mout = mean.output_iterator();
+    double dmin = std::numeric_limits<double>::max();
+    double dmax = -1.;
     for(auto& data : epoch_result)
-      if(data.vq3_bmu_accum.nb > 0) 
-	*(hout++) = data.vq3_bmu_accum.value;
+      if(data.vq3_bmu_accum.nb > 0) {
+	double v = data.vq3_bmu_accum.value;
+	*(hout++) = v;
+	*(mout++) = v;
+	if (v < dmin)
+	  dmin = v;
+	if (v > dmax)
+	  dmax = v;
+      }
     histo.set_bins(0., MAX_HISTO, NB_BINS);
     histo.make();
+    cm = {dmin, dmax};
+    histo = cm;
 
+    // Let us color the prototypes.
+    std::size_t idf = 0;
+    for(auto& data : epoch_result)
+      (*(topology(idf++)))().vq3_color = cm(data.vq3_bmu_accum.value);
+      
     
     int duration =  std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
-    std::cout << "Step duration (" << nb_threads << " threads) : " << std::setw(6) << duration << " ms.    \r" << std::flush;
 
     // Let us check the convergence for each vertex.
     stop = true;
@@ -326,7 +348,9 @@ int main(int argc, char* argv[]) {
     g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
     histo.draw(image, frame);
-    histo.vline(image, frame, 2.5, {0., 0., 0.}, 1);
+    auto [m, v] = mean();
+    histo.vline(image, frame, m, {0, 0, 255}, 1);
+    std::cout << nb_threads << " threads, step duration = " << std::setw(4) << duration << " ms, mean = " << std::setw(10) << m << ", stddev = " << std::setw(10) << std::sqrt(v) << "     \r" << std::flush;
 
     if(snap_all)
       cv::imwrite(filename(), image);

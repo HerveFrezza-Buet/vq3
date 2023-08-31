@@ -519,6 +519,7 @@ namespace vq3 {
 	cv::Scalar frame_foreground = {  0,   0,   0};
 	cv::Scalar frame_background = {255, 255, 255};
 	cv::Scalar frame_bar        = {255,  85,  85};
+	std::optional<::demo2d::opencv::colormap::jet> frame_colormap;
 	cv::Scalar frame_sci_bar    = {170,  85,  85};
 	cv::Scalar NT_color         = {  0,   0, 255};
 	cv::Scalar range_color      = {  0,   0,   0};
@@ -532,6 +533,8 @@ namespace vq3 {
 	  : stats::histogram(),
 	  min(min), max(max){
 	}
+	
+	void operator=(const ::demo2d::opencv::colormap::jet& cm) {frame_colormap = cm;}
 	
       private:
 	double y_coef;
@@ -553,6 +556,7 @@ namespace vq3 {
 	double value_of(double bin) {
 	  return bin_min + bin*bin_coef;
 	}
+
 	
 	void draw_bar(cv::Mat& image, const ::demo2d::opencv::Frame& frame, unsigned int bin) {
 
@@ -562,6 +566,8 @@ namespace vq3 {
 	  cv::Scalar color = frame_bar;
 	  if(sci_range && sci_range.value().first <= value && value < sci_range.value().second)
 	    color = frame_sci_bar;
+
+	  if(frame_colormap) color = (*frame_colormap)(value);
 
 	  auto AA = ::demo2d::Point(a, pA.y);
 	  auto BB = ::demo2d::Point(b, pA.y + maxh*std::min(1.0, h[bin]*y_coef));
