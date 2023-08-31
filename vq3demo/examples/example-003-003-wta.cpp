@@ -55,6 +55,8 @@ unsigned int NB_SAMPLES;
 unsigned int NB_VERTICES;   // The k of k-means...
 #define MAX_DIST2   1e-10  // If a prototypes changes less that this squared distance, it is considered as constant.
 
+#define NB_BINS 500
+#define MAX_HISTO 5.
 
 int main(int argc, char* argv[]) {
   if(argc < 5) {
@@ -102,7 +104,7 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
-  auto image       = cv::Mat(360, 1024, CV_8UC3, cv::Scalar(255,255,255));
+  auto image       = cv::Mat(720, 1024, CV_8UC3, cv::Scalar(255,255,255));
   auto frame       = demo2d::opencv::direct_orthonormal_frame(image.size(), .325*image.size().width, true);
   auto dd          = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
 									 [](const demo2d::Point& pt) {return                      true;},
@@ -126,6 +128,7 @@ int main(int argc, char* argv[]) {
   //
   ///////////////////
 
+  demo2d::Point offset {0., 0.5};
   
   double thickness = .2;
   double sep       =  1;
@@ -147,9 +150,9 @@ int main(int argc, char* argv[]) {
 
   double w3        = .1;
   double h3        = .1;
-  auto source      = demo2d::sample::rectangle(w3, h3, i) + p1;
+  auto source      = demo2d::sample::rectangle(w3, h3, i) + p1 + offset;
 
-  auto multidim = rect || bar || crown;
+  auto multidim = (rect || bar || crown) + offset;
 
   auto bb = multidim->bbox();
   auto min_pt = bb.bottom_left();
@@ -192,7 +195,12 @@ int main(int argc, char* argv[]) {
   // Some initializations
   //
   ///////////////////
- 
+
+  
+  vq3::demo2d::opencv::histogram histo {{-1.5, -1.}, {1.5, -.2}};
+  histo.frame_margin = .1;
+  histo.title        = "local distortions";
+  
   // We need to register the input samples in a vector since we want
   // to both use and display them.
   std::vector<demo2d::Point> S;
@@ -286,6 +294,13 @@ int main(int argc, char* argv[]) {
 						dist2);                                 // dist2(prototype, sample).
     auto t_end = std::chrono::high_resolution_clock::now();
 
+    auto hout = histo.output_iterator();
+    for(auto& data : epoch_result)
+      if(data.vq3_bmu_accum.nb > 0) 
+	*(hout++) = data.vq3_bmu_accum.value;
+    histo.set_bins(0., MAX_HISTO, NB_BINS);
+    histo.make();
+
     
     int duration =  std::chrono::duration_cast<std::chrono::milliseconds>(t_end - t_start).count();
     std::cout << "Step duration (" << nb_threads << " threads) : " << std::setw(6) << duration << " ms.    \r" << std::flush;
@@ -310,6 +325,7 @@ int main(int argc, char* argv[]) {
     std::copy(S.begin(), S.end(), dd);
     g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
+    histo.draw(image, frame);
 
     if(snap_all)
       cv::imwrite(filename(), image);
