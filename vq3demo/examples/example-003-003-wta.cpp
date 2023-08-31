@@ -326,6 +326,7 @@ int main(int argc, char* argv[]) {
     g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
     histo.draw(image, frame);
+    histo.vline(image, frame, 2.5, {0., 0., 0.}, 1);
 
     if(snap_all)
       cv::imwrite(filename(), image);
