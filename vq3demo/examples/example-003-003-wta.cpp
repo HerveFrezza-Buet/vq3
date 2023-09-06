@@ -116,11 +116,7 @@ int main(int argc, char* argv[]) {
 									 [](const demo2d::Point& pt) {return                         1;},
 									 [](const demo2d::Point& pt) {return cv::Scalar(200, 200, 200);},
 									 [](const demo2d::Point& pt) {return                        -1;});
-  auto draw_edge   = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
-								       [](const vertex& v1, const vertex& v2) {return true;},  // always draw
-								       [](const vertex& v)   {return           v.vq3_value;},  // position
-								       []()                  {return cv::Scalar(255, 0, 0);},  // color
-								       []()                  {return                     3;}); // thickness
+  
   auto draw_vertex = vq3::demo2d::opencv::vertex_drawer<graph::ref_vertex>(image, frame,
 									   [](const vertex& v) {return                true;},  // always draw
 									   [](const vertex& v) {return         v.vq3_value;},  // position
@@ -270,7 +266,6 @@ int main(int argc, char* argv[]) {
   
   image = cv::Scalar(255, 255, 255);
   std::copy(S.begin(), S.end(), dd);
-  g.foreach_edge(draw_edge); 
   g.foreach_vertex(draw_vertex);
     
   if(snap_all)
@@ -345,7 +340,6 @@ int main(int argc, char* argv[]) {
     
     image = cv::Scalar(255, 255, 255);
     std::copy(S.begin(), S.end(), dd);
-    g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
     histo.draw(image, frame);
     auto [m, v] = mean();

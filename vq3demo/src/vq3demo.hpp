@@ -59,6 +59,7 @@
    @example example-003-002-chl-counted.cpp
    @example example-003-003-wta.cpp
    @example example-003-004-lbg.cpp
+   @example example-003-005-lloyd-iteration.cpp
    @example example-004-000-online.cpp
    @example example-004-001-som.cpp
    @example example-004-002-som.cpp
