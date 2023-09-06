@@ -291,9 +291,9 @@ int main(int argc, char* argv[]) {
 										return cv::Scalar(component, component, component);
 									      }, 
 									      [](const aux::edge&   e)  {return 2;});
+  g_aux.foreach_edge(draw_edge_aux);
   cv::imwrite("noisy-git-auxiliary.png", image);
   std::cout << "File \"noisy-git-auxiliary.png\" generated." << std::endl;
-  g_aux.foreach_edge(draw_edge_aux);
 
   image = cv::Scalar(255, 255, 255);
   std::vector<demo2d::Point> SS;

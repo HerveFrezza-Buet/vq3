@@ -325,7 +325,7 @@ int main(int argc, char* argv[]) {
       for(auto& data : epoch_results)
       	average += data.vq3_bmu_accum.average();
       average /= epoch_results.size();
-      std::cout << "average per vertex distirtion : " << average << std::endl;
+      std::cout << "average per vertex distortion : " << average << std::endl;
       
     }
     
