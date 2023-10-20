@@ -19,7 +19,7 @@
 #define NB_SAMPLES_PER_M2   20000
 #define GRID_WIDTH             30
 #define GRID_HEIGHT            30
-#define NB_STEPS              250
+#define NB_STEPS             1000
 
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
     // Let us plot the square root of the average d2.
     *(out_disto++) = {double(step), std::sqrt(distortion_accum.average<>())};
 
-    std::cout << "step " << std::setw(3) << step+1 << '/' << NB_STEPS << "   \r" << std::flush;
+    std::cout << "step " << std::setw(4) << step+1 << '/' << NB_STEPS << "   \r" << std::flush;
     
     image = cv::Scalar(255, 255, 255);
     std::copy(S.begin(), S.end(), dd);
