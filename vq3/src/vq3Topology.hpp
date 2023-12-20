@@ -186,9 +186,7 @@ namespace vq3 {
 
 	// Let us flush the to do list.
 	while(!(to_do.empty())) {
-	  unsigned int edge_distance;
-	  typename graph_type::ref_vertex ref_vertex;
-	  std::tie(edge_distance, ref_vertex) = to_do.front();
+	  auto [edge_distance, ref_vertex] = to_do.front();
 	  to_do.pop_front();
 
 	  bool push_neighbors = false;
