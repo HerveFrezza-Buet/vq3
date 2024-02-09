@@ -5,8 +5,7 @@
 #include <random>
 
 #include <opencv2/opencv.hpp>
-#include <vq3.hpp>
-#include <vq3demo.hpp>
+
 #include <demo2d.hpp>
 
 /*
@@ -89,6 +88,11 @@ inline Rotation::intermediate_type operator*(double alpha, const Rotation::inter
   return {alpha * difference.first, alpha * difference.second};
 }
 
+// g++13 bug ? I have to include these files after the declaration of
+// previous operator*. Otherwise, this operator is unknown diring
+// template resolution.
+#include <vq3.hpp>
+#include <vq3demo.hpp>
 
 // That's it, let us use it with an online GNG-T.
 
