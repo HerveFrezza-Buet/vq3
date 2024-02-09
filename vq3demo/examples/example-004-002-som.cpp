@@ -58,7 +58,7 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
   data.g.foreach_vertex([&data](const graph::ref_vertex& v_ref) {(*v_ref)().vq3_value = demo2d::uniform(data.rd, {-.5, -.5}, {.5, .5});});
 }
 
-// At each epoch, the sample are presented and some data is collected,
+// At each epoch, the samples are presented and some data is collected,
 // for each vertex. From each data epoch, the new vertex value can be
 // computed. vq3 offers classes for epoch data, they are intended to
 // be stacked in order to define an agglomerate epoch data class.
