@@ -21,8 +21,8 @@
 
 
 #define NB_SAMPLES_PER_M2   10000
-#define GRID_WIDTH             20
-#define GRID_HEIGHT            20
+#define GRID_WIDTH             15
+#define GRID_HEIGHT            15
 
 #define SOM_H_RADIUS            5.1
 #define SOM_MAX_DIST            (unsigned int)(SOM_H_RADIUS)
