@@ -60,7 +60,9 @@ unsigned int NB_VERTICES;   // The k of k-means...
 #define MAX_DIST2   1e-10  // If a prototypes changes less that this squared distance, it is considered as constant.
 
 #define NB_BINS 500
+#define NB_BINS_2 50
 #define MAX_HISTO 5.
+#define MAX_HISTO2 500
 
 int main(int argc, char* argv[]) {
   if(argc < 5) {
@@ -108,7 +110,7 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
-  auto image       = cv::Mat(720, 1024, CV_8UC3, cv::Scalar(255,255,255));
+  auto image       = cv::Mat(1100, 1024, CV_8UC3, cv::Scalar(255,255,255));
   auto frame       = demo2d::opencv::direct_orthonormal_frame(image.size(), .325*image.size().width, true);
   auto dd          = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
 									 [](const demo2d::Point& pt) {return                      true;},
@@ -128,7 +130,7 @@ int main(int argc, char* argv[]) {
   //
   ///////////////////
 
-  demo2d::Point offset {0., 0.5};
+  demo2d::Point offset {0., 1.1};
   
   double thickness = .2;
   double sep       =  1;
@@ -197,9 +199,15 @@ int main(int argc, char* argv[]) {
   ///////////////////
 
   
-  vq3::demo2d::opencv::histogram histo {{-1.5, -1.}, {1.5, -.2}};
+  vq3::demo2d::opencv::histogram histo {{-1.5, -.4}, {1.5, .4}};
   histo.frame_margin = .1;
   histo.title        = "local distortions";
+  
+  vq3::demo2d::opencv::histogram histo2 {{-1.5, -1.5}, {1.5, -.7}};
+  histo2.frame_margin = .1;
+  histo2.title        = "local nb samples";
+
+  
   demo2d::opencv::colormap::jet cm;
   
   // We need to register the input samples in a vector since we want
@@ -296,10 +304,11 @@ int main(int argc, char* argv[]) {
 
     auto mean = vq3::stats::mean_std();
     auto hout = histo.output_iterator();
+    auto h2out = histo2.output_iterator();
     auto mout = mean.output_iterator();
     double dmin = std::numeric_limits<double>::max();
     double dmax = -1.;
-    for(auto& data : epoch_result)
+    for(auto& data : epoch_result) {
       if(data.vq3_bmu_accum.nb > 0) {
 	double v = data.vq3_bmu_accum.value;
 	*(hout++) = v;
@@ -309,10 +318,16 @@ int main(int argc, char* argv[]) {
 	if (v > dmax)
 	  dmax = v;
       }
+      *(h2out++) = data.vq3_bmu_accum.nb;
+    }
     histo.set_bins(0., MAX_HISTO, NB_BINS);
     histo.make();
     cm = {dmin, dmax};
     histo = cm;
+
+    histo2.set_bins(0., MAX_HISTO2, NB_BINS_2);
+    histo2.make();
+    
 
     // Let us color the prototypes.
     std::size_t idf = 0;
@@ -341,9 +356,15 @@ int main(int argc, char* argv[]) {
     image = cv::Scalar(255, 255, 255);
     std::copy(S.begin(), S.end(), dd);
     g.foreach_vertex(draw_vertex);
+    
     histo.draw(image, frame);
     auto [m, v] = mean();
     histo.vline(image, frame, m, {0, 0, 255}, 1);
+
+    histo2.draw(image, frame);
+    histo2.vline(image, frame, NB_SAMPLES/(double)NB_VERTICES, {0, 0, 255}, 1);
+
+    
     std::cout << nb_threads << " threads, step duration = " << std::setw(4) << duration << " ms, mean = " << std::setw(10) << m << ", stddev = " << std::setw(10) << std::sqrt(v) << "     \r" << std::flush;
 
     if(snap_all)
