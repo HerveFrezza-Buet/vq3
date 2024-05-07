@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 
   
   cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
-  auto image       = cv::Mat(1100, 1024, CV_8UC3, cv::Scalar(255,255,255));
+  auto image       = cv::Mat(1000, 900, CV_8UC3, cv::Scalar(255,255,255));
   auto frame       = demo2d::opencv::direct_orthonormal_frame(image.size(), .325*image.size().width, true);
   auto dd          = demo2d::opencv::dot_drawer<demo2d::Point>(image, frame,
 									 [](const demo2d::Point& pt) {return                      true;},
