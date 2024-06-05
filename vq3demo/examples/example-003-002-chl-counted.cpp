@@ -67,6 +67,7 @@ void on_mouse( int event, int x, int y, int, void* user_data) {
 
 #define NB_VERTICES_PER_M2     50
 #define NB_SAMPLES_PER_M2   50000
+#define MAX_DIST2           1e-10 
 
 graph::ref_edge select_edge(graph& g, const demo2d::Point location);
 void select_samples(graph& g, const std::vector<demo2d::Point>& S,
@@ -75,7 +76,7 @@ void select_samples(graph& g, const std::vector<demo2d::Point>& S,
 
 int main(int argc, char* argv[]) {
   if(argc != 4) {
-    std::cout << "Usage : " << argv[0] << " nb_threads <random | triangles | grid> <uniform | gradient>" << std::endl;
+    std::cout << "Usage : " << argv[0] << " nb_threads <random | triangles | grid | kmeans> <uniform | gradient>" << std::endl;
     return 0;
   }
 
@@ -136,6 +137,16 @@ int main(int argc, char* argv[]) {
   double intensity = 1.0;
   auto background = demo2d::sample::rectangle(side, side, intensity);
 
+
+  auto samples = background;
+  if(dist_kind == "gradient")
+    samples = demo2d::sample::custom(demo2d::sample::BBox(-1, -1, 2, 2), [](const demo2d::Point& p) {return .5*(p.x + 1.0);});
+  std::vector<demo2d::Point> S;
+  auto s_sampler = demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
+  auto S_ = demo2d::sample::sample_set(random_device, s_sampler, samples);
+  auto out = std::back_inserter(S);
+  std::copy(S_.begin(), S_.end(), out);
+
   graph g;
   if(graph_kind == "random") {
     auto v_sampler = demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
@@ -149,20 +160,28 @@ int main(int argc, char* argv[]) {
     auto v_sampler = demo2d::sample::base_sampler::grid(random_device, NB_VERTICES_PER_M2);
     for(auto v : demo2d::sample::sample_set(random_device, v_sampler, background)) g += v;
   }
+  else if(graph_kind == "kmeans") {
+    auto v_sampler = demo2d::sample::base_sampler::random(random_device, NB_VERTICES_PER_M2);
+    unsigned int K = 0;
+    for(auto v : demo2d::sample::sample_set(random_device, v_sampler, background)) ++K;
+    vq3::algo::lbg<demo2d::Point>(random_device,
+				  nb_threads, g, K,
+				  S.begin(), S.end(),
+				  [](const demo2d::Point& s) {return s;},                    // Gets the sample from *it.
+				  [](vertex& v) -> vertex& {return v;},                      // Gets the prototype ***reference*** from the vertex value.
+				  ::d2,                                                      // d2(prototype, sample).
+				  [&random_device](const demo2d::Point& proto) {             // Makes a prototype nearly similar to proto.
+				    return demo2d::alter(random_device, proto, MAX_DIST2);},  
+				  [](const vertex& previous, const vertex& current) {        // check function : if check(previous, current) is false for each vertex, the convergence is achieved.
+				    return ::d2(previous, current) > MAX_DIST2;
+				  },
+				  true);                       
+  }
   else {
-    std::cout << "Graph kind must be in {random, triangles, grid}, \"" << graph_kind << "\" provided." << std::endl;
+    std::cout << "Graph kind must be in {random, triangles, grid, kmeans}, \"" << graph_kind << "\" provided." << std::endl;
     ::exit(0);
   }
-
-  auto samples = background;
-  if(dist_kind == "gradient")
-    samples = demo2d::sample::custom(demo2d::sample::BBox(-1, -1, 2, 2), [](const demo2d::Point& p) {return .5*(p.x + 1.0);});
-  std::vector<demo2d::Point> S;
-  auto s_sampler = demo2d::sample::base_sampler::random(random_device, NB_SAMPLES_PER_M2);
-  auto S_ = demo2d::sample::sample_set(random_device, s_sampler, samples);
-  auto out = std::back_inserter(S);
-  std::copy(S_.begin(), S_.end(), out);
-
+  
   // Computation
   //
   //////////////
