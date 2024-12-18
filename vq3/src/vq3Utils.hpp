@@ -115,7 +115,8 @@ namespace vq3 {
      */
     template<typename GRAPH, typename VALUE_OF_REF_VERTEX>
     auto make_vertex_table(GRAPH& g, const VALUE_OF_REF_VERTEX& value_of) {
-      std::map<typename GRAPH::ref_vertex, typename std::result_of<VALUE_OF_REF_VERTEX (typename GRAPH::ref_vertex)>::type> res;
+      //std::map<typename GRAPH::ref_vertex, typename std::result_of<VALUE_OF_REF_VERTEX (typename GRAPH::ref_vertex)>::type> res;
+      std::map<typename GRAPH::ref_vertex, typename std::invoke_result_t<VALUE_OF_REF_VERTEX, typename GRAPH::ref_vertex>> res;
       g.foreach_vertex([&res, &value_of](const typename GRAPH::ref_vertex& ref_v) {res[ref_v] =  value_of(ref_v);});
       return res;
     }
