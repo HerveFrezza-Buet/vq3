@@ -258,9 +258,10 @@ namespace vq3 {
 	 * @param avg_key The neighborhood key for computing the average.
 	 * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
 	 * @param use_average Tells wether we make a spatial average of the distortions.
+	 * @return is the graph topology (vertices and edges) modified ?
 	 */
 	template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename BMU_DISTANCE>
-	void process(unsigned int nb_threads,
+	bool process(unsigned int nb_threads,
 		     const ITER& begin, const ITER& end,
 		     const SAMPLE_OF& sample_of,
 		     const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
@@ -271,11 +272,14 @@ namespace vq3 {
 		     const typename topology_table_type::neighborhood_key_type& avg_key,
 		     EVOLUTION& evolution,
 		     bool use_average) {
+	  bool topo_changed = false;
+	  
  	  if(begin == end) {
+	    bool has_nodes = false;
 	    // No samples. We kill all nodes and keep the table updated.
-	    table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
+	    table.g.foreach_vertex([&has_nodes](const ref_vertex& ref_v) {ref_v->kill(); has_nodes = true;});
 	    table.update_full();
-	    return;
+	    return has_nodes;
 	  }
 
 	  auto nb_vertices = table.size();
@@ -286,10 +290,10 @@ namespace vq3 {
 	    table.g += sample_of(*begin);
 	    table.update_full();
 	    wta.template process<epoch_wta>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
-	    return;
+	    return true;
 	  }
 	  
-
+	  
 	  // This is an online wide SOM update in order to quickly move the
 	  // graph so that it fits the samples, while topological
 	  // evolution is freezed.
@@ -332,12 +336,16 @@ namespace vq3 {
  
 	  // We call the user evolution method
 	  if(use_average) {
-	    if(evolution(table, avg_bmu_results, clone_prototype, [](auto& accum){return accum.average();}))
+	    if(evolution(table, avg_bmu_results, clone_prototype, [](auto& accum){return accum.average();})) {
 	      table.update_full();
+	      topo_changed = true;
+	    }
 	  }
 	  else {
-	    if(evolution(table, bmu_results, clone_prototype, [](auto& accum){return accum.value;}))
+	    if(evolution(table, bmu_results, clone_prototype, [](auto& accum){return accum.value;})){
 	      table.update_full();
+	      topo_changed = true;
+	    }
 	  }
 
 	  
@@ -347,12 +355,17 @@ namespace vq3 {
 
 	  
 	  // We update the edges thanks to Competitive Hebbian learning.
-	  if(chl.process(nb_threads, begin, end, sample_of, bmu_distance, edge())) 
+	  if(chl.process(nb_threads, begin, end, sample_of, bmu_distance, edge()))  {
 	    table.update_full();
+	    topo_changed = true;
+	  }
 
 	  //  We update more once the edges are created.
 	  for(unsigned int i = 0; i < nb_wta_3; ++i)
 	    wtm.template process<epoch_wtm>(nb_threads, narrow_som_key, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
+
+	  // We notify topology changes.
+	  return topo_changed;
 	  
 	}
 	
@@ -416,9 +429,10 @@ namespace vq3 {
 	   * @param bmu_distance Compares the vertex value to a sample.
 	   * @param key The neighborhood key for computing online SOM-like computation before evolution.
 	   * @param evolution Modifies the graph. See vq3::algo::gngt::by_default::evolution for an example.
+	   * @return is the graph topology (vertices and edges) modified ?
 	   */
 	  template<typename ITER, typename PROTOTYPE_OF_VERTEX, typename SAMPLE_OF, typename EVOLUTION, typename CLONE_PROTOTYPE, typename BMU_DISTANCE>
-	  void process(unsigned int nb_threads,
+	  bool process(unsigned int nb_threads,
 		       const ITER& begin, const ITER& end,
 		       const SAMPLE_OF& sample_of,
 		       const PROTOTYPE_OF_VERTEX& ref_prototype_of_vertex,
@@ -426,12 +440,14 @@ namespace vq3 {
 		       const BMU_DISTANCE& bmu_distance,
 		       const typename topology_table_type::neighborhood_key_type& key,
 		       EVOLUTION& evolution) {
+	    bool topo_changed = false;
 	    
 	    if(begin == end) {
+	      bool has_nodes = false;
 	      // No samples. We kill all nodes and keep the table updated.
-	      table.g.foreach_vertex([](const ref_vertex& ref_v) {ref_v->kill();});
+	      table.g.foreach_vertex([&has_nodes](const ref_vertex& ref_v) {ref_v->kill(); has_nodes = true;});
 	      table.update_full();
-	      return;
+	      return has_nodes;
 	    }
 	  
 	    auto nb_vertices = table.size();
@@ -448,7 +464,7 @@ namespace vq3 {
 					*(sample_it++),
 					alpha);
 	      table.update_full();
-	      return;
+	      return true;
 	    }
 	  
 	    // We update the graph as we update an online SOM.
@@ -465,12 +481,16 @@ namespace vq3 {
 	    bmu_results = wta.template process<epoch_bmu>(nb_threads, begin, end, sample_of, ref_prototype_of_vertex, bmu_distance);
 	    
 	    // We add/remove prototypes.
-	    if(evolution(table, bmu_results, clone_prototype, [](auto& accum){return accum.value;}))
+	    if(evolution(table, bmu_results, clone_prototype, [](auto& accum){return accum.value;})) {
 	      table.update_full();
+	      topo_changed = true;
+	    }
 	    
 	    // We update the edges thanks to Competitive Hebbian learning.
-	    if(chl.process(nb_threads, begin, end, sample_of, bmu_distance, edge())) 
+	    if(chl.process(nb_threads, begin, end, sample_of, bmu_distance, edge())) {
 	      table.update_full();
+	      topo_changed = true;
+	    }
 	    
 	    //  We update more once the edges are created.
 	    sample_it = begin;
@@ -481,6 +501,7 @@ namespace vq3 {
 				      bmu_distance,
 				      sample_of(*(sample_it++)),
 				      alpha);
+	    return topo_changed;
 	  }
 	};
 	

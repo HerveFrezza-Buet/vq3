@@ -490,15 +490,15 @@ int main(int argc, char* argv[]) {
       gngt.nb_wta_3           = slider_nb_wta_3;
 
       // We compute the topology evolution of the graph...
-      gngt.process(nb_threads,
-		   S.begin(), S.end(),                                              // The sample set. Shuffle if the dataset is not sampled randomly.
-		   [](const sample& s) {return s;},                                 // get sample from *iter (identity here).
-		   [](vertex& v) -> prototype& {return v.vq3_value;},               // get a prototype reference from the vertex value.
-		   [](const prototype& p) {return p + demo2d::Point(-1e-5,1e-5);},  // get a point close to a prototype.
-		   dist,                                                            // The distance used for bmu-related stuff.
-		   "wide som", "narrow som", "avg",                                 // Neighborhood keys.
-		   evolution,
-		   true);                                                           // We do spatial averaging.
+      bool topo_changed = gngt.process(nb_threads,
+				       S.begin(), S.end(),                                              // The sample set. Shuffle if the dataset is not sampled randomly.
+				       [](const sample& s) {return s;},                                 // get sample from *iter (identity here).
+				       [](vertex& v) -> prototype& {return v.vq3_value;},               // get a prototype reference from the vertex value.
+				       [](const prototype& p) {return p + demo2d::Point(-1e-5,1e-5);},  // get a point close to a prototype.
+				       dist,                                                            // The distance used for bmu-related stuff.
+				       "wide som", "narrow som", "avg",                                 // Neighborhood keys.
+				       evolution,
+				       true);                                                           // We do spatial averaging.
 
       // Display
     
