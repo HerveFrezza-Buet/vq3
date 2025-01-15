@@ -167,6 +167,20 @@ namespace vq3 {
       if(garbaging) foreach_edge_garbaging_on(fun);
       else          foreach_edge_garbaging_off(fun);
     }
+
+    bool connected_to(const std::shared_ptr<vertex<VERTEX_VALUE, EDGE_VALUE> >& other) {
+      bool res = false;
+      this->foreach_edge([&res, other](auto ref_e){
+	auto extr_pair = ref_e->extremities();           
+	if(vq3::invalid_extremities(extr_pair)) {
+	  ref_e->kill();
+	  return;
+	}
+	if(extr_pair.first == other || extr_pair.second == other)
+	  res = true;
+      });
+      return res;
+    }
   };
 
   template<typename VERTEX_VALUE, typename EDGE_VALUE>
