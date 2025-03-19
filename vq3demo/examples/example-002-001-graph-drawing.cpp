@@ -79,14 +79,14 @@ int main(int argc, char* argv[]) {
     
   } // The temporary references to vertices are released here.
 
-  // Let us display the graph
-
-  cv::namedWindow("image", cv::WINDOW_AUTOSIZE);
-  int delay = 500;
+  // Let us display the graph (we use smart demo2d GUI tools, not directly opencv).
+  std::string main_window {"image"};
   auto image = cv::Mat(480, 640, CV_8UC3, cv::Scalar(255,255,255));
   auto frame = demo2d::opencv::direct_orthogonal_frame(image.size().width,
 						       image.size().height,
 						       {0., image.size().height - 1.0});
+  auto gui = demo2d::opencv::gui(main_window, frame);
+  
   auto draw_edge = vq3::demo2d::opencv::edge_drawer<graph::ref_edge>(image, frame,
   								     [](const vertex_value_type&, const vertex_value_type&, const edge_value_type&) {return true;},  // always draw
   								     [](const vertex_value_type& v)                {return                                 v.pos;},  // position
@@ -100,21 +100,23 @@ int main(int argc, char* argv[]) {
 									   [](const vertex_value_type& v) {return cv::Scalar(255, 255 - v.i, 255 - v.i);},  // color
 									   [](const vertex_value_type& v) {return                                    -1;}); // thickness
 
-  // This is the drawing....
+  // First, let us draw the full grid.
+  gui.loop_ms = 2000;
+  image = cv::Scalar(255, 255, 255);
   g.foreach_edge(draw_edge); 
   g.foreach_vertex(draw_vertex);
-  
-  cv::imshow ("image", image);
-  cv::waitKey(delay);
+  gui << image;
+  if(gui) {} // Waits 2 seconds.
 
   // from now, let us remove the nodes which have less than 4
   // neigbours with probability p and systematically nodes with no
   // edge, until the graph is empty.
 
   double p = .2;
-  
   bool empty = false;
-  while(!empty) {
+  gui.loop_ms = 500; // every 500ms
+  
+  while(gui && !empty) {
     std::cout << vertex_value_type::nb << " vertices, " << edge_value_type::nb << " edges." << std::endl;
     empty = true;
     std::uniform_real_distribution<double> toss(0,1);
@@ -137,8 +139,7 @@ int main(int argc, char* argv[]) {
     image = cv::Scalar(255, 255, 255);
     g.foreach_edge(draw_edge); 
     g.foreach_vertex(draw_vertex);
-    cv::imshow ("image", image);
-    cv::waitKey(delay);
+    gui << image;
   }
   std::cout << "Empty graph : " << vertex_value_type::nb << " vertices, " << edge_value_type::nb << " edges." << std::endl;
   
