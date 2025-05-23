@@ -6,7 +6,7 @@ SET(PACKAGE_LICENSE "GPL")
 SET(PROJECT_DESCRIPTION_SUMMARY "Fast VQ")
 
 SET(CMAKE_BUILD_TYPE Release)
-SET(PROJECT_CFLAGS "-std=c++20")
+SET(PROJECT_CFLAGS "-std=c++20 -O3")
 
  
 ###################################
@@ -32,7 +32,7 @@ Description: ${PROJECT_DESCRIPTION_SUMMARY}
 Version: ${PACKAGE_VERSION}
 Requires: ${PKG_CONFIG_DEPENDS}
 Libs: -pthread
-Cflags: -I${INCLUDE_INSTALL_DIR} ${PROJECT_CFLAGS}
+Cflags: -I${INCLUDE_INSTALL_DIR} 
 "
 )
 
